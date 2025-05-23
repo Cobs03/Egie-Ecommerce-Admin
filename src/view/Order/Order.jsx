@@ -26,7 +26,7 @@ import {
   Cancel,
   AccessTime,
 } from "@mui/icons-material";
-
+import OrderShip from "./OrderShip";
 // Sample data structure for orders
 const orders = [
   {
@@ -226,6 +226,7 @@ const Order = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [showShipModal, setShowShipModal] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
@@ -425,6 +426,31 @@ const Order = () => {
         onClose={handleDrawerClose}
         PaperProps={{ sx: { width: 400, p: 3 } }}
       >
+        <OrderShip
+          visible={showShipModal}
+          onClose={() => setShowShipModal(false)}
+          onShipped={() => {
+            setShowShipModal(false);
+            setDrawerOpen(false);
+            setSelectedOrder(null);
+          }}
+          order={
+            selectedOrder && selectedOrder.deliveryType === "delivery"
+              ? {
+                  name: selectedOrder.customer.name,
+                  email: selectedOrder.customer.email,
+                  phone: selectedOrder.customer.phone || "",
+                  address: selectedOrder.shippingAddress,
+                  paymentMethod: selectedOrder.paymentMethod || "",
+                  productImg: selectedOrder.products[0]?.image,
+                  productName: selectedOrder.products[0]?.name,
+                  productDesc: "",
+                  qty: selectedOrder.products[0]?.quantity,
+                  price: selectedOrder.products[0]?.price,
+                }
+              : null
+          }
+        />
         {selectedOrder && (
           <>
             <Box
@@ -516,17 +542,30 @@ const Order = () => {
                 </Box>
               </Box>
 
-              {selectedOrder.status === "New" && (
-                <Button
-                  variant="contained"
-                  fullWidth
-                  sx={{ color: "white", backgroundColor: "black" }}
-                >
-                  {selectedOrder.deliveryType === "store_pickup"
-                    ? "Ready for Pickup"
-                    : "Deliver"}
-                </Button>
-              )}
+              {selectedOrder.status === "New" &&
+                (selectedOrder.deliveryType === "delivery" ? (
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{ color: "white", backgroundColor: "black" }}
+                    onClick={() => setShowShipModal(true)}
+                  >
+                    Deliver
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    sx={{ color: "white", backgroundColor: "black" }}
+                    onClick={() => {
+                      // Handle store pickup logic here
+                      setDrawerOpen(false);
+                      setSelectedOrder(null);
+                    }}
+                  >
+                    Ready for Pickup
+                  </Button>
+                ))}
             </Stack>
           </>
         )}

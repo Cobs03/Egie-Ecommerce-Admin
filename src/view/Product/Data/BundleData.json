@@ -1,0 +1,54 @@
+{
+  "bundles": [
+    {
+      "id": 1,
+      "name": "Gaming Bundle 1",
+      "code": "CT|001",
+      "category": "Gaming",
+      "price": 29545,
+      "image": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=facearea&w=64&h=64",
+      "description": "Complete gaming setup bundle",
+      "warranty": "warranty1",
+      "officialPrice": "29545",
+      "initialPrice": "32000",
+      "discount": 8,
+      "products": [
+        {
+          "id": 1,
+          "name": "Gaming Mouse",
+          "image": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=facearea&w=64&h=64"
+        },
+        {
+          "id": 2,
+          "name": "Mechanical Keyboard",
+          "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=facearea&w=64&h=64"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Gaming Bundle 2",
+      "code": "CT|002",
+      "category": "Gaming",
+      "price": 29545,
+      "image": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=facearea&w=64&h=64",
+      "description": "Premium gaming setup bundle",
+      "warranty": "warranty2",
+      "officialPrice": "29545",
+      "initialPrice": "32000",
+      "discount": 8,
+      "products": [
+        {
+          "id": 3,
+          "name": "Gaming Headset",
+          "image": "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=64&h=64"
+        },
+        {
+          "id": 4,
+          "name": "Mouse Pad",
+          "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=64&h=64"
+        }
+      ]
+    }
+  ]
+}

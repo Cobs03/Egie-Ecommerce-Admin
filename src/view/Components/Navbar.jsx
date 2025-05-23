@@ -1,6 +1,15 @@
 import * as React from "react";
 import PropTypes from "prop-types";
 import { createTheme } from "@mui/material/styles";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
+import { Stack } from "@mui/material";
+import { Button } from "@mui/material";
+import { useState } from "react";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 
@@ -20,6 +29,10 @@ import { DemoProvider } from "@toolpad/core/internal";
 
 import Dashboard from "../Dashboard/dashboard";
 import Product from "../Product/Product";
+import ProductCreate from "../Product/ProductComponents/ProductCreate";
+import ProductView from "../Product/ProductComponents/ProductView";
+import BundleCreate from "../Product/ProductComponents/BundleCreate";
+import BundleView from "../Product/ProductComponents/BundleView";
 import Order from "../Order/Order";
 import Payment from "../Payment/Payment";
 import Promotions from "../Promotions/Promotions";
@@ -95,6 +108,16 @@ function DashboardLayoutBasic(props) {
 
   const demoWindow = window !== undefined ? window() : undefined;
 
+  const premadeProducts = [
+    { id: 1, name: "Gaming Mouse" },
+    { id: 2, name: "Mechanical Keyboard" },
+    { id: 3, name: "Gaming Headset" },
+    { id: 4, name: "Mouse Pad" },
+    { id: 5, name: "Webcam" },
+  ];
+
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+
   return (
     <DemoProvider window={demoWindow}>
       <AppProvider
@@ -119,6 +142,10 @@ function DashboardLayoutBasic(props) {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/products" element={<Product />} />
+            <Route path="/products/create" element={<ProductCreate />} />
+            <Route path="/products/view" element={<ProductView />} />
+            <Route path="/bundles/create" element={<BundleCreate />} />
+            <Route path="/bundles/view" element={<BundleView />} />
             <Route path="/users" element={<Users />} />
             <Route path="/orders" element={<Order />} />
             <Route path="/payment" element={<Payment />} />
@@ -127,6 +154,31 @@ function DashboardLayoutBasic(props) {
             <Route path="/discount" element={<Promotions />} />
           </Routes>
         </DashboardLayout>
+        <Dialog
+          open={productDialogOpen}
+          onClose={() => setProductDialogOpen(false)}
+        >
+          <DialogTitle>Select a Product</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2}>
+              {premadeProducts.map((product) => (
+                <Button
+                  key={product.id}
+                  variant="outlined"
+                  onClick={() => {
+                    setProducts((prev) => [...prev, product.name]);
+                    setProductDialogOpen(false);
+                  }}
+                >
+                  {product.name}
+                </Button>
+              ))}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setProductDialogOpen(false)}>Cancel</Button>
+          </DialogActions>
+        </Dialog>
       </AppProvider>
     </DemoProvider>
   );
