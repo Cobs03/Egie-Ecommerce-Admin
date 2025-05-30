@@ -16,4 +16,3 @@ const TotalSales = () => (
 );
 
 export default TotalSales;
-

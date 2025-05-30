@@ -15,13 +15,13 @@ export default function ShippingChart() {
         borderRadius: 3,
         boxShadow: 3,
         minWidth: 300,
-        minHeight: 320,
+        minHeight: 300,
         p: 2,
         m: 1,
       }}
     >
       <CardContent>
-        <Typography variant="h6" fontWeight={700} mb={2}>
+        <Typography variant="h6" fontWeight={700}>
           Shipping
         </Typography>
         <Box display="flex" flexDirection="column" alignItems="center">
@@ -55,10 +55,10 @@ export default function ShippingChart() {
                     mr: 1.5,
                   }}
                 />
-                <Typography fontWeight={600} fontSize={15} flex={1}>
+                <Typography fontWeight={600} fontSize={12} flex={1}>
                   {item.label}
                 </Typography>
-                <Typography fontWeight={500} fontSize={15}>
+                <Typography fontWeight={500} fontSize={12}>
                   {item.value}
                 </Typography>
               </Box>

@@ -40,6 +40,7 @@ import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipview";
+import ScrollToTop from "./ScrollToTop";
 
 const NAVIGATION = [
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard /> },
@@ -86,7 +87,7 @@ const demoTheme = createTheme({
     MuiToolbar: {
       styleOverrides: {
         root: {
-          color: "#000",
+          color: "#fff",
         },
       },
     },
@@ -119,7 +120,7 @@ const demoTheme = createTheme({
       styleOverrides: {
         root: {
           color: "#fff",
-
+          margin: "4px 8px",
           borderRadius: "8px",
           "&:hover": {
             backgroundColor: "rgba(34, 197, 94, 0.1)",
@@ -252,6 +253,7 @@ function DashboardLayoutBasic(props) {
         window={demoWindow}
       >
         <DashboardLayout>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
