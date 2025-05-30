@@ -17,7 +17,7 @@ import RecentOrders from "./Dash_Components/RecentOrders";
 const Dashboard = () => {
   return (
     <div style={{ padding: 24, background: "#f5f5f5", minHeight: "100vh" }}>
-      <h1>Dashboard</h1>
+      <h1 style={{ fontSize: "2.5rem", fontWeight:"700" }}>Dashboard</h1>
       <hr />
       <div
         style={{
