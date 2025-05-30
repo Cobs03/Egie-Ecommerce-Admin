@@ -16,12 +16,32 @@ import {
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
-import bundleData from "../Data/BundleData.json";
+
+// Example data
+const bundles = [
+  {
+    id: 1,
+    name: 'Lenovo V15 G4 IRU 15.6" FHD i5',
+    code: "CT|001",
+    category: "Laptop",
+    price: 29545,
+    image:
+      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=facearea&w=64&h=64",
+  },
+  {
+    id: 2,
+    name: 'Lenovo V15 G4 IRU 15.6" FHD i5',
+    code: "CT|002",
+    category: "Laptop",
+    price: 29545,
+    image:
+      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=facearea&w=64&h=64",
+  },
+];
 
 const Bundles = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBundle, setSelectedBundle] = useState(null);
-  const [bundles, setBundles] = useState(bundleData.bundles);
   const navigate = useNavigate();
 
   const handleMenuOpen = (event, bundle) => {
@@ -34,18 +54,16 @@ const Bundles = () => {
     setSelectedBundle(null);
   };
 
+  // Replace these with your actual handlers
   const handleView = () => {
     navigate("/bundles/view", { state: selectedBundle });
     handleMenuClose();
   };
-
   const handleUpdate = () => {
-    navigate("/bundles/create", { state: selectedBundle });
+    alert(`Update bundle: ${selectedBundle.name}`);
     handleMenuClose();
   };
-
   const handleDelete = () => {
-    // TODO: Implement delete functionality
     alert(`Delete bundle: ${selectedBundle.name}`);
     handleMenuClose();
   };
@@ -61,9 +79,7 @@ const Bundles = () => {
             <TableCell>
               <b>Code</b>
             </TableCell>
-            <TableCell>
-              <b>Category</b>
-            </TableCell>
+
             <TableCell>
               <b>Price</b>
             </TableCell>
@@ -82,7 +98,6 @@ const Bundles = () => {
                 </Box>
               </TableCell>
               <TableCell>{bundle.code}</TableCell>
-              <TableCell>{bundle.category}</TableCell>
               <TableCell>
                 ₱
                 {bundle.price.toLocaleString(undefined, {
@@ -104,8 +119,11 @@ const Bundles = () => {
         onClose={handleMenuClose}
       >
         <MenuItem onClick={handleView}>View Bundle</MenuItem>
-        <MenuItem onClick={handleUpdate}>Edit Bundle</MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
+        <MenuItem onClick={handleUpdate}>Update Bundle</MenuItem>
+        <MenuItem
+          onClick={handleMenuClose}
+          sx={{ color: "error.main" }}
+        >
           Delete Bundle
         </MenuItem>
       </Menu>

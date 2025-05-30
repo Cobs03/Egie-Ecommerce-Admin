@@ -39,9 +39,9 @@ import Promotions from "../Promotions/Promotions";
 import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
+import Shipview from "../Shipping/Shipview";
 
 const NAVIGATION = [
-  { kind: "header", title: "Main items" },
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard /> },
   { segment: "products", title: "Products", icon: <TbPackage /> },
   { segment: "users", title: "Users", icon: <FaUserGroup /> },
@@ -59,6 +59,130 @@ const demoTheme = createTheme({
         paper: {
           width: 280,
           transition: "width 0.2s ease-in-out",
+          background: "#000",
+          color: "#fff",
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "#000",
+          color: "#000",
+          "& .MuiIconButton-root": {
+            color: "#fff",
+            padding: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(34, 197, 94, 0.1)",
+              color: "#22c55e",
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "24px",
+            },
+          },
+        },
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          color: "#000",
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          color: "#000",
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          color: "#000",
+          "&.MuiAppBar-root .MuiIconButton-root": {
+            color: "#fff",
+            padding: "8px",
+            "&:hover": {
+              backgroundColor: "rgba(34, 197, 94, 0.1)",
+              color: "#22c55e",
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "24px",
+            },
+          },
+        },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          color: "#fff",
+
+          borderRadius: "8px",
+          "&:hover": {
+            backgroundColor: "rgba(34, 197, 94, 0.1)",
+            color: "#22c55e",
+          },
+          "&.Mui-selected": {
+            backgroundColor: "#22c55e !important",
+            color: "#fff !important",
+            "&:hover": {
+              backgroundColor: "#16a34a !important",
+              color: "#fff !important",
+            },
+            "& .MuiListItemIcon-root": {
+              color: "#fff !important",
+            },
+            "& .MuiListItemText-primary": {
+              color: "#fff !important",
+            },
+          },
+        },
+      },
+    },
+    MuiListItemIcon: {
+      styleOverrides: {
+        root: {
+          color: "#fff",
+          minWidth: "40px",
+        },
+      },
+    },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: {
+          color: "inherit",
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          color: "#000",
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          color: "#fff",
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          color: "#000",
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          color: "#fff",
         },
       },
     },
@@ -71,10 +195,6 @@ const demoTheme = createTheme({
       paper: "#ffffff",
     },
   },
-  cssVariables: {
-    colorSchemeSelector: "data-toolpad-color-scheme",
-  },
-  colorSchemes: { light: true, dark: true },
   breakpoints: {
     values: { xs: 0, sm: 600, md: 600, lg: 1200, xl: 1536 },
   },
@@ -108,16 +228,6 @@ function DashboardLayoutBasic(props) {
 
   const demoWindow = window !== undefined ? window() : undefined;
 
-  const premadeProducts = [
-    { id: 1, name: "Gaming Mouse" },
-    { id: 2, name: "Mechanical Keyboard" },
-    { id: 3, name: "Gaming Headset" },
-    { id: 4, name: "Mouse Pad" },
-    { id: 5, name: "Webcam" },
-  ];
-
-  const [productDialogOpen, setProductDialogOpen] = useState(false);
-
   return (
     <DemoProvider window={demoWindow}>
       <AppProvider
@@ -131,7 +241,11 @@ function DashboardLayoutBasic(props) {
               alt="EGIE Logo"
             />
           ),
-          title: "EGIE Gameshop",
+          title: (
+            <span style={{ color: "#fff", fontWeight: 700 }}>
+              EGIE Gameshop
+            </span>
+          ),
           homeUrl: "/dashboard",
         }}
         theme={demoTheme}
@@ -150,35 +264,11 @@ function DashboardLayoutBasic(props) {
             <Route path="/orders" element={<Order />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/shipping" element={<Shipping />} />
+            <Route path="/shipping/view/:orderId" element={<Shipview />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/discount" element={<Promotions />} />
           </Routes>
         </DashboardLayout>
-        <Dialog
-          open={productDialogOpen}
-          onClose={() => setProductDialogOpen(false)}
-        >
-          <DialogTitle>Select a Product</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2}>
-              {premadeProducts.map((product) => (
-                <Button
-                  key={product.id}
-                  variant="outlined"
-                  onClick={() => {
-                    setProducts((prev) => [...prev, product.name]);
-                    setProductDialogOpen(false);
-                  }}
-                >
-                  {product.name}
-                </Button>
-              ))}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setProductDialogOpen(false)}>Cancel</Button>
-          </DialogActions>
-        </Dialog>
       </AppProvider>
     </DemoProvider>
   );

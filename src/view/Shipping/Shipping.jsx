@@ -24,6 +24,7 @@ import {
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
+import { useNavigate } from "react-router-dom";
 
 const mockShipments = [
   {
@@ -32,13 +33,46 @@ const mockShipments = [
     courier: "LALAMOVE",
     confirmation: "Completed",
     status: "Out for Delivery",
-    tat: "Online",
+    tat: "Ontime",
+  },
+  {
+    customer: "Jane Doe",
+    order: { name: "ASUS TUF Gaming F15", code: "T425858101" },
+    courier: "J&T Express",
+    confirmation: "Pending",
+    status: "Processing",
+    tat: "Delayed",
+  },
+  {
+    customer: "John Smith",
+    order: { name: "Acer Aspire 5", code: "T425858102" },
+    courier: "LBC",
+    confirmation: "Completed",
+    status: "Delivered",
+    tat: "Early",
+  },
+  {
+    customer: "Maria Clara",
+    order: { name: "HP Pavilion x360", code: "T425858103" },
+    courier: "Grab Express",
+    confirmation: "Completed",
+    status: "Out for Delivery",
+    tat: "Ontime",
+  },
+  {
+    customer: "Carlos Reyes",
+    order: { name: "Dell Inspiron 15", code: "T425858104" },
+    courier: "LALAMOVE",
+    confirmation: "Pending",
+    status: "Processing",
+    tat: "Delayed",
   },
 ];
 
 const Shipping = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuRow, setMenuRow] = useState(null);
+  const navigate = useNavigate();
 
   const handleMenuOpen = (event, rowIdx) => {
     setAnchorEl(event.currentTarget);
@@ -104,7 +138,26 @@ const Shipping = () => {
         <TextField
           size="small"
           placeholder="Search item"
-          sx={{ bgcolor: "#fff", borderRadius: 1, mr: 2, width: 220 }}
+          variant="outlined"
+          sx={{
+            bgcolor: "#fff",
+            borderRadius: 1,
+            mr: 2,
+            width: 220,
+            "& .MuiInputBase-input": {
+              color: "#000", // Input text color
+            },
+            "& .MuiInputBase-root": {
+              color: "#000", // Icon and text color
+            },
+            "& .MuiInputAdornment-root svg": {
+              color: "#000", // Icon color
+            },
+            "& .MuiInputBase-input::placeholder": {
+              color: "#666", // Placeholder color
+              opacity: 1, // Required for placeholder color to take effect
+            },
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -113,6 +166,7 @@ const Shipping = () => {
             ),
           }}
         />
+
         <Button
           variant="contained"
           startIcon={<FilterListIcon />}
@@ -127,9 +181,7 @@ const Shipping = () => {
           Filters
         </Button>
       </Box>
-      <Typography variant="h6" fontWeight={600} mb={2} align="center">
-        Recent Shipments
-      </Typography>
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -163,16 +215,8 @@ const Shipping = () => {
                 <TableCell>{row.customer}</TableCell>
                 <TableCell>
                   <Box>
-                    <a
-                      href="#"
-                      style={{
-                        color: "#1976d2",
-                        fontWeight: 600,
-                        textDecoration: "underline",
-                      }}
-                    >
-                      {row.order.name}
-                    </a>
+                    {row.order.name}
+
                     <br />
                     <Typography variant="caption" color="text.secondary">
                       {row.order.code}
@@ -210,7 +254,18 @@ const Shipping = () => {
                   <Chip
                     label={row.tat}
                     size="small"
-                    sx={{ bgcolor: "#6EFF6E", color: "#000", fontWeight: 700 }}
+                    sx={{
+                      bgcolor:
+                        row.tat === "Ontime"
+                          ? "#6EFF6E"
+                          : row.tat === "Early"
+                            ? "#2196f3"
+                            : row.tat === "Delayed"
+                              ? "#FF2D2D"
+                              : undefined,
+                      color: row.tat === "Early" ? "#fff" : "#000",
+                      fontWeight: 700,
+                    }}
                   />
                 </TableCell>
                 <TableCell>
@@ -222,7 +277,14 @@ const Shipping = () => {
                     open={Boolean(anchorEl) && menuRow === idx}
                     onClose={handleMenuClose}
                   >
-                    <MenuItem onClick={handleMenuClose}>View Details</MenuItem>
+                    <MenuItem
+                      onClick={() => {
+                        handleMenuClose();
+                        navigate(`/shipping/view/${row.order.code}`);
+                      }}
+                    >
+                      View Details
+                    </MenuItem>
                     <MenuItem onClick={handleMenuClose}>Delete</MenuItem>
                   </Menu>
                 </TableCell>
