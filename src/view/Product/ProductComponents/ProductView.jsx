@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 const ProductView = () => {
   const { state } = useLocation();
@@ -27,12 +28,22 @@ const ProductView = () => {
     description = "",
     component = "",
     warranty = "",
-    officialPrice = "",
-    initialPrice = "",
     discount = 0,
     variants = [],
     stock = 0,
+    isEditMode = false,
   } = state;
+
+  // Calculate price range from variants
+  const priceRange = useMemo(() => {
+    if (variants.length === 0) return { min: 0, max: 0 };
+
+    const prices = variants.map((v) => Number(v.price) || 0);
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+    };
+  }, [variants]);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -50,6 +61,14 @@ const ProductView = () => {
 
   return (
     <Box maxWidth={1000} mx="auto" mt={3}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate("/products")}
+        sx={{ mb: 2 }}
+        variant="outlined"
+      >
+        Return
+      </Button>
       <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
         {/* Images */}
         <Box>
@@ -95,7 +114,8 @@ const ProductView = () => {
             />
           </Stack>
           <Typography variant="h5" color="primary" fontWeight={700} mb={1}>
-            ₱{officialPrice} {initialPrice && `- ₱${initialPrice}`}
+            ₱{priceRange.min.toLocaleString()} - ₱
+            {priceRange.max.toLocaleString()}
           </Typography>
           <Typography variant="body1" color="text.secondary" mb={1}>
             Discount: {discount}%
@@ -109,19 +129,41 @@ const ProductView = () => {
           </Typography>
           {variants.length > 0 && (
             <Box mb={2}>
-              <Typography variant="body2" fontWeight={600} mb={0.5}>
+              <Typography variant="body2" fontWeight={600} mb={1}>
                 Variants:
               </Typography>
-              <Stack direction="row" spacing={1}>
-                {variants.map((v, i) => (
-                  <Chip key={i} label={v} />
+              <Stack spacing={1}>
+                {variants.map((variant, idx) => (
+                  <Box
+                    key={idx}
+                    sx={{
+                      p: 1.5,
+                      border: "1px solid #e0e0e0",
+                      borderRadius: 1,
+                      bgcolor: "#fafafa",
+                    }}
+                  >
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" fontWeight={500}>
+                        {variant.name || `Variant ${idx + 1}`}
+                      </Typography>
+                      <Stack direction="row" spacing={2}>
+                        <Typography variant="body2" color="text.secondary">
+                          Price: ₱{variant.price}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Stock: {variant.stock} pcs.
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Box>
                 ))}
               </Stack>
             </Box>
           )}
         </Box>
       </Stack>
-      <Paper sx={{ mt: 4, p: 3 }}>
+      <Paper sx={{ mt: 4, p: 3, mb: 4 }}>
         <Typography variant="h6" mb={2}>
           Product Description
         </Typography>
@@ -132,28 +174,45 @@ const ProductView = () => {
         <Typography variant="h6" mb={2}>
           Product Specifications
         </Typography>
-        <Typography variant="body2">
-          Component: {component || "-"}
-          <br />
-          Warranty: {warranty || "-"}
-          <br />
-          Official Price: ₱{officialPrice}
-          <br />
-          Initial Price: {initialPrice ? `₱${initialPrice}` : "-"}
-          <br />
-          Discount: {discount}%
-          <br />
-          Stock: {stock} pcs.
-        </Typography>
+        <Stack spacing={1}>
+          <Typography variant="body2">Component: {component || "-"}</Typography>
+          <Typography variant="body2">Warranty: {warranty || "-"}</Typography>
+          <Typography variant="body2">
+            Price Range: ₱{priceRange.min.toLocaleString()} - ₱
+            {priceRange.max.toLocaleString()}
+          </Typography>
+          <Typography variant="body2">Discount: {discount}%</Typography>
+          <Typography variant="body2">Total Stock: {stock} pcs.</Typography>
+          {variants.length > 0 && (
+            <>
+              <Typography variant="body2" fontWeight={600} sx={{ mt: 1 }}>
+                Variants:
+              </Typography>
+              {variants.map((variant, idx) => (
+                <Box key={idx} sx={{ pl: 2 }}>
+                  <Typography variant="body2">
+                    • {variant.name || `Variant ${idx + 1}`}:
+                    <br />
+                    &nbsp;&nbsp;Price: ₱{variant.price}
+                    <br />
+                    &nbsp;&nbsp;Stock: {variant.stock} pcs.
+                  </Typography>
+                </Box>
+              ))}
+            </>
+          )}
+        </Stack>
       </Paper>
-      <Button
-        variant="contained"
-        color="primary"
-        sx={{ mt: 4, width: 200, mx: "auto", display: "block" }}
-        onClick={handleOpenDialog}
-      >
-        Publish
-      </Button>
+      {isEditMode && (
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mt: 4, mb: 4, width: "100%", mx: "auto", display: "block" }}
+          onClick={handleOpenDialog}
+        >
+          Publish
+        </Button>
+      )}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Confirm Publish</DialogTitle>
         <DialogContent>

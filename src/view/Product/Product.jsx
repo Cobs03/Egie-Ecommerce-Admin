@@ -7,14 +7,13 @@ import {
   Tabs,
   Tab,
   InputAdornment,
+  Typography
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import Inventory from "./ProductComponents/Inventory";
 import LowStock from "./ProductComponents/LowStock";
 import { useNavigate } from "react-router-dom";
-import BundleCreate from "../Product/ProductComponents/BundleCreate";
-import BundleView from "../Product/ProductComponents/BundleView";
 import Bundles from "./ProductComponents/Bundles";
 const Product = () => {
   const [tab, setTab] = useState(() => {
@@ -31,6 +30,10 @@ const Product = () => {
 
   return (
     <Box p={2}>
+      <Typography variant="h5" fontWeight={700} mb={2}>
+        Product Management
+      </Typography>
+      
       <Stack direction="row" spacing={1} alignItems="center" mb={1}>
         <TextField
           size="small"

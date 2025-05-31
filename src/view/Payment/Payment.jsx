@@ -256,7 +256,7 @@ const Payment = () => {
             width: 370,
             maxWidth: "100vw",
             p: 2,
-            border: "2px solid #2196f3",
+            bgcolor: "#f5f5f5",
           },
         }}
       >
@@ -284,9 +284,7 @@ const Payment = () => {
             <Typography fontSize={15} fontWeight={700}>
               {payerInfo.name}
             </Typography>
-            <Typography fontSize={14}>
-              {payerInfo.email}
-            </Typography>
+            <Typography fontSize={14}>{payerInfo.email}</Typography>
             <Typography fontSize={14}>
               <b>Phone:</b> {payerInfo.phone}
             </Typography>
@@ -350,7 +348,7 @@ const Payment = () => {
         anchor="right"
         open={orderDrawerOpen}
         onClose={handleOrderDrawerClose}
-        PaperProps={{ sx: { width: 400, p: 3 } }}
+        PaperProps={{ sx: { width: 400, p: 3, bgcolor: "#f5f5f5" } }}
       >
         <Box
           display="flex"

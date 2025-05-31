@@ -13,11 +13,12 @@ import MostClicked from "./Dash_Components/MostClicked";
 import TopProduct from "./Dash_Components/TopProduct";
 import PaymentStatus from "./Dash_Components/PaymentStatus";
 import RecentOrders from "./Dash_Components/RecentOrders";
+import { Typography } from "@mui/material";
 
 const Dashboard = () => {
   return (
     <div style={{ padding: 24, background: "#f5f5f5", minHeight: "100vh" }}>
-      <h1 style={{ fontSize: "2.5rem", fontWeight:"700" }}>Dashboard</h1>
+            <Typography variant="h5" fontWeight={700} mb={2}>Dashboard</Typography>
       <hr />
       <div
         style={{

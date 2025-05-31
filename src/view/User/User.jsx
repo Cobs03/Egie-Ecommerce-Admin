@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Typography,
@@ -25,6 +25,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import GroupIcon from "@mui/icons-material/Group";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import {
   MoreVert,
   Search,
@@ -81,6 +82,8 @@ const User = () => {
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
   const [promotionRole, setPromotionRole] = useState(null);
   const [usersList, setUsersList] = useState(users);
+  const fileInputRef = useRef();
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const handleFilterClick = (event) => {
     setFilterAnchorEl(event.currentTarget);
@@ -179,6 +182,14 @@ const User = () => {
       if (sortOrder === "Z-A") return b.name.localeCompare(a.name);
       return 0;
     });
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setSelectedImage(imageUrl);
+    }
+  };
 
   return (
     <Box p={4}>
@@ -337,7 +348,7 @@ const User = () => {
         anchor="right"
         open={isDrawerOpen}
         onClose={handleDrawerClose}
-        PaperProps={{ sx: { width: 300, p: 2 } }}
+        PaperProps={{ sx: { width: 300, p: 2, bgcolor: "#f5f5f5" } }}
       >
         {selectedUser && (
           <>
@@ -417,7 +428,7 @@ const User = () => {
         anchor="left"
         open={isAddUserDrawerOpen}
         onClose={handleAddUserDrawerClose}
-        PaperProps={{ sx: { width: 400, p: 3 } }}
+        PaperProps={{ sx: { width: 400, p: 3, bgcolor: "#f5f5f5" } }}
       >
         <Box
           display="flex"
@@ -439,19 +450,46 @@ const User = () => {
             <Typography variant="subtitle2" gutterBottom>
               Profile Picture
             </Typography>
-            <Box
-              sx={{
-                width: 100,
-                height: 100,
-                border: "2px dashed #ccc",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              <AddIcon />
+            <Box position="relative" display="inline-block">
+              <Avatar
+                src={selectedImage}
+                sx={{
+                  width: 100,
+                  height: 100,
+                  border: "2px dashed #ccc",
+                  cursor: "pointer",
+                  "&:hover": {
+                    opacity: 0.8,
+                  },
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {!selectedImage && <AddIcon />}
+              </Avatar>
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+              />
+              <IconButton
+                size="small"
+                sx={{
+                  position: "absolute",
+                  bottom: -8,
+                  right: -8,
+                  bgcolor: "white",
+                  boxShadow: 1,
+                  p: 0.5,
+                  "&:hover": {
+                    bgcolor: "white",
+                  },
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <AddPhotoAlternateIcon fontSize="small" color="primary" />
+              </IconButton>
             </Box>
           </Box>
 

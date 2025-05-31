@@ -424,7 +424,7 @@ const Order = () => {
         anchor="right"
         open={isDrawerOpen}
         onClose={handleDrawerClose}
-        PaperProps={{ sx: { width: 400, p: 3 } }}
+        PaperProps={{ sx: { width: 400, p: 3, bgcolor: "#f5f5f5" } }}
       >
         <OrderShip
           visible={showShipModal}

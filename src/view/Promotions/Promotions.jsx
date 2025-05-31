@@ -11,6 +11,9 @@ import {
   MenuItem,
   Stack,
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -222,111 +225,138 @@ const Promotions = () => {
           sx: { borderRadius: 4, p: 2, minWidth: 370, maxWidth: 420 },
         }}
       >
-        <Box p={2} sx={{ width: 370 }}>
-          <Typography variant="h5" fontWeight="bold" align="center" mb={2}>
-            {isAddMode ? "Add Voucher" : "Edit Voucher"}
+        <DialogTitle>
+          <Typography variant="h6" fontWeight="bold">
+            {isAddMode ? "Create New Voucher" : "Edit Voucher"}
           </Typography>
-          <Stack spacing={2}>
-            <TextField
-              label="Name"
-              fullWidth
-              defaultValue={editVoucher?.name || ""}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            />
-            <TextField
-              label="Code"
-              fullWidth
-              inputProps={{ maxLength: 6 }}
-              defaultValue={editVoucher?.code || ""}
-              helperText="6 characters"
-              InputProps={{ sx: { borderRadius: 2 } }}
-            />
-            <TextField
-              label="Price"
-              fullWidth
-              defaultValue={editVoucher?.price || ""}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            />
-            <Stack direction="row" spacing={1} alignItems="center">
+        </DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              maxHeight: "calc(100vh - 300px)",
+              overflowY: "auto",
+              pr: 1, // Add some padding for the scrollbar
+              "&::-webkit-scrollbar": {
+                width: "8px",
+              },
+              "&::-webkit-scrollbar-track": {
+                background: "#f1f1f1",
+                borderRadius: "4px",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                background: "#888",
+                borderRadius: "4px",
+                "&:hover": {
+                  background: "#555",
+                },
+              },
+            }}
+          >
+            <Stack spacing={2}>
               <TextField
-                label="Active"
-                placeholder="01/01/01"
+                label="Name"
                 fullWidth
+                defaultValue={editVoucher?.name || ""}
                 InputProps={{ sx: { borderRadius: 2 } }}
               />
-              <Typography>to</Typography>
               <TextField
-                placeholder="01/01/01"
+                label="Code"
                 fullWidth
+                inputProps={{ maxLength: 6 }}
+                defaultValue={editVoucher?.code || ""}
+                helperText="6 characters"
                 InputProps={{ sx: { borderRadius: 2 } }}
               />
+              <TextField
+                label="Price"
+                fullWidth
+                defaultValue={editVoucher?.price || ""}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TextField
+                  label="Active"
+                  placeholder="01/01/01"
+                  fullWidth
+                  InputProps={{ sx: { borderRadius: 2 } }}
+                />
+                <Typography>to</Typography>
+                <TextField
+                  placeholder="01/01/01"
+                  fullWidth
+                  InputProps={{ sx: { borderRadius: 2 } }}
+                />
+              </Stack>
+              <TextField
+                label="Limit"
+                fullWidth
+                defaultValue={editVoucher?.limit || ""}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+              <Box mt={1}>
+                <Typography fontSize={14} fontWeight="bold" mb={0.5}>
+                  📝 Reminder: How to Create a Valid Voucher
+                </Typography>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                  <li style={{ color: "red" }}>
+                    Fill in Name, Code, Price, Active Dates, and Limit.
+                  </li>
+                  <li style={{ color: "red" }}>
+                    The Code must be 6 characters long.
+                  </li>
+                  <li style={{ color: "red" }}>
+                    Make sure Price and Limit are numeric and not empty.
+                  </li>
+                  <li style={{ color: "red" }}>
+                    Select a valid start and end date (future or current date).
+                  </li>
+                  <li style={{ color: "red" }}>
+                    Double-check all fields before clicking{" "}
+                    {isAddMode ? "Create" : "Save Changes"}.
+                  </li>
+                </ul>
+                <Typography fontSize={13} color="text.secondary" mt={1}>
+                  <b>
+                    Only click {isAddMode ? "Create" : "Save Changes"} when all
+                    fields are accurate and intentional.
+                  </b>
+                </Typography>
+              </Box>
             </Stack>
-            <TextField
-              label="Limit"
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Stack direction="row" spacing={2} width="100%">
+            <Button
+              variant="contained"
               fullWidth
-              defaultValue={editVoucher?.limit || ""}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            />
-            <Stack direction="row" spacing={2} mt={1}>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={handleEditDialogClose}
-                sx={{
-                  background: "#F44336",
-                  color: "#fff",
-                  borderRadius: 2,
-                  fontWeight: "bold",
-                  "&:hover": { background: "#d32f2f" },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{
-                  background: "#27EF3C",
-                  color: "#fff",
-                  borderRadius: 2,
-                  fontWeight: "bold",
-                  "&:hover": { background: "#1ec32e" },
-                }}
-              >
-                {isAddMode ? "Create" : "Save Changes"}
-              </Button>
-            </Stack>
-            <Box mt={1}>
-              <Typography fontSize={14} fontWeight="bold" mb={0.5}>
-                📝 Reminder: How to Create a Valid Voucher
-              </Typography>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
-                <li style={{ color: "red" }}>
-                  Fill in Name, Code, Price, Active Dates, and Limit.
-                </li>
-                <li style={{ color: "red" }}>
-                  The Code must be 6 characters long.
-                </li>
-                <li style={{ color: "red" }}>
-                  Make sure Price and Limit are numeric and not empty.
-                </li>
-                <li style={{ color: "red" }}>
-                  Select a valid start and end date (future or current date).
-                </li>
-                <li style={{ color: "red" }}>
-                  Double-check all fields before clicking{" "}
-                  {isAddMode ? "Create" : "Save Changes"}.
-                </li>
-              </ul>
-              <Typography fontSize={13} color="text.secondary" mt={1}>
-                <b>
-                  Only click {isAddMode ? "Create" : "Save Changes"} when all
-                  fields are accurate and intentional.
-                </b>
-              </Typography>
-            </Box>
+              onClick={handleEditDialogClose}
+              sx={{
+                background: "#F44336",
+                color: "#fff",
+                borderRadius: 2,
+                fontWeight: "bold",
+                "&:hover": { background: "#d32f2f" },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleEditDialogClose}
+              sx={{
+                background: "#27EF3C",
+                color: "#fff",
+                borderRadius: 2,
+                fontWeight: "bold",
+                "&:hover": { background: "#1ec32e" },
+              }}
+            >
+              {isAddMode ? "Create" : "Save Changes"}
+            </Button>
           </Stack>
-        </Box>
+        </DialogActions>
       </Dialog>
 
       <Dialog

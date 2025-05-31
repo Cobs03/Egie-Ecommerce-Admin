@@ -182,11 +182,17 @@ const LowStock = () => {
         anchor="right"
         open={drawerOpen}
         onClose={handleDrawerClose}
-        PaperProps={{ sx: { width: 350, p: 3 } }}
+        PaperProps={{
+          sx: {
+            width: 350,
+            p: 3,
+            bgcolor: "#f5f5f5", // Light gray background
+          },
+        }}
       >
         {currentSelectedProduct && (
           <Box p={3}>
-            <Typography variant="h6" mb={2}>
+            <Typography variant="h6" mb={2} mt={5}>
               Update Stock
             </Typography>
             <Box display="flex" alignItems="center" mb={2}>

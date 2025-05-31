@@ -227,23 +227,30 @@ const Shipping = () => {
                 <TableCell>
                   <Chip
                     label={row.confirmation}
-                    color="success"
+                    color={
+                      row.confirmation === "Pending" ? "warning" : "success"
+                    }
                     size="small"
                     icon={
                       <span
                         style={{
-                          color: "#00C853",
+                          color:
+                            row.confirmation === "Pending"
+                              ? "#FF9800"
+                              : "#00C853",
                           fontWeight: 700,
                           fontSize: 18,
                         }}
                       >
-                        ✔
+                        {row.confirmation === "Pending" ? "-" : "✔"}
                       </span>
                     }
                     sx={{
                       fontWeight: 700,
-                      bgcolor: "#E8F5E9",
-                      color: "#00C853",
+                      bgcolor:
+                        row.confirmation === "Pending" ? "#FFF3E0" : "#E8F5E9",
+                      color:
+                        row.confirmation === "Pending" ? "#FF9800" : "#00C853",
                     }}
                   />
                 </TableCell>

@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import ScrollToTop from "./view/Components/ScrollToTop";
 import DashboardLayoutBasic from "./view/Components/Navbar";
-import Login from "./view/LogIn/Login";
+import SignIn from "./view/SignIn/SignIn";
 
 function App() {
   return (
@@ -15,7 +15,7 @@ function App() {
       <ScrollToTop />
       <Routes>
         {/* Public route */}
-        <Route path="/auth" element={<Login />} />
+        <Route path="/auth" element={<SignIn />} />
 
         {/* Admin dashboard - catch all nested paths */}
         <Route path="/*" element={<DashboardLayoutBasic />} />

@@ -37,7 +37,12 @@ const Inventory = () => {
 
   const handleViewProduct = () => {
     const product = products.find((p) => p.id === menuProductId);
-    navigate("/products/view", { state: product });
+    navigate("/products/view", {
+      state: {
+        ...product,
+        isEditMode: false, // Explicitly set to false for inventory view
+      },
+    });
     handleMenuClose();
   };
 

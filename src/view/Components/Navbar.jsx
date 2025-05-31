@@ -1,18 +1,10 @@
 import * as React from "react";
 import PropTypes from "prop-types";
-import { createTheme } from "@mui/material/styles";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@mui/material";
 import { Stack } from "@mui/material";
 import { Button } from "@mui/material";
 import { useState } from "react";
-
+import { useNavigate } from "react-router-dom";
 import { Routes, Route, Navigate } from "react-router-dom";
-
 import {
   MdOutlineDashboard,
   MdOutlineLocalShipping,
@@ -22,11 +14,13 @@ import { TbPackage } from "react-icons/tb";
 import { FaUserGroup, FaRegCreditCard } from "react-icons/fa6";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
-
 import { AppProvider } from "@toolpad/core/AppProvider";
 import { DashboardLayout } from "@toolpad/core/DashboardLayout";
 import { DemoProvider } from "@toolpad/core/internal";
+import { theme } from "../../theme/theme";
+import ScrollToTop from "./ScrollToTop";
 
+// Import all necessary components
 import Dashboard from "../Dashboard/dashboard";
 import Product from "../Product/Product";
 import ProductCreate from "../Product/ProductComponents/ProductCreate";
@@ -40,7 +34,6 @@ import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipview";
-import ScrollToTop from "./ScrollToTop";
 
 const NAVIGATION = [
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard /> },
@@ -53,156 +46,9 @@ const NAVIGATION = [
   { segment: "discount", title: "Discount", icon: <RiDiscountPercentFill /> },
 ];
 
-const demoTheme = createTheme({
-  components: {
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          width: 280,
-          transition: "width 0.2s ease-in-out",
-          background: "#000",
-          color: "#fff",
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          backgroundColor: "#000",
-          color: "#000",
-          "& .MuiIconButton-root": {
-            color: "#fff",
-            padding: "8px",
-            "&:hover": {
-              backgroundColor: "rgba(34, 197, 94, 0.1)",
-              color: "#22c55e",
-            },
-            "& .MuiSvgIcon-root": {
-              fontSize: "24px",
-            },
-          },
-        },
-      },
-    },
-    MuiToolbar: {
-      styleOverrides: {
-        root: {
-          color: "#fff",
-        },
-      },
-    },
-    MuiTypography: {
-      styleOverrides: {
-        root: {
-          color: "#000",
-        },
-      },
-    },
-    MuiIconButton: {
-      styleOverrides: {
-        root: {
-          color: "#000",
-          "&.MuiAppBar-root .MuiIconButton-root": {
-            color: "#fff",
-            padding: "8px",
-            "&:hover": {
-              backgroundColor: "rgba(34, 197, 94, 0.1)",
-              color: "#22c55e",
-            },
-            "& .MuiSvgIcon-root": {
-              fontSize: "24px",
-            },
-          },
-        },
-      },
-    },
-    MuiListItemButton: {
-      styleOverrides: {
-        root: {
-          color: "#fff",
-          margin: "4px 8px",
-          borderRadius: "8px",
-          "&:hover": {
-            backgroundColor: "rgba(34, 197, 94, 0.1)",
-            color: "#22c55e",
-          },
-          "&.Mui-selected": {
-            backgroundColor: "#22c55e !important",
-            color: "#fff !important",
-            "&:hover": {
-              backgroundColor: "#16a34a !important",
-              color: "#fff !important",
-            },
-            "& .MuiListItemIcon-root": {
-              color: "#fff !important",
-            },
-            "& .MuiListItemText-primary": {
-              color: "#fff !important",
-            },
-          },
-        },
-      },
-    },
-    MuiListItemIcon: {
-      styleOverrides: {
-        root: {
-          color: "#fff",
-          minWidth: "40px",
-        },
-      },
-    },
-    MuiListItemText: {
-      styleOverrides: {
-        primary: {
-          color: "inherit",
-          fontWeight: 500,
-        },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: {
-          color: "#000",
-        },
-      },
-    },
-    MuiDialogTitle: {
-      styleOverrides: {
-        root: {
-          color: "#fff",
-        },
-      },
-    },
-    MuiDialogContent: {
-      styleOverrides: {
-        root: {
-          color: "#000",
-        },
-      },
-    },
-    MuiDialogActions: {
-      styleOverrides: {
-        root: {
-          color: "#fff",
-        },
-      },
-    },
-  },
-  palette: {
-    mode: "light",
-    primary: { main: "#000000" },
-    background: {
-      default: "#f5f5f5",
-      paper: "#ffffff",
-    },
-  },
-  breakpoints: {
-    values: { xs: 0, sm: 600, md: 600, lg: 1200, xl: 1536 },
-  },
-});
-
 function DashboardLayoutBasic(props) {
   const { window } = props;
+  const navigate = useNavigate();
 
   const [session, setSession] = React.useState({
     user: {
@@ -222,9 +68,12 @@ function DashboardLayoutBasic(props) {
             image: "https://avatars.githubusercontent.com/u/19550456",
           },
         }),
-      signOut: () => setSession(null),
+      signOut: () => {
+        setSession(null);
+        navigate("/auth");
+      },
     }),
-    []
+    [navigate]
   );
 
   const demoWindow = window !== undefined ? window() : undefined;
@@ -240,6 +89,7 @@ function DashboardLayoutBasic(props) {
             <img
               src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
               alt="EGIE Logo"
+              style={{ width: "100%", height: "auto", maxWidth: "150px" }}
             />
           ),
           title: (
@@ -249,7 +99,7 @@ function DashboardLayoutBasic(props) {
           ),
           homeUrl: "/dashboard",
         }}
-        theme={demoTheme}
+        theme={theme}
         window={demoWindow}
       >
         <DashboardLayout>

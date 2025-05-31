@@ -124,7 +124,7 @@ const BundleView = () => {
           </Typography>
         </Box>
       </Stack>
-      <Paper sx={{ mt: 4, p: 3 }}>
+      <Paper sx={{ mt: 4, p: 3, mb: 4 }}>
         <Typography variant="h6" mb={2}>
           Bundle Description
         </Typography>
@@ -169,7 +169,7 @@ const BundleView = () => {
           <Button
             variant="contained"
             color="primary"
-            sx={{ mt: 4, width: 200, mx: "auto", display: "block" }}
+            sx={{ mt: 4, width: 200, mx: "auto", display: "block", mb: 4}}
             onClick={handleOpenDialog}
           >
             Publish
