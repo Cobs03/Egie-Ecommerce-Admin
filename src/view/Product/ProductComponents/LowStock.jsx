@@ -259,7 +259,7 @@ const LowStock = () => {
         )}
       </Drawer>
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-        <DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>
           Confirm Stock {confirmType === "add" ? "Addition" : "Removal"}
         </DialogTitle>
         <DialogContent>
@@ -270,7 +270,11 @@ const LowStock = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)} color="inherit">
+          <Button
+            onClick={() => setConfirmOpen(false)}
+            color="inherit"
+            sx={{ color: "black" }}
+          >
             Cancel
           </Button>
           <Button
