@@ -146,7 +146,7 @@ const Inventory = () => {
               </TableCell>
               <TableCell align="right">
                 <IconButton onClick={(e) => handleMenuOpen(e, product.id)}>
-                  <MoreVertIcon />
+                  <MoreVertIcon className="text-black" />
                 </IconButton>
                 <Menu
                   anchorEl={anchorEl}

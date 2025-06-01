@@ -277,7 +277,7 @@ const Shipping = () => {
                 </TableCell>
                 <TableCell>
                   <IconButton onClick={(e) => handleMenuOpen(e, idx)}>
-                    <MoreVertIcon />
+                    <MoreVertIcon className="text-black" />
                   </IconButton>
                   <Menu
                     anchorEl={anchorEl}

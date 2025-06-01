@@ -226,7 +226,7 @@ const Payment = () => {
                 </TableCell>
                 <TableCell align="right">
                   <IconButton onClick={(e) => handleMenuOpen(e, row)}>
-                    <MoreVertIcon />
+                    <MoreVertIcon className="text-black" />
                   </IconButton>
                 </TableCell>
               </TableRow>
@@ -266,7 +266,7 @@ const Payment = () => {
           justifyContent="space-between"
           mb={1}
         >
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h6" fontWeight={700} color="black">
             Payment Details
           </Typography>
           <MuiIconButton onClick={handleDrawerClose}>
@@ -275,52 +275,59 @@ const Payment = () => {
         </Box>
         <Divider sx={{ mb: 2 }} />
         {/* Payer Information */}
-        <Typography fontWeight={700} mb={1}>
+        <Typography
+          fontWeight={700}
+          mb={1}
+          color="black"
+          sx={{ fontWeight: 600, fontSize: 26 }}
+        >
           Payer Information
         </Typography>
         <Box display="flex" alignItems="center" mb={1}>
           <Avatar sx={{ width: 40, height: 40, mr: 2 }} />
           <Box>
-            <Typography fontSize={15} fontWeight={700}>
+            <Typography fontSize={15} fontWeight={700} color="black">
               {payerInfo.name}
             </Typography>
-            <Typography fontSize={14}>{payerInfo.email}</Typography>
-            <Typography fontSize={14}>
+            <Typography fontSize={14} color="black">
+              {payerInfo.email}
+            </Typography>
+            <Typography fontSize={14} color="black">
               <b>Phone:</b> {payerInfo.phone}
             </Typography>
           </Box>
         </Box>
-        <Typography fontSize={14} mb={2}>
+        <Typography fontSize={14} mb={2} color="black">
           <b>Address:</b> {payerInfo.address}
         </Typography>
         <Divider sx={{ mb: 2 }} />
         {/* Payment Details */}
-        <Typography fontWeight={700} mb={1}>
+        <Typography fontWeight={700} mb={1} color="black">
           Payment Details
         </Typography>
-        <Typography fontSize={14}>
+        <Typography fontSize={14} color="black">
           <b>Order ID:</b> {paymentDetail.orderId}
         </Typography>
-        <Typography fontSize={14}>
+        <Typography fontSize={14} color="black">
           <b>Transaction ID:</b> {paymentDetail.transactionId}
         </Typography>
-        <Typography fontSize={14}>
+        <Typography fontSize={14} color="black">
           <b>Date Ordered:</b> {paymentDetail.dateOrdered}
         </Typography>
-        <Typography fontSize={14}>
+        <Typography fontSize={14} color="black">
           <b>Estimated Delivery Date:</b> {paymentDetail.estimatedDelivery}
         </Typography>
-        <Typography fontSize={14} mb={1}>
+        <Typography fontSize={14} mb={1} color="black">
           <b>Total Amount:</b> {paymentDetail.totalAmount}
         </Typography>
         <Divider sx={{ mb: 2 }} />
-        <Typography fontSize={14}>
+        <Typography fontSize={14} color="black">
           <b>Delivery Option:</b> {paymentDetail.deliveryOption}
         </Typography>
-        <Typography fontSize={14}>
+        <Typography fontSize={14} color="black">
           <b>Payment Method:</b> {paymentDetail.paymentMethod}
         </Typography>
-        <Typography fontSize={14} mb={2}>
+        <Typography fontSize={14} mb={2} color="black">
           <b>Payment Status:</b> {paymentDetail.paymentStatus}
         </Typography>
         <Button
@@ -356,42 +363,49 @@ const Payment = () => {
           justifyContent="space-between"
           mb={3}
         >
-          <Typography variant="h6">Order Details</Typography>
+          <Typography variant="h6" color="black">
+            Order Details
+          </Typography>
           <MuiIconButton onClick={handleOrderDrawerClose}>
             <CloseIcon />
           </MuiIconButton>
         </Box>
         <Stack spacing={3}>
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+              color="black"
+              sx={{ fontWeight: 600, fontSize: 26 }}
+            >
               Order Information
             </Typography>
-            <Typography>Order ID: #{mockOrder.id}</Typography>
-            <Typography>Date: {mockOrder.date}</Typography>
-            <Typography>Status: {mockOrder.status}</Typography>
+            <Typography color="black">Order ID: #{mockOrder.id}</Typography>
+            <Typography color="black">Date: {mockOrder.date}</Typography>
+            <Typography color="black">Status: {mockOrder.status}</Typography>
           </Box>
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" gutterBottom color="black">
               Customer Information
             </Typography>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar src={mockOrder.customer.avatar} />
               <Box>
-                <Typography>{mockOrder.customer.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography color="black">{mockOrder.customer.name}</Typography>
+                <Typography variant="body2" color="black">
                   {mockOrder.customer.email}
                 </Typography>
               </Box>
             </Stack>
           </Box>
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" gutterBottom color="black">
               Shipping Address
             </Typography>
-            <Typography>{mockOrder.shippingAddress}</Typography>
+            <Typography color="black">{mockOrder.shippingAddress}</Typography>
           </Box>
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" gutterBottom color="black">
               Products
             </Typography>
             {mockOrder.products.map((product, index) => (
@@ -399,9 +413,9 @@ const Payment = () => {
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar src={product.image} variant="rounded" />
                   <Box flex={1}>
-                    <Typography>{product.name}</Typography>
+                    <Typography color="black">{product.name}</Typography>
                     <Stack direction="row" spacing={2} alignItems="center">
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="black">
                         Quantity: {product.quantity}
                       </Typography>
                       <Typography
@@ -416,14 +430,18 @@ const Payment = () => {
                       </Typography>
                     </Stack>
                   </Box>
-                  <Typography>₱{product.price.toFixed(2)}</Typography>
+                  <Typography color="black">
+                    ₱{product.price.toFixed(2)}
+                  </Typography>
                 </Stack>
               </Box>
             ))}
             <Divider sx={{ my: 2 }} />
             <Box display="flex" justifyContent="space-between">
-              <Typography variant="subtitle1">Total</Typography>
-              <Typography variant="subtitle1">
+              <Typography variant="subtitle1" color="black">
+                Total
+              </Typography>
+              <Typography variant="subtitle1" color="black">
                 ₱{mockOrder.total.toFixed(2)}
               </Typography>
             </Box>

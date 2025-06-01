@@ -72,7 +72,7 @@ const Feedback = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
+      <Typography variant="h5" fontWeight="bold" gutterBottom>
         Feedback
       </Typography>
       <Tabs value={tab} onChange={handleTabChange} aria-label="feedback tabs">

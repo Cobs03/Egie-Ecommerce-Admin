@@ -309,10 +309,22 @@ const Order = () => {
         Order Management
       </Typography>
 
-      <Grid container justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="subtitle1">
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={2}
+        p={1}
+        bgcolor="#000"
+        borderRadius={2}
+        boxShadow={1}
+      >
+        <Button
+          variant="subtitle1"
+          sx={{ bgcolor: "#00E676", color: "#000", fontWeight: 700, mr: 2 }}
+        >
           All Orders ({filteredOrders.length})
-        </Typography>
+        </Button>
         <Stack direction="row" spacing={1}>
           <TextField
             size="small"
@@ -322,12 +334,22 @@ const Order = () => {
             InputProps={{
               startAdornment: <Search fontSize="small" sx={{ mr: 1 }} />,
             }}
+            sx={{ bgcolor: "#fff", color: "#000", input: { color: "#000" } }}
           />
-          <Button variant="outlined" startIcon={<FilterList />}>
+          <Button
+            variant="outlined"
+            startIcon={<FilterList />}
+            sx={{
+              bgcolor: "#fff",
+              color: "#000",
+              borderColor: "#000",
+              "&:hover": { bgcolor: "#f5f5f5", borderColor: "#000" },
+            }}
+          >
             Filters
           </Button>
         </Stack>
-      </Grid>
+      </Box>
 
       <Tabs
         value={selectedTab}
@@ -459,7 +481,9 @@ const Order = () => {
               justifyContent="space-between"
               mb={3}
             >
-              <Typography variant="h6">Order Details</Typography>
+              <Typography variant="h6" color="black">
+                Order Details
+              </Typography>
               <IconButton onClick={handleDrawerClose}>
                 <CloseIcon />
               </IconButton>
@@ -467,23 +491,36 @@ const Order = () => {
 
             <Stack spacing={3}>
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography
+                  variant="subtitle2"
+                  gutterBottom
+                  color="black"
+                  sx={{ fontWeight: 600, fontSize: 26 }}
+                >
                   Order Information
                 </Typography>
-                <Typography>Order ID: #{selectedOrder.id}</Typography>
-                <Typography>Date: {selectedOrder.date}</Typography>
-                <Typography>Status: {selectedOrder.status}</Typography>
+                <Typography color="black">
+                  Order ID: #{selectedOrder.id}
+                </Typography>
+                <Typography color="black">
+                  Date: {selectedOrder.date}
+                </Typography>
+                <Typography color="black">
+                  Status: {selectedOrder.status}
+                </Typography>
               </Box>
 
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" gutterBottom color="black">
                   Customer Information
                 </Typography>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar src={selectedOrder.customer.avatar} />
                   <Box>
-                    <Typography>{selectedOrder.customer.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography color="black">
+                      {selectedOrder.customer.name}
+                    </Typography>
+                    <Typography variant="body2" color="black">
                       {selectedOrder.customer.email}
                     </Typography>
                   </Box>
@@ -491,12 +528,12 @@ const Order = () => {
               </Box>
 
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" gutterBottom color="black">
                   {selectedOrder.deliveryType === "store_pickup"
                     ? "Pickup Information"
                     : "Shipping Address"}
                 </Typography>
-                <Typography>
+                <Typography color="black">
                   {selectedOrder.deliveryType === "store_pickup"
                     ? "Store Pickup"
                     : selectedOrder.shippingAddress}
@@ -504,7 +541,7 @@ const Order = () => {
               </Box>
 
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" gutterBottom color="black">
                   Products
                 </Typography>
                 {selectedOrder.products.map((product, index) => (
@@ -512,9 +549,9 @@ const Order = () => {
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Avatar src={product.image} variant="rounded" />
                       <Box flex={1}>
-                        <Typography>{product.name}</Typography>
+                        <Typography color="black">{product.name}</Typography>
                         <Stack direction="row" spacing={2} alignItems="center">
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="black">
                             Quantity: {product.quantity}
                           </Typography>
                           <Typography
@@ -529,14 +566,18 @@ const Order = () => {
                           </Typography>
                         </Stack>
                       </Box>
-                      <Typography>${product.price.toFixed(2)}</Typography>
+                      <Typography color="black">
+                        ${product.price.toFixed(2)}
+                      </Typography>
                     </Stack>
                   </Box>
                 ))}
                 <Divider sx={{ my: 2 }} />
                 <Box display="flex" justifyContent="space-between">
-                  <Typography variant="subtitle1">Total</Typography>
-                  <Typography variant="subtitle1">
+                  <Typography variant="subtitle1" color="black">
+                    Total
+                  </Typography>
+                  <Typography variant="subtitle1" color="black">
                     ${selectedOrder.total.toFixed(2)}
                   </Typography>
                 </Box>

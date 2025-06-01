@@ -33,8 +33,17 @@ const Product = () => {
       <Typography variant="h5" fontWeight={700} mb={2}>
         Product Management
       </Typography>
-      
-      <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={2}
+        p={1}
+        bgcolor="#000"
+        borderRadius={2}
+        boxShadow={1}
+      >
         <TextField
           size="small"
           placeholder="Search Product"
@@ -51,26 +60,32 @@ const Product = () => {
         <Button
           variant="outlined"
           startIcon={<FilterListIcon />}
-          sx={{ minWidth: 90 }}
+          sx={{
+            bgcolor: "#fff",
+            color: "#000",
+            borderColor: "#000",
+            "&:hover": { bgcolor: "#f5f5f5", borderColor: "#000" },
+            ml: 1,
+          }}
         >
           Filter
         </Button>
         <Box flex={1} />
         <Button
           variant="contained"
-          sx={{ bgcolor: "#1976d2", color: "#fff", mr: 1, minWidth: 120 }}
+          sx={{ bgcolor: "#00E676", color: "#000", mr: 1, minWidth: 120, fontWeight: 700 }}
           onClick={() => navigate("/bundles/create")}
         >
           Add Bundle
         </Button>
         <Button
           variant="contained"
-          sx={{ bgcolor: "#1976d2", color: "#fff", minWidth: 120 }}
+          sx={{ bgcolor: "#00E676", color: "#000", minWidth: 120, fontWeight: 700 }}
           onClick={() => navigate("/products/create")}
         >
           Add Product
         </Button>
-      </Stack>
+      </Box>
       <Tabs
         value={tab}
         onChange={handleTabChange}

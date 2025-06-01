@@ -91,7 +91,7 @@ const Bundles = () => {
               </TableCell>
               <TableCell>
                 <IconButton onClick={(e) => handleMenuOpen(e, bundle)}>
-                  <MoreVertIcon />
+                  <MoreVertIcon className="text-black" />
                 </IconButton>
               </TableCell>
             </TableRow>

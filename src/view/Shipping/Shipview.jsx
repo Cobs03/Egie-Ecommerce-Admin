@@ -147,7 +147,7 @@ const Shipview = () => {
             variant="contained"
             color="error"
             sx={{ minWidth: 120, fontWeight: 700 }}
-            onClick={() => {}}
+            onClick={() => navigate("/shipping")}
           >
             Delete
           </Button>

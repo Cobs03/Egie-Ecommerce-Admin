@@ -178,7 +178,7 @@ const Promotions = () => {
                   onClick={(e) => handleMenuOpen(e, voucher)}
                   size="small"
                 >
-                  <MoreVertIcon />
+                  <MoreVertIcon className="text-black" />
                 </IconButton>
               </Grid>
             </Grid>
@@ -226,7 +226,7 @@ const Promotions = () => {
         }}
       >
         <DialogTitle>
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="h6" fontWeight="bold" color="black">
             {isAddMode ? "Create New Voucher" : "Edit Voucher"}
           </Typography>
         </DialogTitle>

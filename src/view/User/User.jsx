@@ -197,10 +197,22 @@ const User = () => {
         User Management
       </Typography>
 
-      <Grid container justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="subtitle1">
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={2}
+        p={1}
+        bgcolor="#000"
+        borderRadius={2}
+        boxShadow={1}
+      >
+        <Button
+          variant="contained"
+          sx={{ bgcolor: "#00E676", color: "#000", fontWeight: 700, mr: 2 }}
+        >
           All Users ({filteredUsers.length})
-        </Typography>
+        </Button>
         <Stack direction="row" spacing={1}>
           <TextField
             size="small"
@@ -208,11 +220,19 @@ const User = () => {
             InputProps={{
               startAdornment: <Search fontSize="small" sx={{ mr: 1 }} />,
             }}
+            sx={{ bgcolor: "#fff", color: "#000", input: { color: "#000" } }}
           />
           <Button
             variant="outlined"
             startIcon={<FilterList />}
             onClick={handleFilterClick}
+            sx={{
+              bgcolor: "#fff",
+              color: "#000",
+              borderColor: "#000",
+              "&:hover": { bgcolor: "#f5f5f5", borderColor: "#000" },
+              ml: 1,
+            }}
           >
             Filters
           </Button>
@@ -247,13 +267,19 @@ const User = () => {
           <Button
             variant="contained"
             startIcon={<PersonAdd />}
-            sx={{ color: "white", backgroundColor: "black" }}
+            sx={{
+              bgcolor: "#00E676",
+              color: "#000",
+              mr: 1,
+              minWidth: 120,
+              fontWeight: 700,
+            }}
             onClick={handleAddUserDrawerOpen}
           >
             Add User
           </Button>
         </Stack>
-      </Grid>
+      </Box>
 
       <Paper elevation={1}>
         <Grid
@@ -334,7 +360,7 @@ const User = () => {
                     {user.dateAdded}
                   </Typography>
                   <IconButton onClick={(e) => handleMoreClick(e, idx)}>
-                    <MoreVert />
+                    <MoreVert className="text-black" />
                   </IconButton>
                 </Stack>
               </Grid>
@@ -379,7 +405,9 @@ const User = () => {
                 alt={selectedUser.name}
                 sx={{ width: 80, height: 80, mb: 1 }}
               />
-              <Typography variant="subtitle1">{selectedUser.name}</Typography>
+              <Typography variant="subtitle1" sx={{ color: "black" }}>
+                {selectedUser.name}
+              </Typography>
               <Typography variant="body2" color="text.secondary" mb={1}>
                 {selectedUser.email}
               </Typography>
@@ -390,7 +418,7 @@ const User = () => {
 
             <Divider sx={{ my: 2 }} />
 
-            <Typography fontWeight="bold" mb={1}>
+            <Typography fontWeight="bold" mb={1} sx={{ color: "black" }}>
               Permission
             </Typography>
             <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
@@ -409,12 +437,12 @@ const User = () => {
                   sx={{ border: "1px solid #ccc" }}
                   onClick={() => handlePromotionClick(selectedUser)}
                 >
-                  <AddIcon fontSize="small" />
+                  <AddIcon fontSize="small" sx={{ color: "black" }} />
                 </IconButton>
               )}
             </Box>
 
-            <Typography fontWeight="bold" mb={1}>
+            <Typography fontWeight="bold" mb={1} sx={{ color: "black" }}>
               Delete User
             </Typography>
             <Button variant="contained" color="error" size="small">
@@ -447,7 +475,7 @@ const User = () => {
 
         <Stack spacing={3}>
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" gutterBottom sx={{ color: "black" }}>
               Profile Picture
             </Typography>
             <Box position="relative" display="inline-block">

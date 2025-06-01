@@ -421,7 +421,7 @@ const ProductCreate = () => {
                   color="error"
                   onClick={() => handleRemoveVariant(idx)}
                 >
-                  <CloseIcon fontSize="small" />
+                  <CloseIcon fontSize="small" sx={{ color: "black" }} />
                 </IconButton>
               </Box>
                       <Stack direction="row" spacing={2}>
@@ -458,7 +458,7 @@ const ProductCreate = () => {
                                 Math.max(0, variant.stock - 1)
                               )
                             }
-                            sx={{ border: "1px solid #ccc", borderRadius: 1 }}
+                            sx={{ border: "1px solid #ccc", borderRadius: 1, color: "black" }}
                           >
                             -
                           </IconButton>
@@ -488,7 +488,7 @@ const ProductCreate = () => {
                                 variant.stock + 1
                               )
                             }
-                            sx={{ border: "1px solid #ccc", borderRadius: 1 }}
+                            sx={{ border: "1px solid #ccc", borderRadius: 1, color: "black" }}
                           >
                             +
                 </IconButton>
