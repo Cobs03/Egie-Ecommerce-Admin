@@ -192,7 +192,7 @@ const LowStock = () => {
       >
         {currentSelectedProduct && (
           <Box p={3}>
-            <Typography variant="h6" mb={2} mt={5}>
+            <Typography variant="h6" mb={2} mt={5} color="black">
               Update Stock
             </Typography>
             <Box display="flex" alignItems="center" mb={2}>
@@ -202,15 +202,15 @@ const LowStock = () => {
                 sx={{ width: 40, height: 40, mr: 2 }}
               />
               <Box>
-                <Typography fontWeight={600}>
+                <Typography fontWeight={600} color="black">
                   {currentSelectedProduct.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="black">
                   {currentSelectedProduct.code}
                 </Typography>
               </Box>
             </Box>
-            <Typography variant="body2" color="text.secondary" mb={1}>
+            <Typography variant="body2" color="black" mb={1}>
               Current Stock: <b>{currentSelectedProduct.stock}</b>
             </Typography>
             <Box display="flex" alignItems="center" mb={2}>
@@ -218,7 +218,7 @@ const LowStock = () => {
                 onClick={() => setStockChange((v) => v - 1)}
                 disabled={stockChange <= -999}
                 size="small"
-                sx={{ border: "1px solid #ccc", mr: 1 }}
+                sx={{ border: "1px solid #ccc", mr: 1, color: "black" }}
               >
                 <RemoveIcon />
               </IconButton>
@@ -234,7 +234,7 @@ const LowStock = () => {
                 onClick={() => setStockChange((v) => v + 1)}
                 disabled={stockChange >= 999}
                 size="small"
-                sx={{ border: "1px solid #ccc", ml: 1 }}
+                sx={{ border: "1px solid #ccc", ml: 1, color: "black" }}
               >
                 <AddIcon />
               </IconButton>
