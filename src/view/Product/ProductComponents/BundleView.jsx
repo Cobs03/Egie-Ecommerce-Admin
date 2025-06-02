@@ -175,7 +175,7 @@ const BundleView = () => {
             Publish
           </Button>
           <Dialog open={openDialog} onClose={handleCloseDialog}>
-            <DialogTitle>Confirm Publish</DialogTitle>
+            <DialogTitle sx={{ color: "black" }}>Confirm Publish</DialogTitle>
             <DialogContent>
               Are you sure you want to publish this bundle?
             </DialogContent>
@@ -183,7 +183,7 @@ const BundleView = () => {
               <Button onClick={handleCloseDialog} color="primary">
                 Cancel
               </Button>
-              <Button onClick={handleConfirmPublish} color="primary" autoFocus>
+              <Button onClick={handleConfirmPublish} color="primary" autoFocus sx={{ bgcolor: "black", color: "#fff", fontWeight: 700 }}>
                 Confirm
               </Button>
             </DialogActions>

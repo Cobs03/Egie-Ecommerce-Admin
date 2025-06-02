@@ -124,6 +124,7 @@ const Payment = () => {
   const [menuRow, setMenuRow] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [orderDrawerOpen, setOrderDrawerOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const handleMenuOpen = (event, row) => {
     setAnchorEl(event.currentTarget);
@@ -136,12 +137,14 @@ const Payment = () => {
   };
 
   const handleViewPaymentDetails = () => {
+    setSelectedPayment(menuRow);
     setDrawerOpen(true);
     handleMenuClose();
   };
 
   const handleDrawerClose = () => {
     setDrawerOpen(false);
+    setSelectedPayment(null);
   };
 
   const handleViewOrderDetails = () => {
@@ -306,49 +309,49 @@ const Payment = () => {
           Payment Details
         </Typography>
         <Typography fontSize={14} color="black">
-          <b>Order ID:</b> {paymentDetail.orderId}
+          <b>Order ID:</b> {selectedPayment?.orderId}
         </Typography>
         <Typography fontSize={14} color="black">
-          <b>Transaction ID:</b> {paymentDetail.transactionId}
+          <b>Transaction ID:</b> {selectedPayment?.transactionId}
         </Typography>
         <Typography fontSize={14} color="black">
-          <b>Date Ordered:</b> {paymentDetail.dateOrdered}
+          <b>Date Ordered:</b> {selectedPayment?.dateTime}
         </Typography>
         <Typography fontSize={14} color="black">
           <b>Estimated Delivery Date:</b> {paymentDetail.estimatedDelivery}
         </Typography>
         <Typography fontSize={14} mb={1} color="black">
-          <b>Total Amount:</b> {paymentDetail.totalAmount}
+          <b>Total Amount:</b> {selectedPayment?.amount}
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Typography fontSize={14} color="black">
           <b>Delivery Option:</b> {paymentDetail.deliveryOption}
         </Typography>
         <Typography fontSize={14} color="black">
-          <b>Payment Method:</b> {paymentDetail.paymentMethod}
+          <b>Payment Method:</b> {selectedPayment?.method}
         </Typography>
         <Typography fontSize={14} mb={2} color="black">
-          <b>Payment Status:</b> {paymentDetail.paymentStatus}
+          <b>Payment Status:</b> {selectedPayment?.status}
         </Typography>
-        <Button
-          variant="contained"
-          fullWidth
-          sx={{
-            bgcolor:
-              paymentDetail.paymentStatus === "Paid" ? "#00FF00" : "#FFC107",
-            color: "#000",
-            fontWeight: 700,
-            mt: 2,
-            mb: 2,
-            boxShadow: 1,
-            "&:hover": {
-              bgcolor:
-                paymentDetail.paymentStatus === "Paid" ? "#00FF00" : "#FFC107",
-            },
-          }}
-        >
-          {paymentDetail.paymentStatus}
-        </Button>
+        {selectedPayment?.status === "Pending" && (
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{
+              bgcolor: "#00E676",
+              color: "#000",
+              fontWeight: 700,
+              mt: 2,
+              mb: 2,
+              boxShadow: 1,
+              "&:hover": {
+                bgcolor: "#00E676",
+              },
+            }}
+          >
+            Mark as Paid
+          </Button>
+        )}
       </Drawer>
       {/* Order Details Drawer */}
       <Drawer
