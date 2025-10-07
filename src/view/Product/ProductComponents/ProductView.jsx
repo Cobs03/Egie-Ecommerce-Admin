@@ -7,12 +7,12 @@ import {
   Button,
   Chip,
   Avatar,
-  Divider,
   Paper,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
@@ -20,14 +20,19 @@ const ProductView = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const [openDialog, setOpenDialog] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   if (!state) return <Typography>No product data.</Typography>;
+
   const {
     images = [],
     name = "",
     description = "",
-    component = "",
+    components = [],
+    specifications = {},
     warranty = "",
+    officialPrice = 0,
+    initialPrice = 0,
     discount = 0,
     variants = [],
     stock = 0,
@@ -45,6 +50,14 @@ const ProductView = () => {
     };
   }, [variants]);
 
+  // Format specification fields for display
+  const formatSpecLabel = (key) => {
+    return key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  };
+
   const handleOpenDialog = () => {
     setOpenDialog(true);
   };
@@ -54,108 +67,186 @@ const ProductView = () => {
   };
 
   const handleConfirmPublish = () => {
-    // TODO: Save the product data (e.g., via an API call)
+    console.log("Publishing product:", state);
     navigate("/products");
     handleCloseDialog();
   };
 
   return (
-    <Box maxWidth={1000} mx="auto" mt={3}>
+    <Box maxWidth={1200} mx="auto" mt={3} px={3} pb={4}>
       <Button
         startIcon={<ArrowBackIcon />}
-        onClick={() => navigate("/products")}
-        sx={{ mb: 2 }}
+        onClick={() => navigate(-1)}
+        sx={{ mb: 3 }}
         variant="outlined"
       >
         Return
       </Button>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
-        {/* Images */}
-        <Box>
-          <Avatar
-            src={images[0]?.url}
-            variant="square"
-            sx={{ width: 320, height: 220, mb: 2, borderRadius: 2 }}
-          />
-          <Stack direction="row" spacing={1}>
+
+      <Stack direction={{ xs: "column", md: "row" }} spacing={4} mb={4}>
+        {/* Left Side - Images */}
+        <Box sx={{ width: { xs: "100%", md: "350px" }, flexShrink: 0 }}>
+          {/* Main Image */}
+          <Box
+            sx={{
+              width: "100%",
+              height: 280,
+              mb: 2,
+              borderRadius: 2,
+              overflow: "hidden",
+              border: "1px solid #e0e0e0",
+              bgcolor: "#fafafa",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <img
+              src={images[selectedImage]?.url || images[0]?.url}
+              alt={name}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+
+          {/* Thumbnail Images */}
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              overflowX: "auto",
+              overflowY: "hidden",
+              pb: 1,
+              "&::-webkit-scrollbar": {
+                height: 8,
+              },
+              "&::-webkit-scrollbar-track": {
+                bgcolor: "#f1f1f1",
+                borderRadius: 10,
+              },
+              "&::-webkit-scrollbar-thumb": {
+                bgcolor: "#888",
+                borderRadius: 10,
+                "&:hover": {
+                  bgcolor: "#555",
+                },
+              },
+            }}
+          >
             {images.map((img, idx) => (
-              <Avatar
+              <Box
                 key={idx}
-                src={img.url}
-                variant="square"
+                onClick={() => setSelectedImage(idx)}
                 sx={{
+                  minWidth: 60,
                   width: 60,
-                  height: 45,
-                  borderRadius: 2,
-                  border: "1px solid #eee",
+                  height: 60,
+                  borderRadius: 1,
+                  border:
+                    selectedImage === idx
+                      ? "2px solid #1976d2"
+                      : "1px solid #e0e0e0",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  bgcolor: "#fafafa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    borderColor: "#1976d2",
+                    transform: "scale(1.05)",
+                  },
                 }}
-              />
+              >
+                <img
+                  src={img.url}
+                  alt={`${name} ${idx + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              </Box>
             ))}
-          </Stack>
+          </Box>
         </Box>
-        {/* Product Info */}
+
+        {/* Right Side - Product Info */}
         <Box flex={1}>
-          <Typography variant="h6" fontWeight={700} mb={1}>
+          <Typography variant="h5" fontWeight={700} mb={2}>
             {name}
           </Typography>
-          <Typography color="text.secondary" mb={1}>
-            {description}
-          </Typography>
-          <Stack direction="row" spacing={2} mb={2}>
-            <Chip
-              label={component || "No Component"}
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={warranty || "No Warranty"}
-              color="success"
-              variant="outlined"
-            />
-          </Stack>
-          <Typography variant="h5" color="primary" fontWeight={700} mb={1}>
+
+          {/* Component Tags */}
+          {components.length > 0 && (
+            <Stack direction="row" spacing={1} mb={2} flexWrap="wrap" gap={1}>
+              {components.map((comp, idx) => (
+                <Chip
+                  key={idx}
+                  label={comp.name}
+                  size="small"
+                  sx={{
+                    bgcolor: "#f0f0f0",
+                    fontWeight: 500,
+                    borderRadius: "4px",
+                  }}
+                />
+              ))}
+            </Stack>
+          )}
+
+          {/* Price Range */}
+          <Typography
+            variant="h4"
+            color="text.primary"
+            fontWeight={700}
+            mb={1}
+          >
             ₱{priceRange.min.toLocaleString()} - ₱
             {priceRange.max.toLocaleString()}
           </Typography>
-          <Typography variant="body1" color="text.secondary" mb={1}>
-            Discount: {discount}%
-          </Typography>
+
+
+          {/* Stock Status */}
           <Typography
             variant="body1"
+            fontWeight={600}
             color={stock > 0 ? "success.main" : "error.main"}
-            mb={1}
+            mb={3}
           >
             {stock > 0 ? `In Stock: ${stock} pcs.` : "Out of Stock"}
           </Typography>
+
+          {/* Variants */}
           {variants.length > 0 && (
-            <Box mb={2}>
-              <Typography variant="body2" fontWeight={600} mb={1}>
+            <Box mb={3}>
+              <Typography variant="body1" fontWeight={700} mb={1.5}>
                 Variants:
               </Typography>
-              <Stack spacing={1}>
+              <Stack spacing={1.5}>
                 {variants.map((variant, idx) => (
                   <Box
                     key={idx}
                     sx={{
-                      p: 1.5,
-                      border: "1px solid #e0e0e0",
+                      p: 2,
+                      bgcolor: "#f9f9f9",
                       borderRadius: 1,
-                      bgcolor: "#fafafa",
+                      border: "1px solid #e0e0e0",
                     }}
                   >
-                    <Stack spacing={0.5}>
-                      <Typography variant="body2" fontWeight={500}>
-                        {variant.name || `Variant ${idx + 1}`}
-                      </Typography>
-                      <Stack direction="row" spacing={2}>
-                        <Typography variant="body2" color="text.secondary">
-                          Price: ₱{variant.price}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Stock: {variant.stock} pcs.
-                        </Typography>
-                      </Stack>
-                    </Stack>
+                    <Typography variant="body2" fontWeight={600} mb={0.5}>
+                      • {variant.name || `Variant ${idx + 1}`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Price: ₱{Number(variant.price).toLocaleString()} Stock:{" "}
+                      {variant.stock} pcs.
+                    </Typography>
                   </Box>
                 ))}
               </Stack>
@@ -163,67 +254,116 @@ const ProductView = () => {
           )}
         </Box>
       </Stack>
-      <Paper sx={{ mt: 4, p: 3, mb: 4 }}>
-        <Typography variant="h6" mb={2}>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Product Description Section */}
+      <Box mb={4}>
+        <Typography variant="h6" fontWeight={700} mb={2}>
           Product Description
         </Typography>
-        <Typography variant="body1" mb={2}>
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ lineHeight: 1.8, whiteSpace: "pre-line" }}
+        >
           {description}
         </Typography>
-        <Divider sx={{ my: 2 }} />
-        <Typography variant="h6" mb={2}>
+      </Box>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Product Specifications Section */}
+      <Box mb={4}>
+        <Typography variant="h6" fontWeight={700} mb={2}>
           Product Specifications
         </Typography>
-        <Stack spacing={1}>
-          <Typography variant="body2">Component: {component || "-"}</Typography>
-          <Typography variant="body2">Warranty: {warranty || "-"}</Typography>
-          <Typography variant="body2">
-            Price Range: ₱{priceRange.min.toLocaleString()} - ₱
-            {priceRange.max.toLocaleString()}
-          </Typography>
-          <Typography variant="body2">Discount: {discount}%</Typography>
-          <Typography variant="body2">Total Stock: {stock} pcs.</Typography>
-          {variants.length > 0 && (
-            <>
-              <Typography variant="body2" fontWeight={600} sx={{ mt: 1 }}>
-                Variants:
-              </Typography>
-              {variants.map((variant, idx) => (
-                <Box key={idx} sx={{ pl: 2 }}>
-                  <Typography variant="body2">
-                    • {variant.name || `Variant ${idx + 1}`}:
-                    <br />
-                    &nbsp;&nbsp;Price: ₱{variant.price}
-                    <br />
-                    &nbsp;&nbsp;Stock: {variant.stock} pcs.
-                  </Typography>
-                </Box>
-              ))}
-            </>
-          )}
-        </Stack>
-      </Paper>
+
+        {components.length > 0 &&
+          components.map((component) => {
+            const componentSpecs = specifications[component.id];
+            if (!componentSpecs || Object.keys(componentSpecs).length === 0) {
+              return null;
+            }
+
+            return (
+              <Box key={component.id} mb={3}>
+                <Typography variant="body1" fontWeight={700} mb={1.5}>
+                  Component: {component.name}
+                </Typography>
+                <Stack spacing={0.5}>
+                  {Object.entries(componentSpecs).map(([key, value]) => (
+                    <Typography key={key} variant="body2" color="text.secondary">
+                      <strong>{formatSpecLabel(key)}:</strong> {value || "-"}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Box>
+            );
+          })}
+
+        <Typography variant="body1" fontWeight={700} mb={1}>
+          Warranty: {warranty || "warranty1"}
+        </Typography>
+
+        <Typography variant="body2" color="text.secondary" mb={0.5}>
+          Price Range: ₱{priceRange.min.toLocaleString()} - ₱
+          {priceRange.max.toLocaleString()}
+        </Typography>
+
+
+        <Typography variant="body2" color="text.secondary" mb={0.5}>
+          Total Stock: {stock} pcs.
+        </Typography>
+
+      </Box>
+
+      {/* Publish Button */}
       {isEditMode && (
         <Button
           variant="contained"
           color="primary"
-          sx={{ mt: 4, mb: 4, width: "100%", mx: "auto", display: "block" }}
+          size="large"
+          fullWidth
           onClick={handleOpenDialog}
+          sx={{
+            py: 1.5,
+            fontSize: "1rem",
+            fontWeight: 600,
+            bgcolor: "#000",
+            "&:hover": {
+              bgcolor: "#333",
+            },
+          }}
         >
           Publish
         </Button>
       )}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Confirm Publish</DialogTitle>
         <DialogContent>
-          Are you sure you want to publish this product?
+          <Typography>
+            Are you sure you want to publish this product? Once published, it
+            will be visible to customers.
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
+          <Button onClick={handleCloseDialog} color="inherit">
             Cancel
           </Button>
-          <Button onClick={handleConfirmPublish} color="primary" autoFocus>
-            Confirm
+          <Button
+            onClick={handleConfirmPublish}
+            variant="contained"
+            color="primary"
+          >
+            Publish
           </Button>
         </DialogActions>
       </Dialog>

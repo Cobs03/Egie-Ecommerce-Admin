@@ -18,8 +18,15 @@ import { Typography } from "@mui/material";
 const Dashboard = () => {
   return (
     <div style={{ padding: 24, background: "#f5f5f5", minHeight: "100vh" }}>
-            <Typography variant="h5" fontWeight={700} mb={2}>Dashboard</Typography>
-      <hr />
+      <Typography
+        variant="h4"
+        fontWeight={700}
+        mb={2}
+
+      >
+        DASHBOARD
+      </Typography>
+
       <div
         style={{
           display: "grid",

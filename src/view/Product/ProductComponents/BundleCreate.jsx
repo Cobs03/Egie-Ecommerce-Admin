@@ -14,6 +14,9 @@ import {
   DialogContent,
   DialogActions,
   Grid,
+  InputAdornment,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -43,11 +46,24 @@ const BundleCreate = () => {
   const [officialPrice, setOfficialPrice] = useState(
     state?.officialPrice || ""
   );
-  const [initialPrice, setInitialPrice] = useState(state?.initialPrice || "");
+  const [initialPrice, setInitialPrice] = useState(state?.initialPrice || 0);
   const [discount, setDiscount] = useState(state?.discount || 0);
   const fileInputRef = useRef();
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Error handling states
+  const [errors, setErrors] = useState({});
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Calculate initial price from products
+  useEffect(() => {
+    const totalPrice = products.reduce((sum, product) => {
+      return sum + (Number(product.price) || 0);
+    }, 0);
+    setInitialPrice(totalPrice);
+  }, [products]);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -58,38 +74,37 @@ const BundleCreate = () => {
         file,
       })),
     ]);
+    // Clear image error if exists
+    if (errors.images) {
+      setErrors((prev) => ({ ...prev, images: false }));
+    }
   };
 
   const handleRemoveImage = (idx) => {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleAddProduct = () => {
-    setProducts((prev) => [...prev, ""]);
-  };
-
-  const handleProductChange = (idx, value) => {
-    setProducts((prev) => prev.map((p, i) => (i === idx ? value : p)));
-  };
-
   const handleRemoveProduct = (idx) => {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleViewBundle = () => {
-    navigate("/bundles/view", {
-      state: {
-        images,
-        bundleName,
-        description,
-        warranty,
-        officialPrice,
-        initialPrice,
-        discount,
-        products,
-        isEditMode: true,
-      },
-    });
+  // Handle discount input change with validation
+  const handleDiscountChange = (e) => {
+    const value = e.target.value;
+
+    // Allow empty string for clearing
+    if (value === "") {
+      setDiscount(0);
+      return;
+    }
+
+    // Parse the value as a number
+    const numValue = parseFloat(value);
+
+    // Validate: must be a number between 0 and 100
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+      setDiscount(numValue);
+    }
   };
 
   // Calculate official price based on initial price and discount
@@ -107,6 +122,88 @@ const BundleCreate = () => {
     setOfficialPrice(calculatedPrice);
   }, [initialPrice, discount]);
 
+  // Validate form before viewing bundle
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Validate bundle name
+    if (!bundleName.trim()) {
+      newErrors.bundleName = true;
+      isValid = false;
+      setErrorMessage("Bundle name is required");
+    }
+
+    // Validate description
+    else if (!description.trim()) {
+      newErrors.description = true;
+      isValid = false;
+      setErrorMessage("Bundle description is required");
+    }
+
+    // Validate images
+    else if (images.length === 0) {
+      newErrors.images = true;
+      isValid = false;
+      setErrorMessage("At least one image is required");
+    }
+
+    // Validate products
+    else if (products.length === 0) {
+      newErrors.products = true;
+      isValid = false;
+      setErrorMessage("At least one product must be added");
+    }
+
+    // Validate warranty
+    else if (!warranty) {
+      newErrors.warranty = true;
+      isValid = false;
+      setErrorMessage("Please select a warranty option");
+    }
+
+    // Validate initial price (should be auto-calculated)
+    else if (initialPrice <= 0) {
+      newErrors.initialPrice = true;
+      isValid = false;
+      setErrorMessage("Initial price must be greater than 0");
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      setShowError(true);
+    }
+
+    return isValid;
+  };
+
+  const handleViewBundle = () => {
+    // Validate form before navigating
+    if (!validateForm()) {
+      return;
+    }
+
+    // If validation passes, navigate to view
+    navigate("/bundles/view", {
+      state: {
+        images,
+        bundleName,
+        description,
+        warranty,
+        officialPrice,
+        initialPrice,
+        discount,
+        products,
+        isEditMode: true,
+      },
+    });
+  };
+
+  const handleCloseError = () => {
+    setShowError(false);
+  };
+
   return (
     <Box sx={{ width: "100%", maxWidth: "1400px", mx: "auto", mt: 3, px: 3 }}>
       <Button
@@ -121,6 +218,18 @@ const BundleCreate = () => {
       <Typography variant="h6" fontWeight={700} mb={2}>
         {isEditMode ? "Edit Bundle" : "Bundle Upload"}
       </Typography>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={showError}
+        autoHideDuration={6000}
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{ width: "100%" }}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
 
       <Grid
         container
@@ -149,7 +258,7 @@ const BundleCreate = () => {
               position: "sticky",
               top: "20px",
               p: 2,
-              border: "2px solid #2196f3",
+              border: errors.images ? "2px solid #f44336" : "2px solid #2196f3",
               borderRadius: 2,
               bgcolor: "#fafbfc",
             }}
@@ -158,9 +267,9 @@ const BundleCreate = () => {
               variant="subtitle1"
               fontWeight={700}
               mb={2}
-              color="#000"
+              color={errors.images ? "error" : "#000"}
             >
-              Media and Published
+              Media and Published {errors.images && "*"}
             </Typography>
             <Box
               sx={{
@@ -205,7 +314,9 @@ const BundleCreate = () => {
                 sx={{
                   width: "100%",
                   height: 80,
-                  border: "2px dashed #bdbdbd",
+                  border: errors.images
+                    ? "2px dashed #f44336"
+                    : "2px dashed #bdbdbd",
                   borderRadius: 1,
                   display: "flex",
                   alignItems: "center",
@@ -227,8 +338,8 @@ const BundleCreate = () => {
                 />
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ color: "#000", textAlign: "center", px: 1 }}
+                  color={errors.images ? "error" : "text.secondary"}
+                  sx={{ textAlign: "center", px: 1 }}
                 >
                   Upload Image
                 </Typography>
@@ -244,7 +355,7 @@ const BundleCreate = () => {
           md={8}
           sx={{
             flex: 1,
-            minWidth: 0, // Prevents flex item from overflowing
+            minWidth: 0,
           }}
         >
           <Stack spacing={2}>
@@ -254,7 +365,14 @@ const BundleCreate = () => {
               fullWidth
               size="small"
               value={bundleName}
-              onChange={(e) => setBundleName(e.target.value)}
+              onChange={(e) => {
+                setBundleName(e.target.value);
+                if (errors.bundleName) {
+                  setErrors((prev) => ({ ...prev, bundleName: false }));
+                }
+              }}
+              error={errors.bundleName}
+              helperText={errors.bundleName ? "Bundle name is required" : ""}
             />
             <TextField
               label="Bundle Description"
@@ -263,75 +381,54 @@ const BundleCreate = () => {
               fullWidth
               size="small"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            <Stack direction="row" spacing={2} alignItems="flex-end">
-              <TextField
-                label="Initial Price"
-                required
-                fullWidth
-                size="small"
-                type="number"
-                value={initialPrice}
-                onChange={(e) => setInitialPrice(e.target.value)}
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>₱</Typography>,
-                }}
-              />
-              <TextField
-                label="Discount"
-                select
-                value={discount}
-                onChange={(e) => setDiscount(Number(e.target.value))}
-                size="small"
-                sx={{ minWidth: 100 }}
-              >
-                {[...Array(21)].map((_, i) => (
-                  <MenuItem key={i * 5} value={i * 5}>
-                    {i * 5}%
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-            <TextField
-              label="Official Price"
-              fullWidth
-              size="small"
-              value={
-                officialPrice
-                  ? `₱${Number(officialPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : ""
-              }
-              disabled
-              InputProps={{
-                readOnly: true,
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (errors.description) {
+                  setErrors((prev) => ({ ...prev, description: false }));
+                }
               }}
+              error={errors.description}
+              helperText={
+                errors.description ? "Bundle description is required" : ""
+              }
             />
-            <TextField
-              label="Warranty"
-              select
-              fullWidth
-              size="small"
-              defaultValue=""
-              value={warranty}
-              onChange={(e) => setWarranty(e.target.value)}
-            >
-              <MenuItem value="">None</MenuItem>
-              <MenuItem value="warranty1">Warranty 1</MenuItem>
-              <MenuItem value="warranty2">Warranty 2</MenuItem>
-            </TextField>
+
+            {/* Products Section - Moved before pricing */}
             <Box>
-              <Typography variant="body2" fontWeight={500} mb={0.5}>
-                Products
+              <Typography
+                variant="body2"
+                fontWeight={500}
+                mb={0.5}
+                color={errors.products ? "error" : "text.primary"}
+              >
+                Products {errors.products && "*"}
               </Typography>
               <Button
                 variant="outlined"
                 startIcon={<AddIcon />}
-                sx={{ width: 240, mb: 1 }}
-                onClick={() => setProductDialogOpen(true)}
+                sx={{
+                  width: 240,
+                  mb: 1,
+                  borderColor: errors.products ? "#f44336" : undefined,
+                  color: errors.products ? "#f44336" : undefined,
+                  "&:hover": {
+                    borderColor: errors.products ? "#d32f2f" : undefined,
+                  },
+                }}
+                onClick={() => {
+                  setProductDialogOpen(true);
+                  if (errors.products) {
+                    setErrors((prev) => ({ ...prev, products: false }));
+                  }
+                }}
               >
                 Add Products
               </Button>
+              {errors.products && (
+                <Typography variant="caption" color="error" display="block" mb={1}>
+                  At least one product must be added
+                </Typography>
+              )}
               <Stack spacing={1} mt={1}>
                 {products.map((product, idx) => (
                   <Box key={idx} display="flex" alignItems="center">
@@ -360,6 +457,116 @@ const BundleCreate = () => {
                 ))}
               </Stack>
             </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Pricing Section */}
+            <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+              <TextField
+                label="Initial Price (Auto-calculated from products)"
+                fullWidth
+                size="small"
+                value={
+                  initialPrice
+                    ? `₱${Number(initialPrice).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`
+                    : "₱0.00"
+                }
+                disabled
+                InputProps={{
+                  readOnly: true,
+                }}
+                helperText={
+                  products.length === 0
+                    ? "Add products to calculate initial price"
+                    : `Sum of ${products.length} product(s)`
+                }
+                error={errors.initialPrice}
+              />
+
+              {/* Discount - Now Typable */}
+              <TextField
+                label="Discount"
+                type="number"
+                value={discount}
+                onChange={handleDiscountChange}
+                size="small"
+                fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">%</InputAdornment>
+                  ),
+                  inputProps: {
+                    min: 0,
+                    max: 100,
+                    step: 0.1,
+                  },
+                }}
+                helperText="Enter discount (0-100)"
+                onBlur={(e) => {
+                  // Ensure value is within range on blur
+                  const value = parseFloat(e.target.value);
+                  if (isNaN(value) || value < 0) {
+                    setDiscount(0);
+                  } else if (value > 100) {
+                    setDiscount(100);
+                  }
+                }}
+              />
+            </Box>
+
+            <TextField
+              label="Official Price (After Discount)"
+              fullWidth
+              size="small"
+              value={
+                officialPrice
+                  ? `₱${Number(officialPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  : "₱0.00"
+              }
+              disabled
+              InputProps={{
+                readOnly: true,
+              }}
+              helperText={
+                discount > 0
+                  ? `${discount}% discount applied (₱${(
+                      (initialPrice * discount) /
+                      100
+                    ).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })} off)`
+                  : "Enter a discount to see the official price"
+              }
+            />
+
+            <TextField
+              label="Warranty"
+              select
+              fullWidth
+              size="small"
+              value={warranty}
+              onChange={(e) => {
+                setWarranty(e.target.value);
+                if (errors.warranty) {
+                  setErrors((prev) => ({ ...prev, warranty: false }));
+                }
+              }}
+              error={errors.warranty}
+              helperText={errors.warranty ? "Please select a warranty option" : ""}
+            >
+              <MenuItem value="">None</MenuItem>
+              <MenuItem value="1 Year Warranty">1 Year Warranty</MenuItem>
+              <MenuItem value="2 Year Warranty">2 Year Warranty</MenuItem>
+              <MenuItem value="3 Year Warranty">3 Year Warranty</MenuItem>
+            </TextField>
+
             <Divider sx={{ my: 2 }} />
             <Button
               variant="contained"
@@ -384,11 +591,11 @@ const BundleCreate = () => {
             height: "80vh",
             display: "flex",
             flexDirection: "column",
-            mt:1
+            mt: 1,
           },
         }}
       >
-        <DialogTitle sx={{color:"black"}}>Select Products</DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>Select Products</DialogTitle>
         <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column" }}>
           <Box sx={{ p: 2, borderBottom: "1px solid #e0e0e0" }}>
             <TextField
@@ -436,58 +643,68 @@ const BundleCreate = () => {
                       .toLowerCase()
                       .includes(searchTerm.toLowerCase())
                 )
-                .map((product) => (
-                  <Button
-                    key={product.id}
-                    variant="outlined"
-                    onClick={() => {
-                      setProducts((prev) => [
-                        ...prev,
-                        {
-                          id: product.id,
-                          name: product.name,
-                          code: product.code,
-                          price: Number(product.price),
-                          image: product.image,
-                          category: product.category,
+                .map((product) => {
+                  const isAlreadyAdded = products.some(
+                    (p) => p.id === product.id
+                  );
+
+                  return (
+                    <Button
+                      key={product.id}
+                      variant={isAlreadyAdded ? "contained" : "outlined"}
+                      disabled={isAlreadyAdded}
+                      onClick={() => {
+                        setProducts((prev) => [
+                          ...prev,
+                          {
+                            id: product.id,
+                            name: product.name,
+                            code: product.code,
+                            price: Number(product.price),
+                            image: product.image,
+                            category: product.category,
+                          },
+                        ]);
+                        setProductDialogOpen(false);
+                        setSearchTerm("");
+                      }}
+                      sx={{
+                        justifyContent: "flex-start",
+                        textAlign: "left",
+                        p: 1,
+                        height: "auto",
+                        "&:hover": {
+                          backgroundColor: isAlreadyAdded
+                            ? undefined
+                            : "rgba(25, 118, 210, 0.04)",
                         },
-                      ]);
-                      setProductDialogOpen(false);
-                      setSearchTerm(""); // reset search on close
-                    }}
-                    sx={{
-                      justifyContent: "flex-start",
-                      textAlign: "left",
-                      p: 1,
-                      height: "auto",
-                      "&:hover": {
-                        backgroundColor: "rgba(25, 118, 210, 0.04)",
-                      },
-                    }}
-                  >
-                    <Box display="flex" alignItems="center" width="100%">
-                      <Avatar
-                        src={product.image}
-                        alt={product.name}
-                        sx={{ mr: 1, width: 40, height: 40 }}
-                      />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" fontWeight={500}>
-                          {product.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {product.code} - {product.category} - ₱
-                          {formatPrice(product.price)}
-                        </Typography>
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" width="100%">
+                        <Avatar
+                          src={product.image}
+                          alt={product.name}
+                          sx={{ mr: 1, width: 40, height: 40 }}
+                        />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {product.name}
+                            {isAlreadyAdded && " (Already Added)"}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {product.code} - {product.category} - ₱
+                            {formatPrice(product.price)}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  </Button>
-                ))}
+                    </Button>
+                  );
+                })}
             </Stack>
           </Box>
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #e0e0e0", p: 2 }}>
-          <Button onClick={() => setProductDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setProductDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

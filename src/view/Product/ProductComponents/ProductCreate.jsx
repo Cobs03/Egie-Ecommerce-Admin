@@ -1,26 +1,26 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import {
   Box,
   Typography,
-  TextField,
   Button,
   Stack,
-  MenuItem,
-  IconButton,
   Divider,
-  Avatar,
   Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
+  Alert,
+  Snackbar,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useLocation, useNavigate } from "react-router-dom";
 import componentData from "../Data/ComponentData.json";
+
+// Import separated components
+import MediaUpload from "./ProductCreate Components/MediaUpload";
+import ComponentsSlider from "./ProductCreate Components/ComponentsSlider";
+import ProductBasicInfo from "./ProductCreate Components/ProductBasicInfo";
+import ComponentSpecifications from "./ProductCreate Components/ComponentSpecifications";
+import VariantManager from "./ProductCreate Components/VariantManager";
+import AddComponentDialog from "./ProductCreate Components/AddComponentDialog";
+import ConfirmDialog from "./ProductCreate Components/ConfirmDialog";
 
 const ProductCreate = () => {
   const { state } = useLocation();
@@ -34,9 +34,6 @@ const ProductCreate = () => {
   const [discount, setDiscount] = useState(state?.discount || 0);
   const [name, setName] = useState(state?.name || "");
   const [description, setDescription] = useState(state?.description || "");
-  const [selectedComponent, setSelectedComponent] = useState(
-    state?.component || ""
-  );
   const [warranty, setWarranty] = useState(state?.warranty || "");
   const [officialPrice, setOfficialPrice] = useState(
     state?.officialPrice || ""
@@ -48,6 +45,27 @@ const ProductCreate = () => {
   const [newComponent, setNewComponent] = useState({
     name: "",
     description: "",
+  });
+
+  // Validation error state
+  const [validationError, setValidationError] = useState("");
+  const [showError, setShowError] = useState(false);
+
+  // Component specifications state
+  const [specifications, setSpecifications] = useState(
+    state?.specifications || {}
+  );
+
+  // Get component details from componentData.json based on product's component property
+  const [selectedComponents, setSelectedComponents] = useState(() => {
+    if (state?.component) {
+      // Find the component in componentData
+      const component = componentData.components.find(
+        (comp) => comp.id === state.component || comp.code === state.component
+      );
+      return component ? [component] : [];
+    }
+    return [];
   });
 
   const handleImageUpload = (e) => {
@@ -94,13 +112,118 @@ const ProductCreate = () => {
     setVariants((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // Validate form before viewing product
+  const validateForm = () => {
+    // Check if product name is filled
+    if (!name.trim()) {
+      setValidationError("Product name is required");
+      setShowError(true);
+      return false;
+    }
+
+    // Check if at least one image is uploaded
+    if (images.length === 0) {
+      setValidationError("At least one product image is required");
+      setShowError(true);
+      return false;
+    }
+
+    // Check if a component is selected
+    if (selectedComponents.length === 0) {
+      setValidationError("Please select a component");
+      setShowError(true);
+      return false;
+    }
+
+    // Check if component specifications are filled
+    for (const component of selectedComponents) {
+      const componentSpecs = specifications[component.id];
+      
+      if (!componentSpecs || Object.keys(componentSpecs).length === 0) {
+        setValidationError(
+          `Please fill in specifications for ${component.name}`
+        );
+        setShowError(true);
+        return false;
+      }
+
+      // Check if all specification fields have values
+      const hasEmptyFields = Object.values(componentSpecs).some(
+        (value) => !value || value.toString().trim() === ""
+      );
+
+      if (hasEmptyFields) {
+        setValidationError(
+          `Please complete all specification fields for ${component.name}`
+        );
+        setShowError(true);
+        return false;
+      }
+    }
+
+    // Check if description is filled
+    if (!description.trim()) {
+      setValidationError("Product description is required");
+      setShowError(true);
+      return false;
+    }
+
+    // Check if warranty is selected
+    if (!warranty) {
+      setValidationError("Please select a warranty option");
+      setShowError(true);
+      return false;
+    }
+
+    // Check if at least one variant is added and filled
+    if (variants.length === 0) {
+      setValidationError("At least one product variant is required");
+      setShowError(true);
+      return false;
+    }
+
+    // Check if all variants have required fields
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i];
+      
+      if (!variant.name.trim()) {
+        setValidationError(`Variant ${i + 1}: Name is required`);
+        setShowError(true);
+        return false;
+      }
+
+      // Fixed: Check if price exists and is greater than 0
+      if (variant.price === undefined || variant.price === null || variant.price <= 0) {
+        setValidationError(`Variant ${i + 1}: Valid price (greater than 0) is required`);
+        setShowError(true);
+        return false;
+      }
+
+      // Fixed: Check if stock exists and is not negative (0 is valid)
+      if (variant.stock === undefined || variant.stock === null || variant.stock < 0) {
+        setValidationError(`Variant ${i + 1}: Valid stock (0 or more) is required`);
+        setShowError(true);
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleViewProduct = () => {
+    // Validate form before proceeding
+    if (!validateForm()) {
+      return;
+    }
+
+    // If validation passes, navigate to view
     navigate("/products/view", {
       state: {
         images,
         name,
         description,
-        component: selectedComponent,
+        components: selectedComponents,
+        specifications,
         warranty,
         officialPrice,
         initialPrice,
@@ -110,6 +233,10 @@ const ProductCreate = () => {
         isEditMode: true,
       },
     });
+  };
+
+  const handleCloseError = () => {
+    setShowError(false);
   };
 
   const handleOpenAddComponent = () => {
@@ -129,11 +256,126 @@ const ProductCreate = () => {
   };
 
   const handleConfirmAddComponent = () => {
-    // Here you would typically make an API call to add the component to the database
-    // For now, we'll just close the dialogs
+    // Create a new component object with a temporary ID
+    const newComp = {
+      id: `temp-${Date.now()}`,
+      name: newComponent.name,
+      description: newComponent.description,
+      category: "Custom",
+    };
+
+    // Add to selected components
+    setSelectedComponents((prev) => [...prev, newComp]);
+
+    // Close dialogs
     setOpenConfirmDialog(false);
     setOpenAddComponent(false);
     setNewComponent({ name: "", description: "" });
+  };
+
+  const handleRemoveComponent = (componentId) => {
+    setSelectedComponents((prev) => prev.filter((c) => c.id !== componentId));
+    // Also remove specifications for this component
+    setSpecifications((prev) => {
+      const newSpecs = { ...prev };
+      delete newSpecs[componentId];
+      return newSpecs;
+    });
+  };
+
+  // Handle selecting a component from the slider (single selection)
+  const handleSelectComponent = (component) => {
+    const isAlreadySelected = selectedComponents.some(
+      (c) => c.id === component.id
+    );
+
+    if (isAlreadySelected) {
+      // If clicking the same component, deselect it
+      setSelectedComponents([]);
+    } else {
+      // Replace with only the new component (single selection)
+      setSelectedComponents([component]);
+    }
+  };
+
+  // Handle specification changes
+  const handleSpecificationChange = (componentId, field, value) => {
+    setSpecifications((prev) => ({
+      ...prev,
+      [componentId]: {
+        ...prev[componentId],
+        [field]: value,
+      },
+    }));
+  };
+
+  // Handle component edit
+  const handleEditComponent = (componentId, updatedData) => {
+    // Update in selectedComponents
+    setSelectedComponents((prev) =>
+      prev.map((comp) =>
+        comp.id === componentId
+          ? { ...comp, name: updatedData.name, description: updatedData.description }
+          : comp
+      )
+    );
+
+    console.log("Component edited:", componentId, updatedData);
+  };
+
+  // Handle component delete
+  const handleDeleteComponent = (componentId) => {
+    // Remove from selected components
+    setSelectedComponents((prev) => prev.filter((c) => c.id !== componentId));
+    
+    // Remove specifications for this component
+    setSpecifications((prev) => {
+      const newSpecs = { ...prev };
+      delete newSpecs[componentId];
+      return newSpecs;
+    });
+
+    console.log("Component deleted:", componentId);
+  };
+
+  // Handle product selection from autocomplete
+  const handleProductSelect = (product) => {
+    // Only populate the product name
+    setName(product.name);
+    
+    // Load product images if available
+    if (product.image) {
+      setImages([{ url: product.image }]);
+    }
+
+    // Load component and specifications if exists
+    if (product.component) {
+      const component = componentData.components.find(
+        (comp) => comp.id === product.component || comp.code === product.component
+      );
+      if (component) {
+        setSelectedComponents([component]);
+        
+        // Load specifications if available
+        if (product.specifications && product.specifications[product.component]) {
+          setSpecifications({
+            [product.component]: product.specifications[product.component]
+          });
+        }
+      }
+    }
+
+    // Load variants if exists
+    if (product.variants && Array.isArray(product.variants)) {
+      setVariants(
+        product.variants.map((variantName) => ({
+          name: variantName,
+          stock: 0,
+          price: product.price || 0,
+          initialPrice: product.initialPrice || 0,
+        }))
+      );
+    }
   };
 
   return (
@@ -146,10 +388,27 @@ const ProductCreate = () => {
       >
         Return
       </Button>
-      
+
       <Typography variant="h6" fontWeight={700} mb={2}>
         {isEditMode ? "Edit Product" : "Product Upload"}
       </Typography>
+
+      {/* Validation Error Snackbar */}
+      <Snackbar
+        open={showError}
+        autoHideDuration={6000}
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseError}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {validationError}
+        </Alert>
+      </Snackbar>
 
       <Grid
         container
@@ -174,98 +433,12 @@ const ProductCreate = () => {
             justifyContent: { md: "flex-start" },
           }}
         >
-          <Box
-            sx={{
-              width: "300px",
-              position: "sticky",
-              top: "20px",
-              p: 2,
-              border: "2px solid #2196f3",
-              borderRadius: 2,
-              bgcolor: "#fafbfc",
-            }}
-          >
-            <Typography
-              variant="subtitle1"
-              fontWeight={700}
-              mb={2}
-              color="#000"
-            >
-              Media and Published
-            </Typography>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 1,
-                width: "100%",
-              }}
-            >
-              {images.map((img, idx) => (
-                <Box key={idx} position="relative">
-                  <Avatar
-                    src={img.url}
-                    variant="square"
-                    sx={{
-                      width: "100%",
-                      height: 80,
-                      borderRadius: 1,
-                      aspectRatio: "1",
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    sx={{
-                      position: "absolute",
-                      top: -8,
-                      right: -8,
-                      bgcolor: "#fff",
-                      boxShadow: 1,
-                      p: 0.5,
-                      "&:hover": {
-                        bgcolor: "#fff",
-                      },
-                    }}
-                    onClick={() => handleRemoveImage(idx)}
-                  >
-                    <CloseIcon fontSize="small" color="error" />
-                  </IconButton>
-                </Box>
-              ))}
-              <Box
-                sx={{
-                  width: "100%",
-                  height: 80,
-                  border: "2px dashed #bdbdbd",
-                  borderRadius: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  bgcolor: "#ededed",
-                  position: "relative",
-                  aspectRatio: "1",
-                }}
-                onClick={() => fileInputRef.current.click()}
-              >
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                />
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ color: "#000", textAlign: "center", px: 1 }}
-                >
-                  Upload Image
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
+          <MediaUpload
+            images={images}
+            onImageUpload={handleImageUpload}
+            onRemoveImage={handleRemoveImage}
+            fileInputRef={fileInputRef}
+          />
         </Grid>
 
         {/* Right side - Form fields */}
@@ -275,335 +448,82 @@ const ProductCreate = () => {
           md={8}
           sx={{
             flex: 1,
-            minWidth: 0, // Prevents flex item from overflowing
+            minWidth: 0,
             width: "100%",
           }}
         >
-          <Stack spacing={2} sx={{ width: "100%" }}>
-        <TextField
-          label="Product Name"
-          required
-          fullWidth
-          size="small"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <TextField
-          label="Description"
-          multiline
-          minRows={3}
-          fullWidth
-          size="small"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+          {/* Components Slider */}
+          <ComponentsSlider
+            selectedComponents={selectedComponents}
+            onAddComponent={handleOpenAddComponent}
+            onRemoveComponent={handleRemoveComponent}
+            onSelectComponent={handleSelectComponent}
+            onEditComponent={handleEditComponent}
+            onDeleteComponent={handleDeleteComponent}
+          />
 
-        <Stack direction="row" spacing={2}>
-          <TextField
-            label="Component"
-            select
-            required
-            fullWidth
-            size="small"
-                value={selectedComponent}
-                onChange={(e) => setSelectedComponent(e.target.value)}
-                SelectProps={{
-                  MenuProps: {
-                    PaperProps: {
-                      sx: {
-                        maxHeight: 300,
-                      },
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="">
-                  <em>Select a component</em>
-                </MenuItem>
-                {componentData.components.map((comp) => (
-                  <MenuItem key={comp.id} value={comp.id}>
-                    <Box>
-                      <Typography variant="body2">{comp.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {comp.category} - {comp.description}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-          </TextField>
-          <TextField
-            label="Warranty"
-            select
-            fullWidth
-            size="small"
-            defaultValue=""
-            value={warranty}
-            onChange={(e) => setWarranty(e.target.value)}
-          >
-            <MenuItem value="">None</MenuItem>
-            <MenuItem value="warranty1">Warranty 1</MenuItem>
-            <MenuItem value="warranty2">Warranty 2</MenuItem>
-          </TextField>
-        </Stack>
+          <Stack spacing={2} sx={{ width: "75%" }}>
+            {/* Product Basic Info */}
+            <ProductBasicInfo
+              name={name}
+              description={description}
+              warranty={warranty}
+              onNameChange={setName}
+              onDescriptionChange={setDescription}
+              onWarrantyChange={setWarranty}
+              onProductSelect={handleProductSelect}
+            />
 
-        <Stack direction="row" spacing={2} alignItems="flex-end">
-              <Box sx={{ flex: 1 }}>
-                <Button
-                  variant="outlined"
-            fullWidth
-                  startIcon={<AddIcon />}
-                  onClick={handleOpenAddComponent}
-                  sx={{ justifyContent: "flex-start" }}
-                >
-                  Add a new Component
-                </Button>
-              </Box>
+            {/* Component Specifications */}
+            <ComponentSpecifications
+              selectedComponents={selectedComponents}
+              specifications={specifications}
+              onSpecificationChange={handleSpecificationChange}
+            />
 
-          <TextField
-            label="Discount"
-            select
-            value={discount}
-            onChange={(e) => setDiscount(Number(e.target.value))}
-            size="small"
-            sx={{ minWidth: 100 }}
-          >
-            {[...Array(21)].map((_, i) => (
-              <MenuItem key={i * 5} value={i * 5}>
-                {i * 5}%
-              </MenuItem>
-            ))}
-          </TextField>
-        </Stack>
+            {/* Variant Manager */}
+            <VariantManager
+              variants={variants}
+              onAddVariant={handleAddVariant}
+              onVariantChange={handleVariantChange}
+              onRemoveVariant={handleRemoveVariant}
+            />
 
-        <Box>
-          <Typography variant="body2" fontWeight={500} mb={0.5}>
-            Variation
-          </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+            <Divider sx={{ my: 2 }} />
             <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              sx={{ width: 240 }}
-              onClick={handleAddVariant}
+              variant="contained"
+              color="primary"
+              sx={{
+                mb: 4,
+                mt: 4,
+                width: "100%",
+                mx: "auto",
+                display: "block",
+              }}
+              onClick={handleViewProduct}
             >
-              Add Variant
+              {isEditMode ? "Preview Changes" : "View Product"}
             </Button>
-            {variants.length > 0 && (
-              <Typography variant="body2" color="text.secondary">
-                (Add multiple variants as needed)
-              </Typography>
-            )}
           </Stack>
-              <Stack spacing={2}>
-            {variants.map((variant, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{
-                      p: 2,
-                      border: "1px solid #e0e0e0",
-                      borderRadius: 1,
-                      bgcolor: "#fafafa",
-                    }}
-                  >
-                    <Stack spacing={2}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                <TextField
-                          label={`Variant ${idx + 1} Name`}
-                          value={variant.name}
-                          onChange={(e) =>
-                            handleVariantChange(idx, "name", e.target.value)
-                          }
-                  size="small"
-                  sx={{ flex: 1 }}
-                />
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => handleRemoveVariant(idx)}
-                >
-                  <CloseIcon fontSize="small" sx={{ color: "black" }} />
-                </IconButton>
-              </Box>
-                      <Stack direction="row" spacing={2}>
-                        <TextField
-                          label="Price"
-                          type="number"
-                          value={variant.price}
-                          onChange={(e) =>
-                            handleVariantChange(
-                              idx,
-                              "price",
-                              Number(e.target.value)
-                            )
-                          }
-                          size="small"
-                          InputProps={{
-                            startAdornment: (
-                              <Typography sx={{ mr: 1 }}>₱</Typography>
-                            ),
-                          }}
-                        />
-          </Stack>
-                      <Box>
-                        <Typography variant="body2" fontWeight={500} mb={0.5}>
-                          Stock <span style={{ color: "red" }}>*</span>
-                        </Typography>
-                        <Box display="flex" alignItems="center">
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              handleVariantChange(
-                                idx,
-                                "stock",
-                                Math.max(0, variant.stock - 1)
-                              )
-                            }
-                            sx={{ border: "1px solid #ccc", borderRadius: 1, color: "black" }}
-                          >
-                            -
-                          </IconButton>
-                          <TextField
-                            value={variant.stock}
-                            onChange={(e) =>
-                              handleVariantChange(
-                                idx,
-                                "stock",
-                                Math.max(0, Number(e.target.value) || 0)
-                              )
-                            }
-                            type="number"
-                            size="small"
-                            sx={{ width: 60, mx: 1 }}
-                            inputProps={{
-                              min: 0,
-                              style: { textAlign: "center" },
-                            }}
-                />
-                <IconButton
-                  size="small"
-                            onClick={() =>
-                              handleVariantChange(
-                                idx,
-                                "stock",
-                                variant.stock + 1
-                              )
-                            }
-                            sx={{ border: "1px solid #ccc", borderRadius: 1, color: "black" }}
-                          >
-                            +
-                </IconButton>
-                          <Typography variant="body2" sx={{ ml: 1 }}>
-                            pcs.
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Stack>
-              </Box>
-            ))}
-              </Stack>
-            </Box>
-
-        <Divider sx={{ my: 2 }} />
-        <Button
-          variant="contained"
-          color="primary"
-              sx={{ mb: 4, mt: 4, width: "100%", mx: "auto", display: "block" }}
-          onClick={handleViewProduct}
-        >
-          {isEditMode ? "Preview Changes" : "View Product"}
-        </Button>
-      </Stack>
         </Grid>
       </Grid>
 
       {/* Add Component Dialog */}
-      <Dialog
+      <AddComponentDialog
         open={openAddComponent}
         onClose={handleCloseAddComponent}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Add New Component</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Add a Component
-            </Typography>
-            <TextField
-              label="Component Name"
-              fullWidth
-              required
-              value={newComponent.name}
-              onChange={(e) =>
-                setNewComponent((prev) => ({ ...prev, name: e.target.value }))
-              }
-              placeholder="Enter component name"
-            />
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              value={newComponent.description}
-              onChange={(e) =>
-                setNewComponent((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-              placeholder="Enter component description"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseAddComponent} color="inherit">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAddComponent}
-            variant="contained"
-            disabled={!newComponent.name.trim()}
-          >
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+        component={newComponent}
+        onComponentChange={setNewComponent}
+        onAdd={handleAddComponent}
+      />
 
       {/* Confirmation Dialog */}
-      <Dialog
+      <ConfirmDialog
         open={openConfirmDialog}
         onClose={() => setOpenConfirmDialog(false)}
-      >
-        <DialogTitle>Confirm New Component</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to add this new component?
-          </DialogContentText>
-          <Box sx={{ mt: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-            <Typography variant="subtitle2">Component Details:</Typography>
-            <Typography variant="body2">
-              <strong>Name:</strong> {newComponent.name}
-            </Typography>
-            {newComponent.description && (
-              <Typography variant="body2">
-                <strong>Description:</strong> {newComponent.description}
-              </Typography>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenConfirmDialog(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirmAddComponent}
-            variant="contained"
-            color="primary"
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleConfirmAddComponent}
+        component={newComponent}
+      />
     </Box>
   );
 };

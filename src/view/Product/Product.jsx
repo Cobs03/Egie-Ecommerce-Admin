@@ -30,8 +30,8 @@ const Product = () => {
 
   return (
     <Box p={2}>
-      <Typography variant="h5" fontWeight={700} mb={2}>
-        Product Management
+      <Typography variant="h4" fontWeight={700} mb={2}>
+        PRODUCT MANAGEMENT
       </Typography>
 
       <Box
@@ -57,19 +57,7 @@ const Product = () => {
           }}
           sx={{ minWidth: 280 }}
         />
-        <Button
-          variant="outlined"
-          startIcon={<FilterListIcon />}
-          sx={{
-            bgcolor: "#fff",
-            color: "#000",
-            borderColor: "#000",
-            "&:hover": { bgcolor: "#f5f5f5", borderColor: "#000" },
-            ml: 1,
-          }}
-        >
-          Filter
-        </Button>
+
         <Box flex={1} />
         <Button
           variant="contained"
