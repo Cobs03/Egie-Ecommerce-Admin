@@ -11,10 +11,12 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
+import DownloadIcon from "@mui/icons-material/Download";
 import Inventory from "./ProductComponents/Inventory";
 import Stocks from "./ProductComponents/Stocks";
 import { useNavigate } from "react-router-dom";
 import Bundles from "./ProductComponents/Bundles";
+
 const Product = () => {
   const [tab, setTab] = useState(() => {
     const savedTab = localStorage.getItem("productTab");
@@ -27,6 +29,40 @@ const Product = () => {
   };
 
   const navigate = useNavigate();
+
+  // Download handlers
+  const handleDownload = () => {
+    if (tab === 0) {
+      handleDownloadInventory();
+    } else if (tab === 1) {
+      handleDownloadStocks();
+    } else if (tab === 2) {
+      handleDownloadBundles();
+    }
+  };
+
+  const handleDownloadInventory = () => {
+    console.log("Downloading Inventory...");
+    // TODO: Implement inventory download logic (CSV/Excel/PDF)
+    // Example: fetch inventory data and generate file
+  };
+
+  const handleDownloadStocks = () => {
+    console.log("Downloading Stocks...");
+    // TODO: Implement stocks download logic
+  };
+
+  const handleDownloadBundles = () => {
+    console.log("Downloading Bundles...");
+    // TODO: Implement bundles download logic
+  };
+
+  // Get button label based on active tab
+  const getDownloadButtonLabel = () => {
+    if (tab === 0) return "Download Inventory";
+    if (tab === 1) return "Download Stocks";
+    return "Download Bundles";
+  };
 
   return (
     <Box p={2}>
@@ -74,19 +110,49 @@ const Product = () => {
           Add Product
         </Button>
       </Box>
-      <Tabs
-        value={tab}
-        onChange={handleTabChange}
-        sx={{ minHeight: 32 }}
-        TabIndicatorProps={{ style: { height: 2 } }}
+
+      {/* Tabs with Download Button */}
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={2}
       >
-        <Tab
-          label="Inventories"
-          sx={{ minWidth: 120, textTransform: "none" }}
-        />
-        <Tab label="Stocks" sx={{ minWidth: 120, textTransform: "none" }} />
-        <Tab label="Bundles" sx={{ minWidth: 120, textTransform: "none" }} />
-      </Tabs>
+        <Tabs
+          value={tab}
+          onChange={handleTabChange}
+          sx={{ minHeight: 32 }}
+          TabIndicatorProps={{ style: { height: 2 } }}
+        >
+          <Tab
+            label="Inventories"
+            sx={{ minWidth: 120, textTransform: "none" }}
+          />
+          <Tab label="Stocks" sx={{ minWidth: 120, textTransform: "none" }} />
+          <Tab label="Bundles" sx={{ minWidth: 120, textTransform: "none" }} />
+        </Tabs>
+
+        {/* Download Button */}
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+          onClick={handleDownload}
+          sx={{
+            borderColor: "#1976d2",
+            color: "#1976d2",
+            fontWeight: 600,
+            textTransform: "none",
+            minWidth: 180,
+            "&:hover": {
+              borderColor: "#115293",
+              bgcolor: "rgba(25, 118, 210, 0.04)",
+            },
+          }}
+        >
+          {getDownloadButtonLabel()}
+        </Button>
+      </Box>
+
       {tab === 0 && <Inventory />}
       {tab === 1 && <Stocks />}
       {tab === 2 && <Bundles />}
