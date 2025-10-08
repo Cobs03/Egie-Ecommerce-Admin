@@ -38,7 +38,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import productData from "../Data/ProductData.json";
 
-const LowStock = () => {
+const Stocks = () => {
   const [products, setProducts] = useState(productData.products);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -55,19 +55,19 @@ const LowStock = () => {
   const [statusFilter, setStatusFilter] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
-  // Filter low stock products (stock <= 10)
-  const lowStockProducts = useMemo(() => {
-    return products.filter((product) => product.stock <= 10);
+  // All products (not just low stock)
+  const allProducts = useMemo(() => {
+    return products;
   }, [products]);
   
   // Apply filters and sorting
   useEffect(() => {
-    let result = [...lowStockProducts];
+    let result = [...allProducts];
     
     // Apply status filter
     if (statusFilter.length > 0) {
       result = result.filter(product => {
-        const status = product.stock === 0 ? "Out of Stock" : "Low Stock";
+        const status = getStockStatus(product.stock);
         return statusFilter.includes(status);
       });
     }
@@ -84,7 +84,7 @@ const LowStock = () => {
     
     setFilteredProducts(result);
     setPage(0); // Reset to first page when filters change
-  }, [lowStockProducts, statusFilter, nameSort]);
+  }, [allProducts, statusFilter, nameSort]);
 
   const handleUpdateStockClick = (product) => {
     setSelectedProduct(product);
@@ -158,12 +158,15 @@ const LowStock = () => {
   // Function to get status color
   const getStockColor = (stock) => {
     if (stock === 0) return "error";
-    return "warning";
+    if (stock <= 10) return "warning";
+    return "success";
   };
   
   // Function to get stock status text
   const getStockStatus = (stock) => {
-    return stock === 0 ? "Out of Stock" : "Low Stock";
+    if (stock === 0) return "Out of Stock";
+    if (stock <= 10) return "Low Stock";
+    return "Available";
   };
 
   // Get the latest selected product from products state
@@ -242,7 +245,7 @@ const LowStock = () => {
                   }}
                 >
                   <List sx={{ width: 200, pt: 0, pb: 0 }}>
-                    {["Low Stock", "Out of Stock"].map(status => (
+                    {["Available", "Low Stock", "Out of Stock"].map(status => (
                       <ListItem key={status} dense>
                         <FormControlLabel
                           control={
@@ -380,7 +383,7 @@ const LowStock = () => {
         />
       </TableContainer>
       
-      {/* Drawer remains the same */}
+      {/* Drawer - same as before */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -569,4 +572,4 @@ const LowStock = () => {
   );
 };
 
-export default LowStock;
+export default Stocks;

@@ -484,9 +484,6 @@ const Inventory = () => {
                       <MenuItem onClick={handleEditProduct}>
                         Edit Product
                       </MenuItem>
-                      <MenuItem onClick={handleUpdateStock}>
-                        Update Stock
-                      </MenuItem>
                     </Menu>
                   </TableCell>
                 </TableRow>

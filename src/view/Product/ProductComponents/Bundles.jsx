@@ -107,7 +107,12 @@ const Bundles = () => {
   };
 
   const handleView = () => {
-    navigate("/bundles/view", { state: selectedBundle });
+    navigate("/bundles/view", { 
+      state: {
+        ...selectedBundle,
+        editedBy: "Admin User", // Add this - can be dynamic from your data
+      }
+    });
     handleMenuClose();
   };
 

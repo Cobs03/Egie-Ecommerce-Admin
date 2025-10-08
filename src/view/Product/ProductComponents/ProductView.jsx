@@ -15,6 +15,10 @@ import {
   Divider,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import UpdateIcon from "@mui/icons-material/Update";
+import PersonIcon from "@mui/icons-material/Person";
 
 const ProductView = () => {
   const { state } = useLocation();
@@ -37,6 +41,8 @@ const ProductView = () => {
     variants = [],
     stock = 0,
     isEditMode = false,
+    lastEdit = null, // This comes from Inventory
+    editedBy = "Admin User", // Add default editor name, can be passed from Inventory
   } = state;
 
   // Calculate price range from variants
@@ -49,6 +55,50 @@ const ProductView = () => {
       max: Math.max(...prices),
     };
   }, [variants]);
+
+  // Calculate hours since last edit
+  const getTimeSinceEdit = () => {
+    if (!lastEdit) return null;
+
+    try {
+      // Parse lastEdit format: "03/11/2025 3:12 PM"
+      const [datePart, timePart, meridiem] = lastEdit.split(" ");
+      const [month, day, year] = datePart.split("/");
+      let [hours, minutes] = timePart.split(":");
+
+      // Convert to 24-hour format
+      hours = parseInt(hours);
+      if (meridiem === "PM" && hours !== 12) {
+        hours += 12;
+      } else if (meridiem === "AM" && hours === 12) {
+        hours = 0;
+      }
+
+      const editDate = new Date(
+        year,
+        month - 1,
+        day,
+        hours,
+        parseInt(minutes)
+      );
+      const now = new Date();
+      const diffMs = now - editDate;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      const remainingHours = diffHours % 24;
+
+      return {
+        totalHours: diffHours,
+        days: diffDays,
+        hours: remainingHours,
+      };
+    } catch (error) {
+      console.error("Error parsing lastEdit date:", error);
+      return null;
+    }
+  };
+
+  const timeSinceEdit = getTimeSinceEdit();
 
   // Format specification fields for display
   const formatSpecLabel = (key) => {
@@ -74,14 +124,81 @@ const ProductView = () => {
 
   return (
     <Box maxWidth={1200} mx="auto" mt={3} px={3} pb={4}>
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(-1)}
-        sx={{ mb: 3 }}
-        variant="outlined"
+      {/* Header with Return Button and Last Edit Info */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+          flexWrap: "wrap",
+          gap: 2,
+        }}
       >
-        Return
-      </Button>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(-1)}
+          variant="outlined"
+        >
+          Return
+        </Button>
+
+        {/* Last Edit Information - Only shown when coming from Inventory */}
+        {lastEdit && (
+          <Paper
+            elevation={3}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              px: 2.5,
+              py: 1.5,
+              bgcolor: "#1976d2", // Blue background
+              color: "white",
+              borderRadius: 2,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Edited By */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <PersonIcon sx={{ fontSize: 18, color: "white" }} />
+              <Typography variant="body2" sx={{ color: "white" }}>
+                <strong>Edited By:</strong> {editedBy}
+              </Typography>
+            </Box>
+
+            {/* Last Edit Date/Time */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <CalendarTodayIcon sx={{ fontSize: 16, color: "white" }} />
+              <Typography variant="body2" sx={{ color: "white" }}>
+                <strong>Last Edit:</strong> {lastEdit}
+              </Typography>
+            </Box>
+
+            {/* Time Since Edit */}
+            {timeSinceEdit && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <UpdateIcon sx={{ fontSize: 16, color: "white" }} />
+                <Typography variant="body2" sx={{ color: "white" }}>
+                  <strong>Time Since:</strong>{" "}
+                  {timeSinceEdit.days > 0 && `${timeSinceEdit.days}d `}
+                  {timeSinceEdit.hours}h ago
+                </Typography>
+              </Box>
+            )}
+
+            {/* Total Hours */}
+            {timeSinceEdit && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <AccessTimeIcon sx={{ fontSize: 16, color: "white" }} />
+                <Typography variant="body2" sx={{ color: "white" }}>
+                  <strong>Total Hours:</strong> {timeSinceEdit.totalHours}h
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+        )}
+      </Box>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={4} mb={4}>
         {/* Left Side - Images */}
@@ -212,7 +329,6 @@ const ProductView = () => {
             {priceRange.max.toLocaleString()}
           </Typography>
 
-
           {/* Stock Status */}
           <Typography
             variant="body1"
@@ -293,7 +409,11 @@ const ProductView = () => {
                 </Typography>
                 <Stack spacing={0.5}>
                   {Object.entries(componentSpecs).map(([key, value]) => (
-                    <Typography key={key} variant="body2" color="text.secondary">
+                    <Typography
+                      key={key}
+                      variant="body2"
+                      color="text.secondary"
+                    >
                       <strong>{formatSpecLabel(key)}:</strong> {value || "-"}
                     </Typography>
                   ))}
@@ -311,11 +431,9 @@ const ProductView = () => {
           {priceRange.max.toLocaleString()}
         </Typography>
 
-
         <Typography variant="body2" color="text.secondary" mb={0.5}>
           Total Stock: {stock} pcs.
         </Typography>
-
       </Box>
 
       {/* Publish Button */}

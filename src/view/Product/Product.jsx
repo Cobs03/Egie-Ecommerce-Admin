@@ -12,7 +12,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import Inventory from "./ProductComponents/Inventory";
-import LowStock from "./ProductComponents/LowStock";
+import Stocks from "./ProductComponents/Stocks";
 import { useNavigate } from "react-router-dom";
 import Bundles from "./ProductComponents/Bundles";
 const Product = () => {
@@ -84,11 +84,11 @@ const Product = () => {
           label="Inventories"
           sx={{ minWidth: 120, textTransform: "none" }}
         />
-        <Tab label="Low Stocks" sx={{ minWidth: 120, textTransform: "none" }} />
+        <Tab label="Stocks" sx={{ minWidth: 120, textTransform: "none" }} />
         <Tab label="Bundles" sx={{ minWidth: 120, textTransform: "none" }} />
       </Tabs>
       {tab === 0 && <Inventory />}
-      {tab === 1 && <LowStock />}
+      {tab === 1 && <Stocks />}
       {tab === 2 && <Bundles />}
     </Box>
   );
