@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -12,8 +12,8 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SaveIcon from "@mui/icons-material/Save";
 import { useLocation, useNavigate } from "react-router-dom";
-import componentData from "../Data/ComponentData.json";
 import { ProductService } from "../../../services/ProductService";
+import { CategoryService } from "../../../services/CategoryService";
 import { supabase } from "../../../lib/supabase";
 
 // Import separated components
@@ -35,6 +35,10 @@ const ProductCreate = () => {
   console.log("🔍 Is edit mode:", isEditMode);
   console.log("🔍 State images:", state?.images);
   console.log("🔍 State name:", state?.name);
+
+  // Dynamic categories state
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   // Initialize state with product data if in edit mode
   const [images, setImages] = useState(state?.images || []);
@@ -61,6 +65,11 @@ const ProductCreate = () => {
   const [validationError, setValidationError] = useState("");
   const [showError, setShowError] = useState(false);
 
+  // Snackbar state for success/error messages
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+
   // Save state
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -71,17 +80,54 @@ const ProductCreate = () => {
     state?.specifications || {}
   );
 
-  // Get component details from componentData.json based on product's component property
+  // Get category assignments for the product (replaces component details from componentData.json)
   const [selectedComponents, setSelectedComponents] = useState(() => {
-    if (state?.component) {
-      // Find the component in componentData
-      const component = componentData.components.find(
-        (comp) => comp.id === state.component || comp.code === state.component
-      );
-      return component ? [component] : [];
+    console.log("🔍 Edit mode initialization - state:", state);
+    console.log("🔍 State selected_components:", state?.selected_components);
+    console.log("🔍 State selectedComponents:", state?.selectedComponents);
+    
+    if (isEditMode && state?.selected_components) {
+      // Handle both array and single component cases
+      let components = [];
+      
+      if (Array.isArray(state.selected_components)) {
+        components = state.selected_components;
+      } else if (typeof state.selected_components === 'object') {
+        components = [state.selected_components];
+      }
+      
+      console.log("🔍 Components to set:", components);
+      return components;
     }
+    
     return [];
   });
+
+  // Function to load categories (reusable)
+  const loadCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const result = await CategoryService.getCategories();
+      
+      if (result.success) {
+        console.log("🎯 Loaded dynamic categories:", result.data);
+        setCategories(result.data);
+      } else {
+        console.error("❌ Failed to load categories:", result.error);
+      }
+    } catch (error) {
+      console.error("❌ Error loading categories:", error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Load dynamic categories on component mount
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  // Track the last auto-formatted description to avoid overwriting manual edits was moved to state section above
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -335,9 +381,8 @@ const ProductCreate = () => {
         brand_id: brandId || null,
         price: variants.length > 0 ? variants[0].price : 0, // Use first variant price as base price
         stock_quantity: variants.reduce((sum, v) => sum + (v.stock || 0), 0), // Total stock
-        sku: `${name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`, // Auto-generate SKU
         images: uploadedImageUrls, // Direct array of image URLs
-        selectedComponents: selectedComponents, // From ComponentsSlider
+        selected_components: selectedComponents, // From ComponentsSlider (use correct field name)
         specifications: specifications, // From ComponentSpecifications
         variants: variants, // From VariantManager
         metadata: {
@@ -349,17 +394,43 @@ const ProductCreate = () => {
         status: 'active'
       };
 
-      // Save product using ProductService
-      const result = await ProductService.createProduct(productData);
+      // For edit mode, don't regenerate SKU - keep existing one
+      if (isEditMode && state?.sku) {
+        productData.sku = state.sku;
+      } else {
+        productData.sku = `${name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`;
+      }
+
+      console.log("🔄 Product data prepared:", productData);
+      console.log("🔄 Is edit mode:", isEditMode);
+      console.log("🔄 Product ID:", state?.id);
+
+      // Save product using ProductService - check if edit or create
+      let result;
+      if (isEditMode && state?.id) {
+        console.log("🔄 Updating existing product with ID:", state.id);
+        result = await ProductService.updateProduct(state.id, productData);
+      } else {
+        console.log("🔄 Creating new product");
+        result = await ProductService.createProduct(productData);
+      }
 
       if (result.success) {
-        setSuccessMessage('Product saved successfully! It will now appear in the e-commerce app.');
+        const successMsg = isEditMode && state?.id 
+          ? 'Product updated successfully!'
+          : 'Product saved successfully! It will now appear in the e-commerce app.';
+        setSuccessMessage(successMsg);
         setShowSuccess(true);
         
-        // Optionally clear form or navigate
-        // navigate('/products');
+        // Navigate back to products list after short delay
+        setTimeout(() => {
+          navigate('/products');
+        }, 1500);
       } else {
-        setValidationError(`Failed to save product: ${result.error}`);
+        const errorMsg = isEditMode && state?.id 
+          ? `Failed to update product: ${result.error}`
+          : `Failed to save product: ${result.error}`;
+        setValidationError(errorMsg);
         setShowError(true);
       }
     } catch (error) {
@@ -379,9 +450,12 @@ const ProductCreate = () => {
     // If validation passes, navigate to view
     navigate("/products/view", {
       state: {
+        id: state?.id, // Include the product ID for edit mode
+        sku: state?.sku, // Include the SKU for edit mode
         images,
         name,
         description,
+        brand_id: brandId,
         components: selectedComponents,
         specifications,
         warranty,
@@ -390,7 +464,7 @@ const ProductCreate = () => {
         discount,
         variants,
         stock: variants.reduce((sum, v) => sum + (v.stock || 0), 0),
-        isEditMode: true,
+        isEditMode: isEditMode,
       },
     });
   };
@@ -419,17 +493,47 @@ const ProductCreate = () => {
     }
   };
 
-  const handleConfirmAddComponent = () => {
-    // Create a new component object with a temporary ID
-    const newComp = {
-      id: `temp-${Date.now()}`,
-      name: newComponent.name,
-      description: newComponent.description,
-      category: "Custom",
-    };
+  const handleConfirmAddComponent = async () => {
+    try {
+      // Create category in database using CategoryService
+      const slug = newComponent.name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      
+      const categoryData = {
+        name: newComponent.name,
+        slug: slug,
+        description: newComponent.description,
+        is_active: true,
+        display_order: categories.length + 1
+      };
 
-    // Add to selected components
-    setSelectedComponents((prev) => [...prev, newComp]);
+      const result = await CategoryService.createCategory(categoryData);
+      
+      if (result.success) {
+        // Refresh categories list
+        await loadCategories();
+        
+        // Add to selected components (use the real category from database)
+        const newCategory = result.data;
+        setSelectedComponents((prev) => [...prev, newCategory]);
+        
+        // Show success message
+        setSnackbarMessage(`Category "${newComponent.name}" added successfully!`);
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+      } else {
+        // Show error message
+        setSnackbarMessage(`Failed to add category: ${result.error}`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+      setSnackbarMessage(`Error adding category: ${error.message}`);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
 
     // Close dialogs
     setOpenConfirmDialog(false);
@@ -557,6 +661,18 @@ const ProductCreate = () => {
         {isEditMode ? "Edit Product" : "Product Upload"}
       </Typography>
 
+      {/* Temporary Debug: Show category loading status */}
+      {loadingCategories && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          🔄 Loading dynamic categories...
+        </Alert>
+      )}
+      {!loadingCategories && categories.length > 0 && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          ✅ Loaded {categories.length} dynamic categories: {categories.map(c => c.name).join(', ')}
+        </Alert>
+      )}
+
       {/* Validation Error Snackbar */}
       <Snackbar
         open={showError}
@@ -619,6 +735,8 @@ const ProductCreate = () => {
           {/* Components Slider */}
           <ComponentsSlider
             selectedComponents={selectedComponents}
+            categories={categories}
+            loadingCategories={loadingCategories}
             onAddComponent={handleOpenAddComponent}
             onRemoveComponent={handleRemoveComponent}
             onSelectComponent={handleSelectComponent}
@@ -700,11 +818,30 @@ const ProductCreate = () => {
         </Alert>
       </Snackbar>
 
+      {/* Category Add/Update Message Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+
       {/* Add Component Dialog */}
       <AddComponentDialog
         open={openAddComponent}
         onClose={handleCloseAddComponent}
         component={newComponent}
+        categories={categories}
+        loadingCategories={loadingCategories}
         onComponentChange={setNewComponent}
         onAdd={handleAddComponent}
       />

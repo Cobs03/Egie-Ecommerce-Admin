@@ -37,6 +37,7 @@ import { FaUserGroup, FaRegCreditCard } from "react-icons/fa6";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
+import { MdCategory } from "react-icons/md";
 import ScrollToTop from "./ScrollToTop";
 
 // Import all necessary components
@@ -54,6 +55,7 @@ import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
+import CategoryManagement from "../CategoryManagement/CategoryManagement";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -63,6 +65,7 @@ const miniDrawerWidth = 65;
 const NAVIGATION = [
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard size={20} /> },
   { segment: "products", title: "Product", icon: <TbPackage size={20} /> },
+  { segment: "categories", title: "Categories", icon: <MdCategory size={20} /> },
   { segment: "users", title: "Users", icon: <FaUserGroup size={20} /> },
   { segment: "orders", title: "Orders", icon: <IoDocumentTextOutline size={20} /> },
   { segment: "payment", title: "Payment", icon: <FaRegCreditCard size={20} /> },
@@ -465,6 +468,7 @@ function Navbar() {
             <Route path="/products/view" element={<ProductView />} />
             <Route path="/bundles/create" element={<BundleCreate />} />
             <Route path="/bundles/view" element={<BundleView />} />
+            <Route path="/categories" element={<CategoryManagement />} />
             <Route path="/users" element={<Users />} />
             <Route path="/orders" element={<Order />} />
             <Route path="/payment" element={<Payment />} />

@@ -29,6 +29,8 @@ import {
   ListItemText,
   Checkbox,
   FormControlLabel,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -56,6 +58,10 @@ const Stocks = () => {
   const [statusFilter, setStatusFilter] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   // Load real products from database
   useEffect(() => {
     const loadProducts = async () => {
@@ -71,12 +77,28 @@ const Stocks = () => {
             price: parseFloat(product.price),
             stock: product.stock_quantity,
             sku: product.sku,
+            code: product.sku || product.id,
             status: product.status,
+            warranty: product.warranty,
+            brand_id: product.brand_id,
+            brands: product.brands,
             category: product.metadata?.category || 'General',
+            
+            // Handle images properly
             image: product.images && product.images.length > 0 ? product.images[0] : null,
+            images: product.images || [],
+            
             lastEdit: new Date(product.updated_at).toLocaleString(),
-            variants: product.metadata?.variants || [],
-            components: product.metadata?.components || []
+            
+            // Direct database fields
+            variants: product.variants || [],
+            selectedComponents: product.selected_components || [],
+            specifications: product.specifications || {},
+            
+            // Metadata fields
+            officialPrice: product.metadata?.officialPrice || product.price,
+            initialPrice: product.metadata?.initialPrice || product.price,
+            discount: product.metadata?.discount || 0
           }));
           setProducts(transformedProducts);
         }
@@ -139,33 +161,76 @@ const Stocks = () => {
     setConfirmOpen(true);
   };
 
-  const handleConfirm = () => {
+  const handleVariantStockChange = (variantIndex, newStock) => {
+    setSelectedProduct(prev => ({
+      ...prev,
+      variants: prev.variants.map((variant, index) => 
+        index === variantIndex 
+          ? { ...variant, stock: Math.max(0, newStock) }
+          : variant
+      )
+    }));
+  };
+
+  const handleConfirm = async () => {
     if (selectedProduct) {
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.id === selectedProduct.id) {
-            const newStock = Math.max(0, p.stock + stockChange);
-            return {
-              ...p,
-              stock: newStock,
-              stocks:
-                newStock === 0
-                  ? "Out of Stock"
-                  : newStock <= 10
-                    ? "Low Stock"
-                    : "Available",
-            };
-          }
-          return p;
-        })
-      );
+      try {
+        let newStock;
+        let updatedProduct = { ...selectedProduct };
+
+        // If product has variants, calculate total stock from variants
+        if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+          newStock = selectedProduct.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
+          updatedProduct.variants = selectedProduct.variants;
+        } else {
+          // Simple stock update
+          newStock = Math.max(0, selectedProduct.stock + stockChange);
+        }
+
+        // Update in database
+        await ProductService.updateProduct(selectedProduct.id, {
+          stock_quantity: newStock,
+          variants: updatedProduct.variants
+        });
+
+        // Update local state
+        setProducts((prev) =>
+          prev.map((p) => {
+            if (p.id === selectedProduct.id) {
+              return {
+                ...p,
+                stock: newStock,
+                variants: updatedProduct.variants,
+                stocks:
+                  newStock === 0
+                    ? "Out of Stock"
+                    : newStock <= 10
+                      ? "Low Stock"
+                      : "Available",
+              };
+            }
+            return p;
+          })
+        );
+
+        // Show success notification
+        if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+          setSuccessMessage(`Variant stocks updated successfully! Total stock: ${newStock}`);
+        } else {
+          setSuccessMessage(`Stock updated successfully! New stock: ${newStock}`);
+        }
+        setShowSuccess(true);
+
+      } catch (error) {
+        console.error('Error updating stock:', error);
+      }
     }
     setConfirmOpen(false);
     setDrawerOpen(false);
     setSelectedProduct(null);
     setStockChange(0);
   };
-  
+
   // Filter handlers
   const handleNameFilterOpen = (event) => {
     setNameFilterAnchor(event.currentTarget);
@@ -205,9 +270,8 @@ const Stocks = () => {
     return "Available";
   };
 
-  // Get the latest selected product from products state
-  const currentSelectedProduct =
-    selectedProduct && products.find((p) => p.id === selectedProduct.id);
+  // Use selectedProduct directly as it gets updated with variant changes
+  const currentSelectedProduct = selectedProduct;
 
   return (
     <>
@@ -471,74 +535,132 @@ const Stocks = () => {
 
               {/* Current Stock */}
               <Typography variant="body1" mb={3}>
-                Current Stock: <b>{currentSelectedProduct.stock}</b>
+                Total Current Stock: <b>{currentSelectedProduct.stock}</b>
               </Typography>
 
-              {/* Stock Change Controls */}
-              <Box mb={4}>
-                <Typography variant="caption" color="text.secondary" mb={1} display="block">
-                  Stock Change
-                </Typography>
-                <Box display="flex" alignItems="center">
-                  <IconButton
-                    onClick={() => setStockChange((v) => v - 1)}
-                    disabled={stockChange <= -currentSelectedProduct.stock}
-                    sx={{ 
-                      border: "1px solid #e0e0e0", 
-                      borderRadius: '50%',
-                      p: 1,
-                      color: "black"
-                    }}
-                  >
-                    <RemoveIcon />
-                  </IconButton>
+              {/* Show variants if they exist */}
+              {currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0 ? (
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Variants
+                  </Typography>
                   
-                  <TextField
-                    value={stockChange}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value) || 0;
-                      setStockChange(val);
-                    }}
-                    variant="outlined"
-                    size="small"
-                    InputProps={{
-                      inputProps: { 
-                        min: -currentSelectedProduct.stock, 
-                        style: { textAlign: 'center' } 
-                      }
-                    }}
-                    sx={{ 
-                      mx: 2,
-                      width: 120,
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '4px',
-                      }
-                    }}
-                  />
+                  {currentSelectedProduct.variants.map((variant, index) => (
+                    <Paper key={index} elevation={1} sx={{ p: 2, mb: 2 }}>
+                      <Typography 
+                        variant="subtitle2" 
+                        sx={{ 
+                          mb: 1, 
+                          fontWeight: 'bold',
+                          color: '#000',
+                          fontSize: '1rem'
+                        }}
+                      >
+                        {variant.name || `Variant ${index + 1}`}
+                      </Typography>
+                      
+                      {variant.price && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          Price: ₱{variant.price.toLocaleString()}
+                        </Typography>
+                      )}
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <TextField
+                          label="Stock"
+                          type="number"
+                          size="small"
+                          value={variant.stock || 0}
+                          onChange={(e) => handleVariantStockChange(index, parseInt(e.target.value) || 0)}
+                          sx={{ width: 120 }}
+                          inputProps={{ min: 0 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          Current: {variant.stock || 0}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  ))}
                   
-                  <IconButton
-                    onClick={() => setStockChange((v) => v + 1)}
-                    sx={{ 
-                      border: "1px solid #e0e0e0", 
-                      borderRadius: '50%',
-                      p: 1,
-                      color: "black"
-                    }}
-                  >
-                    <AddIcon />
-                  </IconButton>
+                  <Typography variant="body1" sx={{ mt: 2, mb: 3, fontWeight: 'bold' }}>
+                    New Total Stock: {currentSelectedProduct.variants.reduce((sum, v) => sum + (v.stock || 0), 0)}
+                  </Typography>
                 </Box>
-              </Box>
+              ) : (
+                /* No variants - simple stock update */
+                <Box mb={4}>
+                  <Typography variant="caption" color="text.secondary" mb={1} display="block">
+                    Stock Change
+                  </Typography>
+                  <Box display="flex" alignItems="center">
+                    <IconButton
+                      onClick={() => setStockChange((v) => v - 1)}
+                      disabled={stockChange <= -currentSelectedProduct.stock}
+                      sx={{ 
+                        border: "1px solid #e0e0e0", 
+                        borderRadius: '50%',
+                        p: 1,
+                        color: "black"
+                      }}
+                    >
+                      <RemoveIcon />
+                    </IconButton>
+                    
+                    <TextField
+                      value={stockChange}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        setStockChange(val);
+                      }}
+                      variant="outlined"
+                      size="small"
+                      InputProps={{
+                        inputProps: { 
+                          min: -currentSelectedProduct.stock, 
+                          style: { textAlign: 'center' } 
+                        }
+                      }}
+                      sx={{ 
+                        mx: 2,
+                        width: 120,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '4px',
+                        }
+                      }}
+                    />
+                    
+                    <IconButton
+                      onClick={() => setStockChange((v) => v + 1)}
+                      sx={{ 
+                        border: "1px solid #e0e0e0", 
+                        borderRadius: '50%',
+                        p: 1,
+                        color: "black"
+                      }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+              )}
 
               {/* Action Buttons */}
               <Stack direction="row" spacing={2}>
                 <Button
                   variant="contained"
                   fullWidth
-                  disabled={stockChange === 0}
-                  onClick={() =>
-                    handleChangeStock(stockChange > 0 ? "add" : "remove")
+                  disabled={
+                    currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0
+                      ? false // For variants, always allow update
+                      : stockChange === 0 // For simple products, only disable if no change
                   }
+                  onClick={() => {
+                    if (currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0) {
+                      handleConfirm(); // Direct confirm for variants
+                    } else {
+                      handleChangeStock(stockChange > 0 ? "add" : "remove"); // Keep existing logic for simple products
+                    }
+                  }}
                   sx={{
                     bgcolor: "#39FC1D",
                     color: "black",
@@ -552,7 +674,10 @@ const Stocks = () => {
                     }
                   }}
                 >
-                  CHANGE STOCK
+                  {currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0 
+                    ? "UPDATE STOCK" 
+                    : "CHANGE STOCK"
+                  }
                 </Button>
                 <Button 
                   variant="outlined" 
@@ -604,6 +729,32 @@ const Stocks = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
