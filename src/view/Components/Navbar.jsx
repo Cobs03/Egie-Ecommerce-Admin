@@ -52,7 +52,7 @@ import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipview";
-import Logs from "../Logs/Logs";
+import AdminLogs from "../AdminLogs/AdminLogs";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -463,7 +463,7 @@ function Navbar() {
             <Route path="/shipping/view/:orderId" element={<Shipview />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/discount" element={<Promotions />} />
-            <Route path="/logs" element={<Logs />} />
+            <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}
             {/* Add routes for new profile pages */}
             <Route path="/profile" element={<div>Profile Page</div>} />
             <Route path="/settings" element={<div>Settings Page</div>} />
