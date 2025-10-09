@@ -25,6 +25,7 @@ import MenuItem from "@mui/material/MenuItem";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
+import { useAuth } from "../../contexts/AuthContext";
 
 import {
   MdOutlineDashboard,
@@ -36,6 +37,7 @@ import { FaUserGroup, FaRegCreditCard } from "react-icons/fa6";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
+import { MdCategory } from "react-icons/md";
 import ScrollToTop from "./ScrollToTop";
 
 // Import all necessary components
@@ -53,6 +55,7 @@ import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
+import CategoryManagement from "../CategoryManagement/CategoryManagement";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -62,6 +65,7 @@ const miniDrawerWidth = 65;
 const NAVIGATION = [
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard size={20} /> },
   { segment: "products", title: "Product", icon: <TbPackage size={20} /> },
+  { segment: "categories", title: "Categories", icon: <MdCategory size={20} /> },
   { segment: "users", title: "Users", icon: <FaUserGroup size={20} /> },
   { segment: "orders", title: "Orders", icon: <IoDocumentTextOutline size={20} /> },
   { segment: "payment", title: "Payment", icon: <FaRegCreditCard size={20} /> },
@@ -73,7 +77,7 @@ const NAVIGATION = [
 
 // Styled components
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
-  ({ theme, open, isCollapsed }) => ({
+  ({ theme, open }) => ({
     flexGrow: 1,
     padding: theme.spacing(3),
     backgroundColor: '#f5f5f5',
@@ -81,13 +85,13 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    marginLeft: 0, // CHANGED HERE - was: isCollapsed ? miniDrawerWidth : 0
+    marginLeft: 0,
     ...(open && {
       transition: theme.transitions.create('margin', {
         easing: theme.transitions.easing.easeOut,
         duration: theme.transitions.duration.enteringScreen,
       }),
-      marginLeft: 0, // CHANGED HERE - was: isCollapsed ? miniDrawerWidth : 0
+      marginLeft: 0,
     }),
   }),
 );
@@ -122,6 +126,7 @@ function Navbar() {
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -161,11 +166,14 @@ function Navbar() {
     handleProfileMenuClose();
   };
   
-  const handleLogoutClick = () => {
-    // Handle logout click
-    console.log("Logout clicked");
-    navigate("/auth");
-    handleProfileMenuClose();
+  const handleLogoutClick = async () => {
+    try {
+      await signOut();
+      handleProfileMenuClose();
+      navigate("/auth", { replace: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   // Determine if a navigation item is active
@@ -277,21 +285,23 @@ function Navbar() {
               }}
             >
               <Avatar
-                src="https://xsgames.co/randomusers/avatar.php?g=male"
+                src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
                 sx={{ width: 32, height: 32, mr: 1.5 }}
-              />
+              >
+                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
+              </Avatar>
               <Box>
                 <Typography
                   variant="body2"
                   sx={{ color: "#fff", fontWeight: 500 }}
                 >
-                  Mik ko
+                  {profile?.full_name || 'Admin User'}
                 </Typography>
                 <Typography
                   variant="caption"
                   sx={{ color: "rgba(255, 255, 255, 0.7)" }}
                 >
-                  mik@gmail.com
+                  {user?.email || 'admin@example.com'}
                 </Typography>
               </Box>
             </ListItem>
@@ -305,9 +315,9 @@ function Navbar() {
               justifyContent: "center",
             }}
           >
-            <Tooltip title="Mik ko" placement="right">
+            <Tooltip title={profile?.full_name || 'Admin User'} placement="right">
               <Avatar
-                src="https://xsgames.co/randomusers/avatar.php?g=male"
+                src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
                 onClick={handleProfileMenuOpen}
                 sx={{ 
                   width: 40, 
@@ -318,7 +328,9 @@ function Navbar() {
                     boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
                   },
                 }}
-              />
+              >
+                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
+              </Avatar>
             </Tooltip>
           </Box>
         )}
@@ -445,7 +457,7 @@ function Navbar() {
       </Drawer>
       
       {/* Main content */}
-      <Main open={open} isCollapsed={isCollapsed} sx={{ width: '100%', padding: 0 }}>
+      <Main open={open} sx={{ width: '100%', padding: 0 }}>
         <Box sx={{ minHeight: '100vh' }}>
           <ScrollToTop />
           <Routes>
@@ -456,6 +468,7 @@ function Navbar() {
             <Route path="/products/view" element={<ProductView />} />
             <Route path="/bundles/create" element={<BundleCreate />} />
             <Route path="/bundles/view" element={<BundleView />} />
+            <Route path="/categories" element={<CategoryManagement />} />
             <Route path="/users" element={<Users />} />
             <Route path="/orders" element={<Order />} />
             <Route path="/payment" element={<Payment />} />

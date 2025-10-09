@@ -22,6 +22,14 @@ import {
   Checkbox,
   FormControlLabel,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -29,26 +37,106 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { useNavigate } from "react-router-dom";
 
-// Import only product data
-import productData from "../Data/ProductData.json";
+// Import ProductService to get real data
+import { ProductService } from "../../../services/ProductService";
 
 const Inventory = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuProductId, setMenuProductId] = useState(null);
   
-  // Initialize data only from products
-  const [allProducts, setAllProducts] = useState(
-    productData.products.map((product) => ({
-      ...product,
-      lastEdit: "03/11/2025 3:12 PM",
-    }))
-  );
+  // State for real database products
+  const [allProducts, setAllProducts] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  const [products, setProducts] = useState(allProducts);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [stockChange, setStockChange] = useState(0);
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  
   const navigate = useNavigate();
+
+  // Load real products from database
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      console.log("Loading products from database...");
+      const result = await ProductService.getAllProducts();
+      
+      if (result.success) {
+        console.log(`Found ${result.data.length} products in database`);
+        
+        // Debug: Log first product to see structure
+        if (result.data.length > 0) {
+          console.log('First product from database:', result.data[0]);
+          console.log('First product images:', result.data[0].images);
+          console.log('Product names:', result.data.map(p => p.name));
+          console.log('All products images status:', result.data.map(p => ({
+            name: p.name,
+            hasImages: p.images && p.images.length > 0,
+            imageCount: p.images?.length || 0,
+            images: p.images
+          })));
+        }
+        
+        // Transform products to match existing component structure
+        const transformedProducts = result.data.map((product) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: parseFloat(product.price),
+          stock: product.stock_quantity,
+          sku: product.sku,
+          status: product.status,
+          warranty: product.warranty, // Direct from database
+          brand_id: product.brand_id,
+          brands: product.brands, // Brand info from join
+          category: product.metadata?.category || 'General',
+          
+          // Handle images properly - database stores as array of URLs
+          image: product.images && product.images.length > 0 ? product.images[0] : null,
+          images: product.images || [], // Full images array for ProductView
+          
+          // Use SKU as code if no specific code field exists
+          code: product.sku || product.id,
+          lastEdit: new Date(product.updated_at).toLocaleString(),
+          
+          // Direct from database fields (not nested in metadata)
+          variants: product.variants || [],
+          selectedComponents: product.selected_components || [],
+          specifications: product.specifications || {},
+          
+          // Metadata fields
+          officialPrice: product.metadata?.officialPrice || product.price,
+          initialPrice: product.metadata?.initialPrice || product.price,
+          discount: product.metadata?.discount || 0
+        }));
+        
+        console.log('Transformed products:', transformedProducts);
+        setAllProducts(transformedProducts);
+        setProducts(transformedProducts);
+      } else {
+        console.error("Failed to load products:", result.error);
+        setAllProducts([]);
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      // Keep empty array on error
+      setAllProducts([]);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
   
   // Pagination state
   const [page, setPage] = useState(0);
@@ -182,25 +270,134 @@ const Inventory = () => {
   // Product action handlers
   const handleViewProduct = () => {
     const product = products.find((p) => p.id === menuProductId);
+    
+    console.log("Raw product for view:", product); // Debug log
+    
+    // Transform database product to match ProductView expectations
+    const transformedProduct = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      sku: product.sku,
+      status: product.status,
+      category: product.category,
+      lastEdit: product.lastEdit,
+      warranty: product.warranty, // Direct field
+      brand_id: product.brand_id,
+      brands: product.brands,
+      
+      // Transform images to expected format with url property
+      // Database stores images as array of URLs, ProductView expects array of {url: string}
+      images: product.images ? product.images.map(url => ({ url })) : [],
+      
+      // Use the correct field mappings from database
+      components: product.selectedComponents || [], // Use selectedComponents
+      variants: product.variants || [],
+      specifications: product.specifications || {},
+      
+      // Metadata fields
+      officialPrice: product.officialPrice || product.price,
+      initialPrice: product.initialPrice || product.price,
+      discount: product.discount || 0,
+      
+      isEditMode: false,
+    };
+    
+    console.log("Transformed product for ProductView:", transformedProduct); // Debug log
+    
     navigate("/products/view", {
-      state: {
-        ...product,
-        isEditMode: false,
-      },
+      state: transformedProduct,
     });
     handleMenuClose();
   };
 
   const handleEditProduct = () => {
     const product = products.find((p) => p.id === menuProductId);
-    navigate("/products/create", { state: product });
+    
+    console.log("🔍 Raw product for edit:", product); // Debug log
+    console.log("🔍 Product.selectedComponents:", product.selectedComponents);
+    console.log("🔍 Product.selected_components:", product.selected_components);
+    console.log("🔍 Product keys:", Object.keys(product));
+    console.log("🔍 All product fields:", JSON.stringify(product, null, 2));
+    
+    // Transform product for ProductCreate component
+    const transformedProduct = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      warranty: product.warranty,
+      brand_id: product.brand_id,
+      price: product.price,
+      stock_quantity: product.stock,
+      sku: product.sku,
+      status: product.status,
+      
+      // Transform images back to the format ProductCreate expects
+      images: product.images ? product.images.map(url => ({ url })) : [],
+      
+      // Direct database fields
+      variants: product.variants || [],
+      selectedComponents: product.selectedComponents || [],
+      specifications: product.specifications || {},
+      
+      // Metadata
+      officialPrice: product.officialPrice,
+      initialPrice: product.initialPrice,
+      discount: product.discount,
+      
+      // Add edit mode flag
+      isEditMode: true
+    };
+    
+    console.log("🔍 Transformed product for ProductCreate:", transformedProduct); // Debug log
+    console.log("🔍 Transformed selectedComponents:", transformedProduct.selectedComponents);
+    
+    navigate("/products/create", { state: transformedProduct });
     handleMenuClose();
   };
 
-  const handleUpdateStock = () => {
-    setSelectedProduct(products.find((p) => p.id === menuProductId));
-    setDrawerOpen(true);
+  const handleDeleteProduct = () => {
+    const product = products.find((p) => p.id === menuProductId);
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
     handleMenuClose();
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      console.log("🗑️ Deleting product:", productToDelete.name);
+      const result = await ProductService.deleteProduct(productToDelete.id);
+      
+      if (result.success) {
+        console.log("✅ Product deleted successfully");
+        // Refresh the products list
+        await loadProducts();
+        
+        // Show success notification
+        setSuccessMessage(`Product "${productToDelete.name}" deleted successfully!`);
+        setShowSuccess(true);
+      } else {
+        console.error("❌ Failed to delete product:", result.error);
+        alert(`Failed to delete product: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("❌ Error deleting product:", error);
+      alert(`Error deleting product: ${error.message}`);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
   };
 
   // Function to determine stock status
@@ -432,10 +629,17 @@ const Inventory = () => {
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <Avatar
-                        src={product.image}
+                        src={product.image || undefined}
                         variant="square"
-                        sx={{ width: 32, height: 32, mr: 1 }}
-                      />
+                        sx={{ 
+                          width: 32, 
+                          height: 32, 
+                          mr: 1,
+                          bgcolor: product.image ? 'transparent' : 'grey.300'
+                        }}
+                      >
+                        {!product.image && product.name ? product.name.charAt(0).toUpperCase() : '?'}
+                      </Avatar>
                       <Typography variant="body2">{product.name}</Typography>
                     </Box>
                   </TableCell>
@@ -478,11 +682,39 @@ const Inventory = () => {
                       open={Boolean(anchorEl) && menuProductId === product.id}
                       onClose={handleMenuClose}
                     >
-                      <MenuItem onClick={handleViewProduct}>
+                      <MenuItem 
+                        onClick={handleViewProduct}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: '#4caf50',
+                            color: 'white'
+                          }
+                        }}
+                      >
                         View Product
                       </MenuItem>
-                      <MenuItem onClick={handleEditProduct}>
+                      <MenuItem 
+                        onClick={handleEditProduct}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: '#4caf50',
+                            color: 'white'
+                          }
+                        }}
+                      >
                         Edit Product
+                      </MenuItem>
+                      <MenuItem 
+                        onClick={handleDeleteProduct}
+                        sx={{ 
+                          color: 'error.main',
+                          '&:hover': {
+                            backgroundColor: 'error.light',
+                            color: 'white'
+                          }
+                        }}
+                      >
+                        Delete Product
                       </MenuItem>
                     </Menu>
                   </TableCell>
@@ -537,6 +769,82 @@ const Inventory = () => {
           }}
         />
       </Paper>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title" sx={{ color: 'error.main' }}>
+          Delete Product
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete "{productToDelete?.name}"?
+            <br />
+            <strong>This action cannot be undone.</strong>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions 
+          sx={{ 
+            justifyContent: 'center', 
+            gap: 2, 
+            padding: '16px 24px' 
+          }}
+        >
+          <Button 
+            onClick={handleDeleteCancel} 
+            color="primary"
+            variant="outlined"
+            sx={{ minWidth: '120px' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+            sx={{
+              minWidth: '120px',
+              '&:hover': {
+                backgroundColor: 'error.dark',
+              },
+              fontWeight: 'bold'
+            }}
+          >
+            {isDeleting ? "Deleting..." : "Delete Product"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
