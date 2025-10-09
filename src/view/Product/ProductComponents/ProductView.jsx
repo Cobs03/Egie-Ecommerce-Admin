@@ -218,80 +218,88 @@ const ProductView = () => {
               justifyContent: "center",
             }}
           >
-            <img
-              src={images[selectedImage]?.url || images[0]?.url}
-              alt={name}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-              }}
-            />
+            {images.length > 0 && images[selectedImage]?.url ? (
+              <img
+                src={images[selectedImage]?.url || images[0]?.url}
+                alt={name}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No Image Available
+              </Typography>
+            )}
           </Box>
 
-          {/* Thumbnail Images */}
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              overflowX: "auto",
-              overflowY: "hidden",
-              pb: 1,
-              "&::-webkit-scrollbar": {
-                height: 8,
-              },
-              "&::-webkit-scrollbar-track": {
-                bgcolor: "#f1f1f1",
-                borderRadius: 10,
-              },
-              "&::-webkit-scrollbar-thumb": {
-                bgcolor: "#888",
-                borderRadius: 10,
-                "&:hover": {
-                  bgcolor: "#555",
+          {/* Thumbnail Images - Only show if we have images */}
+          {images.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                overflowX: "auto",
+                overflowY: "hidden",
+                pb: 1,
+                "&::-webkit-scrollbar": {
+                  height: 8,
                 },
-              },
-            }}
-          >
-            {images.map((img, idx) => (
-              <Box
-                key={idx}
-                onClick={() => setSelectedImage(idx)}
-                sx={{
-                  minWidth: 60,
-                  width: 60,
-                  height: 60,
-                  borderRadius: 1,
-                  border:
-                    selectedImage === idx
-                      ? "2px solid #1976d2"
-                      : "1px solid #e0e0e0",
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  bgcolor: "#fafafa",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  transition: "all 0.2s ease",
+                "&::-webkit-scrollbar-track": {
+                  bgcolor: "#f1f1f1",
+                  borderRadius: 10,
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  bgcolor: "#888",
+                  borderRadius: 10,
                   "&:hover": {
-                    borderColor: "#1976d2",
-                    transform: "scale(1.05)",
+                    bgcolor: "#555",
                   },
-                }}
-              >
-                <img
-                  src={img.url}
-                  alt={`${name} ${idx + 1}`}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
+                },
+              }}
+            >
+              {images.map((img, idx) => (
+                <Box
+                  key={idx}
+                  onClick={() => setSelectedImage(idx)}
+                  sx={{
+                    minWidth: 60,
+                    width: 60,
+                    height: 60,
+                    borderRadius: 1,
+                    border:
+                      selectedImage === idx
+                        ? "2px solid #1976d2"
+                        : "1px solid #e0e0e0",
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    bgcolor: "#fafafa",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      borderColor: "#1976d2",
+                      transform: "scale(1.05)",
+                    },
                   }}
-                />
-              </Box>
-            ))}
-          </Box>
+                >
+                  <img
+                    src={img.url}
+                    alt={`${name} ${idx + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          )}
         </Box>
 
         {/* Right Side - Product Info */}

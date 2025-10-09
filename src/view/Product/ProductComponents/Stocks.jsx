@@ -36,10 +36,11 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import productData from "../Data/ProductData.json";
+import { ProductService } from "../../../services/ProductService";
 
 const Stocks = () => {
-  const [products, setProducts] = useState(productData.products);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [stockChange, setStockChange] = useState(0);
@@ -54,6 +55,41 @@ const Stocks = () => {
   const [nameSort, setNameSort] = useState(null); // "az", "za", "recent"
   const [statusFilter, setStatusFilter] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+
+  // Load real products from database
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const result = await ProductService.getAllProducts();
+        if (result.success) {
+          // Transform products to match existing component structure
+          const transformedProducts = result.data.map((product) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: parseFloat(product.price),
+            stock: product.stock_quantity,
+            sku: product.sku,
+            status: product.status,
+            category: product.metadata?.category || 'General',
+            image: product.images && product.images.length > 0 ? product.images[0] : null,
+            lastEdit: new Date(product.updated_at).toLocaleString(),
+            variants: product.metadata?.variants || [],
+            components: product.metadata?.components || []
+          }));
+          setProducts(transformedProducts);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   // All products (not just low stock)
   const allProducts = useMemo(() => {

@@ -29,26 +29,85 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { useNavigate } from "react-router-dom";
 
-// Import only product data
-import productData from "../Data/ProductData.json";
+// Import ProductService to get real data
+import { ProductService } from "../../../services/ProductService";
 
 const Inventory = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuProductId, setMenuProductId] = useState(null);
   
-  // Initialize data only from products
-  const [allProducts, setAllProducts] = useState(
-    productData.products.map((product) => ({
-      ...product,
-      lastEdit: "03/11/2025 3:12 PM",
-    }))
-  );
-  
-  const [products, setProducts] = useState(allProducts);
+  // State for real database products
+  const [allProducts, setAllProducts] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [stockChange, setStockChange] = useState(0);
   const navigate = useNavigate();
+
+  // Load real products from database
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      console.log("Loading products from database...");
+      const result = await ProductService.getAllProducts();
+      
+      if (result.success) {
+        console.log(`Found ${result.data.length} products in database`);
+        
+        // Debug: Log first product to see structure
+        if (result.data.length > 0) {
+          console.log('First product from database:', result.data[0]);
+          console.log('First product images:', result.data[0].images);
+          console.log('Product names:', result.data.map(p => p.name));
+          console.log('All products images status:', result.data.map(p => ({
+            name: p.name,
+            hasImages: p.images && p.images.length > 0,
+            imageCount: p.images?.length || 0,
+            images: p.images
+          })));
+        }
+        
+        // Transform products to match existing component structure
+        const transformedProducts = result.data.map((product) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: parseFloat(product.price),
+          stock: product.stock_quantity,
+          sku: product.sku,
+          status: product.status,
+          category: product.metadata?.category || 'General',
+          // Handle images properly - database stores as array of URLs
+          image: product.images && product.images.length > 0 ? product.images[0] : null,
+          // Use SKU as code if no specific code field exists
+          code: product.sku || product.id,
+          lastEdit: new Date(product.updated_at).toLocaleString(),
+          variants: product.metadata?.variants || [],
+          components: product.metadata?.components || []
+        }));
+        
+        console.log('Transformed products:', transformedProducts);
+        setAllProducts(transformedProducts);
+        setProducts(transformedProducts);
+      } else {
+        console.error("Failed to load products:", result.error);
+        setAllProducts([]);
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      // Keep empty array on error
+      setAllProducts([]);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
   
   // Pagination state
   const [page, setPage] = useState(0);
@@ -182,11 +241,37 @@ const Inventory = () => {
   // Product action handlers
   const handleViewProduct = () => {
     const product = products.find((p) => p.id === menuProductId);
+    
+    // Transform database product to match ProductView expectations
+    const transformedProduct = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      sku: product.sku,
+      status: product.status,
+      category: product.category,
+      lastEdit: product.lastEdit,
+      
+      // Transform images to expected format with url property
+      // Database stores images as array of URLs, ProductView expects array of {url: string}
+      images: product.image ? [{ url: product.image }] : [],
+      
+      // Extract from metadata or use defaults
+      components: product.components || [],
+      variants: product.variants || [],
+      specifications: product.metadata?.specifications || {},
+      warranty: product.metadata?.warranty || "",
+      officialPrice: product.metadata?.officialPrice || product.price,
+      initialPrice: product.metadata?.initialPrice || product.price,
+      discount: product.metadata?.discount || 0,
+      
+      isEditMode: false,
+    };
+    
     navigate("/products/view", {
-      state: {
-        ...product,
-        isEditMode: false,
-      },
+      state: transformedProduct,
     });
     handleMenuClose();
   };
@@ -432,10 +517,17 @@ const Inventory = () => {
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <Avatar
-                        src={product.image}
+                        src={product.image || undefined}
                         variant="square"
-                        sx={{ width: 32, height: 32, mr: 1 }}
-                      />
+                        sx={{ 
+                          width: 32, 
+                          height: 32, 
+                          mr: 1,
+                          bgcolor: product.image ? 'transparent' : 'grey.300'
+                        }}
+                      >
+                        {!product.image && product.name ? product.name.charAt(0).toUpperCase() : '?'}
+                      </Avatar>
                       <Typography variant="body2">{product.name}</Typography>
                     </Box>
                   </TableCell>

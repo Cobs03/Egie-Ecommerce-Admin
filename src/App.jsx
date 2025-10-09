@@ -10,24 +10,94 @@ import Navbar from "./view/Components/Navbar";
 import SignIn from "./view/SignIn/SignIn";
 import AIChatBox from "./view/AI-Chat/AIChatBox";
 import ContentWrapper from "./view/AI-Chat/ContentWrapper";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, profile, loading, isAdmin } = useAuth();
+
+  console.log('ProtectedRoute state:', { user: !!user, profile, loading, isAdmin });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    console.log('No user, redirecting to auth');
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!isAdmin) {
+    console.log('User is not admin, showing access denied');
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">This portal is for administrators only.</p>
+          <p className="text-sm text-gray-500 mb-4">
+            User: {user?.email}, Admin: {isAdmin ? 'Yes' : 'No'}
+          </p>
+          <button
+            onClick={() => window.location.href = "/auth"}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('User is admin, rendering children');
+  return children;
+};
+
+// Main App Content
+const AppContent = () => {
+  const { user } = useAuth();
+  const isAuthPage = window.location.pathname === "/auth";
+
+  return (
+    <ContentWrapper className="App">
+      <Routes>
+        {/* Public route */}
+        <Route 
+          path="/auth" 
+          element={user ? <Navigate to="/dashboard" replace /> : <SignIn />} 
+        />
+
+        {/* Protected admin routes */}
+        <Route 
+          path="/*" 
+          element={
+            <ProtectedRoute>
+              <Navbar />
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+
+      {/* Add AI ChatBox - appears on all pages except auth */}
+      {!isAuthPage && user && <AIChatBox />}
+    </ContentWrapper>
+  );
+};
 
 function App() {
   return (
-    <Router>
-      <ScrollToTop />
-      <ContentWrapper className="App">
-        <Routes>
-          {/* Public route */}
-          <Route path="/auth" element={<SignIn />} />
-
-          {/* Admin dashboard - catch all nested paths */}
-          <Route path="/*" element={<Navbar />} />
-        </Routes>
-
-        {/* Add AI ChatBox - appears on all pages */}
-        <AIChatBox />
-      </ContentWrapper>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <ScrollToTop />
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 }
 

@@ -3,16 +3,62 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaEye } from "react-icons/fa";
 import { IoMdEyeOff } from "react-icons/io";
 import { FaGoogle } from "react-icons/fa";
+import { supabase } from "../../lib/supabase";
 
 const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Here you would typically validate credentials
-    // For now, we'll just navigate to dashboard
-    navigate("/dashboard");
+    setLoading(true);
+    setError("");
+
+    try {
+      // Authenticate with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // Check if user is admin
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin, first_name, last_name')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        setError("Error loading user profile. Please contact administrator.");
+        setLoading(false);
+        return;
+      }
+
+      if (!profile?.is_admin) {
+        // Sign out non-admin user
+        await supabase.auth.signOut();
+        setError("Access denied. This portal is for administrators only.");
+        setLoading(false);
+        return;
+      }
+
+      // Success - redirect to dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -36,6 +82,13 @@ const SignIn = () => {
             Welcome back! Please login to your account to continue
           </p>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
           {/* Email */}
           <label className="text-sm" htmlFor="email">
             Email Address
@@ -43,9 +96,12 @@ const SignIn = () => {
           <input
             type="email"
             id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="p-2 border border-gray-300 rounded w-full text-black mb-4 bg-white"
             placeholder="wayne.enterprises@gotham.com"
             required
+            disabled={loading}
           />
 
           {/* Password */}
@@ -60,9 +116,12 @@ const SignIn = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="p-2 border border-gray-300 rounded w-full pr-10 text-black bg-white"
                 placeholder="********"
                 required
+                disabled={loading}
               />
               <button
                 type="button"
@@ -82,9 +141,10 @@ const SignIn = () => {
           <div className="flex justify-center">
             <button
               type="submit"
-              className="w-[60%] bg-green-500 text-white px-4 py-2 rounded-3xl cursor-pointer hover:bg-transparent border hover:border-green-500 hover:text-green-500 transition duration-200"
+              disabled={loading}
+              className="w-[60%] bg-green-500 text-white px-4 py-2 rounded-3xl cursor-pointer hover:bg-transparent border hover:border-green-500 hover:text-green-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              LOG IN
+              {loading ? "Signing In..." : "LOG IN"}
             </button>
           </div>
         </form>
