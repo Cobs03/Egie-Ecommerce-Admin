@@ -16,7 +16,6 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import componentData from "../../Data/ComponentData.json";
 
 const ComponentsSlider = ({
   selectedComponents,
@@ -26,8 +25,10 @@ const ComponentsSlider = ({
   onEditComponent,
   onDeleteComponent,
   componentBoxWidth = 150,
+  categories = [], // Dynamic categories from database
 }) => {
-  const allComponents = componentData.components;
+  // Use dynamic categories instead of hardcoded componentData
+  const allComponents = categories;
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null);

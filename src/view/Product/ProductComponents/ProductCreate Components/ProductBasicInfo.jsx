@@ -4,53 +4,75 @@ import {
   Stack,
   MenuItem,
   Typography,
-  Autocomplete,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Box,
-  Paper,
 } from "@mui/material";
-import productData from "../../Data/ProductData.json";
+import { BrandService } from "../../../../services/BrandService";
 
 const ProductBasicInfo = ({
   name,
   description,
   warranty,
+  brandId,
   onNameChange,
   onDescriptionChange,
   onWarrantyChange,
-  onProductSelect, // New prop to handle product selection
+  onBrandChange,
 }) => {
-  const [searchTerm, setSearchTerm] = useState(name);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [loadingBrands, setLoadingBrands] = useState(true);
+  const [openBrandDialog, setOpenBrandDialog] = useState(false);
+  const [newBrand, setNewBrand] = useState({
+    name: '',
+    description: '',
+    website_url: ''
+  });
 
-  // Get all products from JSON
-  const allProducts = productData.products;
-
-  // Filter products based on search term
+  // Load brands on component mount
   useEffect(() => {
-    if (searchTerm) {
-      const filtered = allProducts.filter((product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredProducts(filtered);
-    } else {
-      setFilteredProducts([]);
-    }
-  }, [searchTerm]);
+    loadBrands();
+  }, []);
 
-  const handleProductSelect = (event, value) => {
-    if (value) {
-      // Call parent handler with full product data
-      if (onProductSelect) {
-        onProductSelect(value);
+  const loadBrands = async () => {
+    setLoadingBrands(true);
+    try {
+      const result = await BrandService.getAllBrands();
+      if (result.success) {
+        setBrands(result.data);
+      } else {
+        console.error('Failed to load brands:', result.error);
+        setBrands([]);
       }
-      setSearchTerm(value.name);
-      onNameChange(value.name);
+    } catch (error) {
+      console.error('Error loading brands:', error);
+      setBrands([]);
+    } finally {
+      setLoadingBrands(false);
     }
   };
 
-  const handleInputChange = (event, value) => {
-    setSearchTerm(value);
-    onNameChange(value);
+  const handleCreateBrand = async () => {
+    if (!newBrand.name.trim()) return;
+
+    try {
+      const result = await BrandService.createBrand(newBrand);
+      if (result.success) {
+        setBrands([...brands, result.data]);
+        onBrandChange(result.data.id); // Auto-select the new brand
+        setNewBrand({ name: '', description: '', website_url: '' });
+        setOpenBrandDialog(false);
+      } else {
+        console.error('Failed to create brand:', result.error);
+        alert('Failed to create brand: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error creating brand:', error);
+      alert('Error creating brand');
+    }
   };
 
   return (
@@ -59,67 +81,14 @@ const ProductBasicInfo = ({
         Product Information
       </Typography>
 
-      {/* Autocomplete Product Name with Search */}
-      <Autocomplete
-        freeSolo
-        options={allProducts}
-        getOptionLabel={(option) =>
-          typeof option === "string" ? option : option.name
-        }
+      {/* Product Name Field */}
+      <TextField
+        label="Product Name"
+        required
+        size="small"
+        placeholder="Enter product name..."
         value={name}
-        onChange={handleProductSelect}
-        onInputChange={handleInputChange}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="Product Name"
-            required
-            size="small"
-            placeholder="Search or enter product name..."
-          />
-        )}
-        renderOption={(props, option) => (
-          <Box
-            component="li"
-            {...props}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              py: 1,
-            }}
-          >
-            <Box
-              component="img"
-              src={option.image}
-              alt={option.name}
-              sx={{
-                width: 40,
-                height: 40,
-                objectFit: "cover",
-                borderRadius: 1,
-              }}
-            />
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" fontWeight={500}>
-                {option.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {option.code} - ₱{option.price.toLocaleString()}
-              </Typography>
-            </Box>
-          </Box>
-        )}
-        PaperComponent={(props) => (
-          <Paper
-            {...props}
-            sx={{
-              "& .MuiAutocomplete-listbox": {
-                maxHeight: "300px",
-              },
-            }}
-          />
-        )}
+        onChange={(e) => onNameChange(e.target.value)}
       />
 
       <TextField
@@ -134,12 +103,48 @@ const ProductBasicInfo = ({
       />
 
       <Stack direction="row" spacing={2}>
+        {/* Brand Selection */}
+        <TextField
+          label="Brand"
+          select
+          fullWidth
+          size="small"
+          value={brandId || ''}
+          onChange={(e) => onBrandChange(e.target.value)}
+          disabled={loadingBrands}
+          helperText={loadingBrands ? "Loading brands..." : ""}
+        >
+          <MenuItem value="">
+            <em>Select a brand</em>
+          </MenuItem>
+          {brands.map((brand) => (
+            <MenuItem key={brand.id} value={brand.id}>
+              {brand.name}
+            </MenuItem>
+          ))}
+          <MenuItem
+            value="create_new"
+            sx={{ 
+              color: 'primary.main', 
+              fontStyle: 'italic',
+              borderTop: 1,
+              borderColor: 'divider'
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              setOpenBrandDialog(true);
+            }}
+          >
+            + Create New Brand
+          </MenuItem>
+        </TextField>
+
+        {/* Warranty Selection */}
         <TextField
           label="Warranty"
           select
           fullWidth
           size="small"
-          defaultValue=""
           value={warranty}
           onChange={(e) => onWarrantyChange(e.target.value)}
         >
@@ -149,6 +154,49 @@ const ProductBasicInfo = ({
           <MenuItem value="warranty3">3 Year Warranty</MenuItem>
         </TextField>
       </Stack>
+
+      {/* Create Brand Dialog */}
+      <Dialog open={openBrandDialog} onClose={() => setOpenBrandDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Brand</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Brand Name"
+              required
+              fullWidth
+              value={newBrand.name}
+              onChange={(e) => setNewBrand({...newBrand, name: e.target.value})}
+              placeholder="Enter brand name..."
+            />
+            <TextField
+              label="Description"
+              multiline
+              rows={3}
+              fullWidth
+              value={newBrand.description}
+              onChange={(e) => setNewBrand({...newBrand, description: e.target.value})}
+              placeholder="Enter brand description..."
+            />
+            <TextField
+              label="Website URL"
+              fullWidth
+              value={newBrand.website_url}
+              onChange={(e) => setNewBrand({...newBrand, website_url: e.target.value})}
+              placeholder="https://www.example.com"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenBrandDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleCreateBrand} 
+            variant="contained"
+            disabled={!newBrand.name.trim()}
+          >
+            Create Brand
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 };

@@ -145,18 +145,18 @@ const ComponentSpecifications = ({
     // Define fields for each component category
     const fieldConfigs = {
       processor: [
-        { name: "modelName", label: "Model Name", placeholder: "e.g., Intel Core i7-13700K" },
+        { name: "modelName", label: "Model Name", placeholder: "e.g., AMD Ryzen 7 7700X" },
         { name: "cores", label: "Number of Cores", placeholder: "e.g., 8" },
         { name: "threads", label: "Number of Threads", placeholder: "e.g., 16" },
-        { name: "baseClock", label: "Base Clock Speed (GHz)", placeholder: "e.g., 3.4" },
-        { name: "boostClock", label: "Max Boost Clock (GHz)", placeholder: "e.g., 5.4" },
-        { name: "architecture", label: "Architecture (Generation)", placeholder: "e.g., Raptor Lake, 13th Gen" },
-        { name: "socket", label: "Socket Type", placeholder: "e.g., AM5, LGA 1700" },
-        { name: "tdp", label: "TDP (Watts)", placeholder: "e.g., 125W" },
-        { name: "cacheL1", label: "L1 Cache", placeholder: "e.g., 640 KB" },
-        { name: "cacheL2", label: "L2 Cache", placeholder: "e.g., 16 MB" },
-        { name: "cacheL3", label: "L3 Cache", placeholder: "e.g., 30 MB" },
-        { name: "integratedGraphics", label: "Integrated Graphics", placeholder: "e.g., Intel UHD Graphics 770" },
+        { name: "base_clock", label: "Base Clock Speed (GHz)", placeholder: "e.g., 4.5" },
+        { name: "boost_clock", label: "Max Boost Clock (GHz)", placeholder: "e.g., 5.4" },
+        { name: "l2_cache", label: "L2 Cache (MB)", placeholder: "e.g., 8" },
+        { name: "l3_cache", label: "L3 Cache (MB)", placeholder: "e.g., 32" },
+        { name: "tdp", label: "TDP (Watts)", placeholder: "e.g., 105W" },
+        { name: "socket", label: "Socket Type", placeholder: "e.g., AM5" },
+        { name: "memory_support", label: "Memory Support", placeholder: "e.g., DDR5-5200" },
+        { name: "pcie_support", label: "PCIe Support", placeholder: "e.g., 5.0" },
+        { name: "integrated_graphics", label: "Integrated Graphics", placeholder: "e.g., Radeon Graphics (2 cores, 2200 MHz)" },
       ],
       gpu: [
         { name: "modelName", label: "Model Name", placeholder: "e.g., NVIDIA GeForce RTX 4070" },
@@ -295,7 +295,6 @@ const ComponentSpecifications = ({
       ],
       default: [
         { name: "modelName", label: "Model Name", placeholder: "Enter model name" },
-        { name: "brand", label: "Brand", placeholder: "Enter brand" },
         { name: "specifications", label: "Specifications", placeholder: "Enter specifications", multiline: true, rows: 5 },
       ],
     };
@@ -379,6 +378,18 @@ const ComponentSpecifications = ({
                       onChange={(e) =>
                         handleFieldChange(component.id, field.name, e.target.value)
                       }
+                      InputProps={{
+                        style: field.name === 'specifications' ? {
+                          whiteSpace: 'pre-wrap',
+                          fontFamily: 'inherit'
+                        } : {}
+                      }}
+                      inputProps={{
+                        style: field.name === 'specifications' ? {
+                          whiteSpace: 'pre-wrap',
+                          fontFamily: 'inherit'
+                        } : {}
+                      }}
                     />
                   ))}
                 </Stack>
