@@ -247,6 +247,7 @@ const CustomerTable = ({
           )}
         </TableBody>
       </Table>
+
       <TablePagination
         rowsPerPageOptions={[5, 10, 25]}
         component="div"
@@ -258,6 +259,19 @@ const CustomerTable = ({
         sx={{
           backgroundColor: "#E4FDE1",
           borderTop: "1px solid #e0e0e0",
+          "& .MuiTablePagination-toolbar": {
+            justifyContent: "flex-start",
+            paddingLeft: 2,
+          },
+          "& .MuiTablePagination-spacer": {
+            display: "none",
+          },
+          "& .MuiTablePagination-displayedRows": {
+            marginLeft: 0,
+          },
+          "& .MuiTablePagination-actions": {
+            marginLeft: 2,
+          },
         }}
       />
     </TableContainer>

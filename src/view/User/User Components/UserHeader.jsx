@@ -1,7 +1,6 @@
 import React from "react";
 import { Box, Typography, TextField, Button, Stack } from "@mui/material";
-import { Search, PersonAdd } from "@mui/icons-material";
-import DownloadIcon from "@mui/icons-material/Download";
+import { Search, PersonAdd, FileDownload } from "@mui/icons-material";
 
 const UserHeader = ({ 
   onAddUser, 
@@ -93,7 +92,7 @@ const UserHeader = ({
         </Stack>
       </Box>
 
-      {/* Add Employee & Download Button */}
+      {/* Add Employee & Export Button */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -122,7 +121,7 @@ const UserHeader = ({
 
         <Button
           variant="outlined"
-          startIcon={<DownloadIcon />}
+          startIcon={<FileDownload />}
           onClick={onDownload}
           sx={{
             borderColor: "#1976d2",
@@ -135,7 +134,7 @@ const UserHeader = ({
             },
           }}
         >
-          Download File
+          {activeTab === "employees" ? "Export Employees" : "Export Customers"}
         </Button>
       </Box>
     </>

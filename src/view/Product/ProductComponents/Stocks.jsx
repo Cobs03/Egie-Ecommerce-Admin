@@ -7,21 +7,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   Paper,
-  Typography,
+  TablePagination,
   Avatar,
-  Button,
-  Stack,
-  Drawer,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   IconButton,
-  Divider,
+  Menu,
+  MenuItem,
+  Typography,
   Chip,
   Popover,
   List,
@@ -29,16 +21,32 @@ import {
   ListItemText,
   Checkbox,
   FormControlLabel,
+<<<<<<< HEAD
   Snackbar,
   Alert,
+=======
+  Divider,
+  Button,
+  Drawer,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+>>>>>>> f6c2ad6 (Orders and other change)
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+<<<<<<< HEAD
 import { ProductService } from "../../../services/ProductService";
+=======
+import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
+import productData from "../Data/ProductData.json";
+>>>>>>> f6c2ad6 (Orders and other change)
 
 const Stocks = () => {
   const [products, setProducts] = useState([]);
@@ -54,10 +62,11 @@ const Stocks = () => {
   // Sorting & Filtering state
   const [nameFilterAnchor, setNameFilterAnchor] = useState(null);
   const [statusFilterAnchor, setStatusFilterAnchor] = useState(null);
-  const [nameSort, setNameSort] = useState(null); // "az", "za", "recent"
+  const [nameSort, setNameSort] = useState(null);
   const [statusFilter, setStatusFilter] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
+<<<<<<< HEAD
   // Success notification state
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -114,34 +123,36 @@ const Stocks = () => {
   }, []);
 
   // All products (not just low stock)
+=======
+  // All products
+>>>>>>> f6c2ad6 (Orders and other change)
   const allProducts = useMemo(() => {
     return products;
   }, [products]);
-  
+
   // Apply filters and sorting
   useEffect(() => {
     let result = [...allProducts];
-    
-    // Apply status filter
+
+    // Apply status filters
     if (statusFilter.length > 0) {
       result = result.filter(product => {
         const status = getStockStatus(product.stock);
         return statusFilter.includes(status);
       });
     }
-    
+
     // Apply name sorting
     if (nameSort === "az") {
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (nameSort === "za") {
       result.sort((a, b) => b.name.localeCompare(a.name));
     } else if (nameSort === "recent") {
-      // Assuming recent means last edited
       result.sort((a, b) => new Date(b.lastEdit || "2025-03-11") - new Date(a.lastEdit || "2025-03-11"));
     }
-    
+
     setFilteredProducts(result);
-    setPage(0); // Reset to first page when filters change
+    setPage(0);
   }, [allProducts, statusFilter, nameSort]);
 
   const handleUpdateStockClick = (product) => {
@@ -226,26 +237,28 @@ const Stocks = () => {
       }
     }
     setConfirmOpen(false);
-    setDrawerOpen(false);
+    setDrawerClose();
     setSelectedProduct(null);
     setStockChange(0);
   };
 
+<<<<<<< HEAD
   // Filter handlers
+=======
+>>>>>>> f6c2ad6 (Orders and other change)
   const handleNameFilterOpen = (event) => {
     setNameFilterAnchor(event.currentTarget);
   };
-  
+
   const handleStatusFilterOpen = (event) => {
     setStatusFilterAnchor(event.currentTarget);
   };
-  
+
   const handleFilterClose = () => {
     setNameFilterAnchor(null);
     setStatusFilterAnchor(null);
   };
-  
-  // Handle status filter change
+
   const handleStatusFilterChange = (status) => {
     setStatusFilter(prev => {
       if (prev.includes(status)) {
@@ -256,22 +269,25 @@ const Stocks = () => {
     });
   };
 
-  // Function to get status color
   const getStockColor = (stock) => {
     if (stock === 0) return "error";
     if (stock <= 10) return "warning";
     return "success";
   };
-  
-  // Function to get stock status text
+
   const getStockStatus = (stock) => {
     if (stock === 0) return "Out of Stock";
     if (stock <= 10) return "Low Stock";
     return "Available";
   };
 
+<<<<<<< HEAD
   // Use selectedProduct directly as it gets updated with variant changes
   const currentSelectedProduct = selectedProduct;
+=======
+  const currentSelectedProduct =
+    selectedProduct && products.find((p) => p.id === selectedProduct.id);
+>>>>>>> f6c2ad6 (Orders and other change)
 
   return (
     <>
@@ -292,10 +308,6 @@ const Stocks = () => {
                   onClose={handleFilterClose}
                   anchorOrigin={{
                     vertical: 'bottom',
-                    horizontal: 'left',
-                  }}
-                  transformOrigin={{
-                    vertical: 'top',
                     horizontal: 'left',
                   }}
                 >
@@ -382,7 +394,7 @@ const Stocks = () => {
             {filteredProducts
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((product) => (
-                <TableRow 
+                <TableRow
                   key={product.id}
                   sx={{
                     "&:last-child td, &:last-child th": { border: 0 },
@@ -401,7 +413,7 @@ const Stocks = () => {
                   </TableCell>
                   <TableCell>{product.code}</TableCell>
                   <TableCell>
-                    <Chip 
+                    <Chip
                       label={getStockStatus(product.stock)}
                       color={getStockColor(product.stock)}
                       size="small"
@@ -456,15 +468,21 @@ const Stocks = () => {
             setRowsPerPage(parseInt(event.target.value, 10))
           }
           sx={{
-            backgroundColor: "#E4FDE1", 
-            borderTop: "1px solid #e0e0e0", 
-            ".MuiTablePagination-selectIcon": {
+            backgroundColor: "#E4FDE1",
+            borderTop: "1px solid #e0e0e0",
+            "& .MuiTablePagination-toolbar": {
+              justifyContent: "flex-start",
+              paddingLeft: 2,
+            },
+            "& .MuiTablePagination-spacer": {
+              display: "none",
+            },
+            "& .MuiTablePagination-displayedRows": {
+              marginLeft: 0,
               color: "gray",
             },
-            ".MuiTablePagination-displayedRows": {
-              color: "gray",
-            },
-            ".MuiTablePagination-actions": {
+            "& .MuiTablePagination-actions": {
+              marginLeft: 2,
               color: "gray",
               "& .Mui-disabled": {
                 color: "#d3d3d3 !important",
@@ -476,14 +494,17 @@ const Stocks = () => {
                 },
               },
             },
-            ".MuiTablePagination-select": {
+            "& .MuiTablePagination-selectIcon": {
+              color: "gray",
+            },
+            "& .MuiTablePagination-select": {
               color: "gray",
             },
           }}
         />
       </TableContainer>
       
-      {/* Drawer - same as before */}
+      {/* Drawer for updating stock */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -491,13 +512,14 @@ const Stocks = () => {
         PaperProps={{
           sx: {
             width: 350,
-            p: 0,
+            p: 3,
             bgcolor: "#fff",
           },
         }}
       >
         {currentSelectedProduct && (
           <Box>
+<<<<<<< HEAD
             {/* Blue Header Bar */}
             <Box sx={{ 
               bgcolor: "#e3f2fd", 
@@ -696,35 +718,82 @@ const Stocks = () => {
                   CANCEL
                 </Button>
               </Stack>
+=======
+            <Typography variant="h6" gutterBottom>
+              Update Stock
+            </Typography>
+            <Box display="flex" alignItems="center" my={2}>
+              <Avatar
+                src={currentSelectedProduct.image}
+                variant="square"
+                sx={{ width: 60, height: 60, mr: 2 }}
+              />
+              <Box>
+                <Typography fontWeight={600}>{currentSelectedProduct.name}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {currentSelectedProduct.code}
+                </Typography>
+              </Box>
+            </Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Current Stock: {currentSelectedProduct.stock}
+            </Typography>
+            <Box display="flex" alignItems="center" gap={1} my={2}>
+              <IconButton
+                onClick={() => setStockChange(stockChange - 1)}
+                sx={{ bgcolor: "#f5f5f5" }}
+              >
+                <RemoveIcon />
+              </IconButton>
+              <TextField
+                type="number"
+                value={stockChange}
+                onChange={(e) => setStockChange(parseInt(e.target.value) || 0)}
+                sx={{ width: 100 }}
+                size="small"
+              />
+              <IconButton
+                onClick={() => setStockChange(stockChange + 1)}
+                sx={{ bgcolor: "#f5f5f5" }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Box>
+            <Typography variant="subtitle2" color="text.secondary">
+              New Stock: {Math.max(0, currentSelectedProduct.stock + stockChange)}
+            </Typography>
+            <Box display="flex" gap={1} mt={3}>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => handleChangeStock('update')}
+              >
+                Update
+              </Button>
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={handleDrawerClose}
+              >
+                Cancel
+              </Button>
+>>>>>>> f6c2ad6 (Orders and other change)
             </Box>
           </Box>
         )}
       </Drawer>
 
+      {/* Confirmation Dialog */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-        <DialogTitle sx={{ color: "black" }}>
-          Confirm Stock {confirmType === "add" ? "Addition" : "Reduction"}
-        </DialogTitle>
+        <DialogTitle>Confirm Stock Update</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Are you sure you want to {confirmType === "add" ? "add" : "remove"}{" "}
-            {Math.abs(stockChange)} stock for{" "}
-            <b>{currentSelectedProduct?.name}</b>?
-          </DialogContentText>
+          <Typography>
+            Are you sure you want to update the stock for {selectedProduct?.name}?
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => setConfirmOpen(false)}
-            color="inherit"
-            sx={{ color: "black" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            color={confirmType === "add" ? "success" : "error"}
-            variant="contained"
-          >
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirm} variant="contained">
             Confirm
           </Button>
         </DialogActions>

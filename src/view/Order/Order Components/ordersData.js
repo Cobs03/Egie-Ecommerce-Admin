@@ -1,0 +1,193 @@
+// Sample data structure for orders
+export const orders = [
+  {
+    id: "ORD001",
+    customer: {
+      name: "John Doe",
+      email: "john@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 1",
+        quantity: 2,
+        price: 29.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 15,
+      },
+      {
+        name: "Product 2",
+        quantity: 1,
+        price: 49.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 3,
+      },
+    ],
+    total: 109.97,
+    status: "New",
+    date: "2024-03-20",
+    shippingAddress: "123 Main St, City, Country",
+    deliveryType: "delivery",
+  },
+  {
+    id: "ORD002",
+    customer: {
+      name: "Jane Smith",
+      email: "jane@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 3",
+        quantity: 1,
+        price: 59.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 0,
+      },
+    ],
+    total: 59.99,
+    status: "New",
+    date: "2024-03-21",
+    shippingAddress: "456 Elm St, City, Country",
+    deliveryType: "store_pickup",
+  },
+  {
+    id: "ORD003",
+    customer: {
+      name: "Alice Johnson",
+      email: "alice@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 4",
+        quantity: 3,
+        price: 19.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 10,
+      },
+    ],
+    total: 59.97,
+    status: "Completed",
+    date: "2024-03-18",
+    shippingAddress: "789 Pine St, City, Country",
+    deliveryType: "delivery",
+  },
+  {
+    id: "ORD004",
+    customer: {
+      name: "Bob Lee",
+      email: "bob@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 5",
+        quantity: 2,
+        price: 39.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 0,
+      },
+      {
+        name: "Product 6",
+        quantity: 1,
+        price: 24.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 5,
+      },
+    ],
+    total: 104.97,
+    status: "Cancelled",
+    date: "2024-03-19",
+    shippingAddress: "321 Oak St, City, Country",
+    deliveryType: "delivery",
+  },
+  {
+    id: "ORD005",
+    customer: {
+      name: "Chris Martin",
+      email: "chris@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 7",
+        quantity: 1,
+        price: 99.99,
+        image: "https://via.placeholder.com/40",
+        inventory: 1,
+      },
+    ],
+    total: 99.99,
+    status: "New",
+    date: "2024-03-22",
+    shippingAddress: "555 Maple St, City, Country",
+    deliveryType: "delivery",
+  },
+  {
+    id: "ORD006",
+    customer: {
+      name: "Diana Prince",
+      email: "diana@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 8",
+        quantity: 2,
+        price: 45.0,
+        image: "https://via.placeholder.com/40",
+        inventory: 2,
+      },
+    ],
+    total: 90.0,
+    status: "On Going",
+    date: "2024-03-23",
+    shippingAddress: "Wonderland Ave, City, Country",
+    deliveryType: "delivery",
+  },
+  {
+    id: "ORD007",
+    customer: {
+      name: "Clark Kent",
+      email: "clark@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 9",
+        quantity: 1,
+        price: 150.0,
+        image: "https://via.placeholder.com/40",
+        inventory: 0,
+      },
+    ],
+    total: 150.0,
+    status: "Completed",
+    date: "2024-03-17",
+    shippingAddress: "Fortress of Solitude, North Pole",
+    deliveryType: "delivery",
+  },
+  {
+    id: "ORD008",
+    customer: {
+      name: "Bruce Wayne",
+      email: "bruce@example.com",
+      avatar: "https://via.placeholder.com/40",
+    },
+    products: [
+      {
+        name: "Product 10",
+        quantity: 3,
+        price: 33.33,
+        image: "https://via.placeholder.com/40",
+        inventory: 1,
+      },
+    ],
+    total: 99.99,
+    status: "Cancelled",
+    date: "2024-03-16",
+    shippingAddress: "Wayne Manor, Gotham",
+    deliveryType: "delivery",
+  },
+];

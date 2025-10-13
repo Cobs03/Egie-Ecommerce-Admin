@@ -8,7 +8,7 @@ const OrderShip = ({ visible, onClose, onShipped, order }) => {
   // Generate tracking number when courier is selected
   useEffect(() => {
     if (courier) {
-      const prefix = courier.split(" ")[0].toUpperCase();
+      const prefix = courier.split(" ")[0].toUpperCase(); // FIXED: Define prefix here
       const timestamp = Date.now().toString().slice(-6);
       const random = Math.floor(Math.random() * 1000)
         .toString()
@@ -19,14 +19,18 @@ const OrderShip = ({ visible, onClose, onShipped, order }) => {
     }
   }, [courier]);
 
-  if (!visible) return null;
+  if (!visible || !order) return null; // Added null check for order
 
   const textColor = { color: "#222" };
   const cursorPointer = { cursor: "pointer" };
 
   const handleShipped = () => {
-    // Call the onShipped callback which will handle closing both modal and drawer
-    onShipped();
+    if (!courier || !tracking) {
+      alert("Please select a courier and ensure tracking number is generated");
+      return;
+    }
+    // Pass tracking data to parent
+    onShipped({ courier, tracking });
   };
 
   return (
@@ -37,11 +41,11 @@ const OrderShip = ({ visible, onClose, onShipped, order }) => {
         left: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(0,0,0,0.3)",
+        background: "rgba(0,0,0,0.5)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 1000,
+        zIndex: 1500,
       }}
     >
       <div
@@ -59,20 +63,20 @@ const OrderShip = ({ visible, onClose, onShipped, order }) => {
         </h2>
         <div style={{ margin: "16px 0", fontSize: 15, ...textColor }}>
           <div>
-            <b>Name:</b> <span style={textColor}>{order?.name}</span>
+            <b>Name:</b> <span style={textColor}>{order?.name || order?.customer?.name}</span>
           </div>
           <div>
-            <b>Email Address:</b> <span style={textColor}>{order?.email}</span>
+            <b>Email Address:</b> <span style={textColor}>{order?.email || order?.customer?.email}</span>
           </div>
           <div>
-            <b>Phone:</b> <span style={textColor}>{order?.phone}</span>
+            <b>Phone:</b> <span style={textColor}>{order?.phone || order?.customer?.phone || "N/A"}</span>
           </div>
           <div>
-            <b>Address:</b> <span style={textColor}>{order?.address}</span>
+            <b>Address:</b> <span style={textColor}>{order?.address || order?.shippingAddress}</span>
           </div>
           <div>
             <b>Payment Method:</b>{" "}
-            <span style={textColor}>{order?.paymentMethod}</span>
+            <span style={textColor}>{order?.paymentMethod || "N/A"}</span>
           </div>
         </div>
         <hr />
@@ -153,6 +157,7 @@ const OrderShip = ({ visible, onClose, onShipped, order }) => {
               padding: "10px 32px",
               fontWeight: 600,
               ...cursorPointer,
+              opacity: courier && tracking ? 1 : 0.6,
             }}
           >
             Shipped

@@ -413,15 +413,21 @@ const Bundles = () => {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         sx={{
-          backgroundColor: "#E4FDE1", 
-          borderTop: "1px solid #e0e0e0", 
-          ".MuiTablePagination-selectIcon": {
+          backgroundColor: "#E4FDE1",
+          borderTop: "1px solid #e0e0e0",
+          "& .MuiTablePagination-toolbar": {
+            justifyContent: "flex-start",
+            paddingLeft: 2,
+          },
+          "& .MuiTablePagination-spacer": {
+            display: "none",
+          },
+          "& .MuiTablePagination-displayedRows": {
+            marginLeft: 0,
             color: "gray",
           },
-          ".MuiTablePagination-displayedRows": {
-            color: "gray",
-          },
-          ".MuiTablePagination-actions": {
+          "& .MuiTablePagination-actions": {
+            marginLeft: 2,
             color: "gray",
             "& .Mui-disabled": {
               color: "#d3d3d3 !important",
@@ -433,7 +439,10 @@ const Bundles = () => {
               },
             },
           },
-          ".MuiTablePagination-select": {
+          "& .MuiTablePagination-selectIcon": {
+            color: "gray",
+          },
+          "& .MuiTablePagination-select": {
             color: "gray",
           },
         }}
