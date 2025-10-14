@@ -11,8 +11,8 @@ import { Search, FilterList, FileDownload } from "@mui/icons-material";
 const OrderHeader = ({ searchQuery, onSearchChange, totalOrders, onExport }) => {
   return (
     <>
-      <Typography variant="h5" fontWeight="bold" gutterBottom>
-        Order Management
+      <Typography variant="h4" fontWeight={700} mb={2}>
+      ORDER MANAGEMENT
       </Typography>
 
       <Box
