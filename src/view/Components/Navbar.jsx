@@ -37,7 +37,6 @@ import { FaUserGroup, FaRegCreditCard } from "react-icons/fa6";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
-import { MdCategory } from "react-icons/md";
 import ScrollToTop from "./ScrollToTop";
 
 // Import all necessary components
@@ -53,9 +52,8 @@ import Promotions from "../Promotions/Promotions";
 import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
-import Shipview from "../Shipping/Shipview";
+import Shipview from "../Shipping/Shipping Components/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
-import CategoryManagement from "../CategoryManagement/CategoryManagement";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -65,7 +63,6 @@ const miniDrawerWidth = 65;
 const NAVIGATION = [
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard size={20} /> },
   { segment: "products", title: "Product", icon: <TbPackage size={20} /> },
-  { segment: "categories", title: "Categories", icon: <MdCategory size={20} /> },
   { segment: "users", title: "Users", icon: <FaUserGroup size={20} /> },
   { segment: "orders", title: "Orders", icon: <IoDocumentTextOutline size={20} /> },
   { segment: "payment", title: "Payment", icon: <FaRegCreditCard size={20} /> },
@@ -181,6 +178,13 @@ function Navbar() {
     return location.pathname === `/${segment}` || location.pathname.startsWith(`/${segment}/`);
   };
 
+  // Add helper function to truncate email
+  const truncateEmail = (email, maxLength = 15) => {
+    if (!email) return 'admin@example.com';
+    if (email.length <= maxLength) return email;
+    return email.substring(0, maxLength) + '...';
+  };
+
   const drawer = (
     <>
       <DrawerHeader
@@ -268,43 +272,57 @@ function Navbar() {
           ))}
         </List>
 
-        {/* User profile section with menu */}
+        {/* User profile section with menu - UPDATED */}
         {!isCollapsed ? (
           <Box sx={{ mt: "auto", mb: 1, mx: 2 }}>
-            <ListItem
-              component="div"
-              onClick={handleProfileMenuOpen}
-              sx={{
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                borderRadius: "8px",
-                padding: "8px",
-                cursor: "pointer",
-                "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 0.12)",
-                },
-              }}
-            >
-              <Avatar
-                src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
-                sx={{ width: 32, height: 32, mr: 1.5 }}
+            <Tooltip title={user?.email || 'admin@example.com'} placement="top">
+              <ListItem
+                component="div"
+                onClick={handleProfileMenuOpen}
+                sx={{
+                  backgroundColor: "rgba(255, 255, 255, 0.08)",
+                  borderRadius: "8px",
+                  padding: "8px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.12)",
+                  },
+                }}
               >
-                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
-              </Avatar>
-              <Box>
-                <Typography
-                  variant="body2"
-                  sx={{ color: "#fff", fontWeight: 500 }}
+                <Avatar
+                  src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
+                  sx={{ width: 32, height: 32, mr: 1.5 }}
                 >
-                  {profile?.full_name || 'Admin User'}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "rgba(255, 255, 255, 0.7)" }}
-                >
-                  {user?.email || 'admin@example.com'}
-                </Typography>
-              </Box>
-            </ListItem>
+                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
+                </Avatar>
+                <Box sx={{ overflow: 'hidden' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ 
+                      color: "#fff", 
+                      fontWeight: 500,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {profile?.full_name || 'Admin User'}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ 
+                      color: "rgba(255, 255, 255, 0.7)",
+                      display: 'block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {truncateEmail(user?.email)}
+                  </Typography>
+                </Box>
+              </ListItem>
+            </Tooltip>
           </Box>
         ) : (
           <Box
@@ -315,7 +333,7 @@ function Navbar() {
               justifyContent: "center",
             }}
           >
-            <Tooltip title={profile?.full_name || 'Admin User'} placement="right">
+            <Tooltip title={`${profile?.full_name || 'Admin User'}\n${user?.email || 'admin@example.com'}`} placement="right">
               <Avatar
                 src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
                 onClick={handleProfileMenuOpen}
@@ -336,7 +354,7 @@ function Navbar() {
         )}
       </Box>
       
-      {/* Profile Menu - Modified to appear ABOVE the profile button */}
+      {/* Profile Menu */}
       <Menu
         anchorEl={profileMenuAnchor}
         id="profile-menu"
@@ -347,7 +365,7 @@ function Navbar() {
           sx: {
             overflow: 'visible',
             filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: -1,  // Negative margin to move up
+            mt: -1,
             '& .MuiAvatar-root': {
               width: 32,
               height: 32,
@@ -358,18 +376,16 @@ function Navbar() {
               content: '""',
               display: 'block',
               position: 'absolute',
-              top: 'auto', // Change from top to bottom
-              bottom: -5, // Position at bottom
+              bottom: -5,
               right: 14,
               width: 10,
               height: 10,
               bgcolor: 'background.paper',
-              transform: 'translateY(0) rotate(45deg)', // Changed transform
+              transform: 'translateY(0) rotate(45deg)',
               zIndex: 0,
             },
           },
         }}
-        // Change these two properties to position menu above
         transformOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
       >
@@ -468,12 +484,11 @@ function Navbar() {
             <Route path="/products/view" element={<ProductView />} />
             <Route path="/bundles/create" element={<BundleCreate />} />
             <Route path="/bundles/view" element={<BundleView />} />
-            <Route path="/categories" element={<CategoryManagement />} />
             <Route path="/users" element={<Users />} />
             <Route path="/orders" element={<Order />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/shipping" element={<Shipping />} />
-            <Route path="/shipping/view/:orderId" element={<Shipview />} />
+            <Route path="/shipping/view/:orderCode" element={<Shipview />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/discount" element={<Promotions />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}

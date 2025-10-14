@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  MenuItem,
+  Typography,
+  Box,
+  Divider,
+} from "@mui/material";
 
 const OrderShip = ({ visible, onClose, onShipped, order }) => {
   const [courier, setCourier] = useState("");
   const [tracking, setTracking] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Generate tracking number when courier is selected
   useEffect(() => {
     if (courier) {
-      const prefix = courier.split(" ")[0].toUpperCase(); // FIXED: Define prefix here
+      const prefix = courier.split(" ")[0].toUpperCase();
       const timestamp = Date.now().toString().slice(-6);
       const random = Math.floor(Math.random() * 1000)
         .toString()
@@ -19,152 +31,194 @@ const OrderShip = ({ visible, onClose, onShipped, order }) => {
     }
   }, [courier]);
 
-  if (!visible || !order) return null; // Added null check for order
-
-  const textColor = { color: "#222" };
-  const cursorPointer = { cursor: "pointer" };
-
   const handleShipped = () => {
     if (!courier || !tracking) {
       alert("Please select a courier and ensure tracking number is generated");
       return;
     }
-    // Pass tracking data to parent
-    onShipped({ courier, tracking });
+    // Pass tracking data and notes to parent
+    onShipped({ courier, tracking, notes });
+    // Reset form
+    setCourier("");
+    setTracking("");
+    setNotes("");
+  };
+
+  const handleClose = () => {
+    // Reset form on close
+    setCourier("");
+    setTracking("");
+    setNotes("");
+    onClose();
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1500,
+    <Dialog
+      open={visible && !!order}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          maxHeight: "90vh",
+          zIndex: 1550, // Dialog Paper highest
+        },
+      }}
+      sx={{
+        zIndex: 1540, // Dialog root above drawer
+        "& .MuiDialog-container": {
+          zIndex: 1540, // Container same level
+        },
+      }}
+      BackdropProps={{
+        sx: {
+          zIndex: 1530, // Backdrop above drawer but below dialog
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+        },
       }}
     >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 10,
-          padding: 32,
-          minWidth: 400,
-          maxWidth: 500,
-          boxShadow: "0 2px 16px rgba(0,0,0,0.15)",
+      <DialogTitle
+        sx={{
+          textAlign: "center",
+          fontWeight: 700,
+          fontSize: 24,
+          pb: 2,
         }}
       >
-        <h2 style={{ textAlign: "center", fontWeight: 600, ...textColor }}>
-          Shipping Process
-        </h2>
-        <div style={{ margin: "16px 0", fontSize: 15, ...textColor }}>
-          <div>
-            <b>Name:</b> <span style={textColor}>{order?.name || order?.customer?.name}</span>
-          </div>
-          <div>
-            <b>Email Address:</b> <span style={textColor}>{order?.email || order?.customer?.email}</span>
-          </div>
-          <div>
-            <b>Phone:</b> <span style={textColor}>{order?.phone || order?.customer?.phone || "N/A"}</span>
-          </div>
-          <div>
-            <b>Address:</b> <span style={textColor}>{order?.address || order?.shippingAddress}</span>
-          </div>
-          <div>
-            <b>Payment Method:</b>{" "}
-            <span style={textColor}>{order?.paymentMethod || "N/A"}</span>
-          </div>
-        </div>
-        <hr />
-        <div style={{ margin: "16px 0" }}>
-          <div style={{ fontWeight: 500, marginBottom: 8, ...textColor }}>
-            Choose Couriers
-          </div>
-          <select
-            value={courier}
-            onChange={(e) => setCourier(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 5,
-              border: "1px solid #ccc",
-              marginBottom: 8,
-              ...textColor,
-              ...cursorPointer,
-            }}
-          >
-            <option value="">Choose Courier</option>
-            <option value="J&T Express">J&T Express</option>
-            <option value="LBC Express">LBC Express</option>
-            <option value="Ninja Van">Ninja Van</option>
-            <option value="JRS Express">JRS Express</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Tracking Number"
-            value={tracking}
-            readOnly
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 5,
-              border: "1px solid #ccc",
-              marginBottom: 8,
-              ...textColor,
-              backgroundColor: "#f5f5f5",
-            }}
-          />
-          <div
-            style={{ fontSize: 12, color: "#888", marginTop: 4, ...textColor }}
-          >
-            Use PHL if your order is handling delivery — no need for courier
-            tracking
-          </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 24,
+        Shipping Process
+      </DialogTitle>
+
+      <DialogContent>
+        {/* Order Details */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Name:</strong> {order?.name || order?.customer?.name}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Email Address:</strong>{" "}
+            {order?.email || order?.customer?.email}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Phone:</strong>{" "}
+            {order?.phone || order?.customer?.phone || "N/A"}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Address:</strong>{" "}
+            {order?.address || order?.shippingAddress}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Payment Method:</strong> {order?.paymentMethod || "N/A"}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Courier Selection */}
+        <TextField
+          select
+          fullWidth
+          label="Choose Courier"
+          value={courier}
+          onChange={(e) => setCourier(e.target.value)}
+          sx={{ mb: 2 }}
+          required
+          SelectProps={{
+            MenuProps: {
+              sx: {
+                zIndex: 1600, // Dropdown menu above everything
+              },
+            },
           }}
         >
-          <button
-            onClick={onClose}
-            style={{
-              background: "#FF2323",
+          <MenuItem value="">Choose Courier</MenuItem>
+          <MenuItem value="J&T Express">J&T Express</MenuItem>
+          <MenuItem value="LBC Express">LBC Express</MenuItem>
+          <MenuItem value="Ninja Van">Ninja Van</MenuItem>
+          <MenuItem value="JRS Express">JRS Express</MenuItem>
+        </TextField>
+
+        {/* Tracking Number */}
+        <TextField
+          fullWidth
+          label="Tracking Number"
+          value={tracking}
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={{
+            mb: 1,
+            "& .MuiInputBase-input": {
+              backgroundColor: "#f5f5f5",
+            },
+          }}
+        />
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: "block", mb: 2 }}
+        >
+          Use PHL if your order is handling delivery — no need for courier
+          tracking
+        </Typography>
+
+        {/* Notes Text Field */}
+        <TextField
+          fullWidth
+          label="Delivery Notes (Optional)"
+          placeholder="Add delivery notes, special instructions, or handling requirements..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          multiline
+          rows={4}
+          sx={{ mb: 1 }}
+        />
+
+        <Typography variant="caption" color="text.secondary">
+          Example: Handle with care - fragile item, Customer requested expedited
+          shipping, etc.
+        </Typography>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 3, gap: 2 }}>
+        <Button
+          onClick={handleClose}
+          variant="contained"
+          sx={{
+            bgcolor: "#FF2323",
+            color: "#fff",
+            fontWeight: 600,
+            px: 4,
+            "&:hover": {
+              bgcolor: "#DD1111",
+            },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleShipped}
+          disabled={!courier || !tracking}
+          variant="contained"
+          sx={{
+            bgcolor: "#00D100",
+            color: "#fff",
+            fontWeight: 600,
+            px: 4,
+            "&:hover": {
+              bgcolor: "#00B100",
+            },
+            "&:disabled": {
+              bgcolor: "#ccc",
               color: "#fff",
-              border: "none",
-              borderRadius: 5,
-              padding: "10px 32px",
-              fontWeight: 600,
-              ...cursorPointer,
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleShipped}
-            disabled={!courier || !tracking}
-            style={{
-              background: courier && tracking ? "#00D100" : "#ccc",
-              color: "#fff",
-              border: "none",
-              borderRadius: 5,
-              padding: "10px 32px",
-              fontWeight: 600,
-              ...cursorPointer,
-              opacity: courier && tracking ? 1 : 0.6,
-            }}
-          >
-            Shipped
-          </button>
-        </div>
-      </div>
-    </div>
+            },
+          }}
+        >
+          Shipped
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
