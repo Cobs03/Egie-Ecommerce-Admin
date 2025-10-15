@@ -12,10 +12,12 @@ import {
   TextField,
   ListItemIcon,
   ListItemText,
+  IconButton,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
 const ComponentsSlider = ({
   selectedComponents,
@@ -31,7 +33,7 @@ const ComponentsSlider = ({
   const allComponents = categories;
 
   // Context menu state
-  const [contextMenu, setContextMenu] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
   const [selectedComponentForAction, setSelectedComponentForAction] = useState(
     null
   );
@@ -43,19 +45,17 @@ const ComponentsSlider = ({
   // Delete dialog state
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
-  // Handle right-click
+  // Handle menu open (right-click or three-dot button)
   const handleContextMenu = (event, component) => {
     event.preventDefault();
+    event.stopPropagation();
     setSelectedComponentForAction(component);
-    setContextMenu({
-      mouseX: event.clientX - 2,
-      mouseY: event.clientY - 4,
-    });
+    setAnchorEl(event.currentTarget);
   };
 
   // Close context menu
   const handleCloseContextMenu = () => {
-    setContextMenu(null);
+    setAnchorEl(null);
   };
 
   // Open edit dialog
@@ -168,16 +168,6 @@ const ComponentsSlider = ({
           return (
             <Box
               key={component.id}
-              onClick={() => {
-                if (isSelected) {
-                  onRemoveComponent(component.id);
-                } else {
-                  selectedComponents.forEach((comp) => {
-                    onRemoveComponent(comp.id);
-                  });
-                  onSelectComponent(component);
-                }
-              }}
               onContextMenu={(e) => handleContextMenu(e, component)}
               sx={{
                 minWidth: componentBoxWidth,
@@ -188,29 +178,66 @@ const ComponentsSlider = ({
                 borderRadius: 1,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
+                justifyContent: "space-between",
                 bgcolor: isSelected ? "#e3f2fd" : "#fff",
-                px: 2,
+                pl: 2,
+                pr: 0.5,
                 transition: "all 0.2s ease",
+                position: "relative",
                 "&:hover": {
                   borderColor: isSelected ? "#2196f3" : "#9e9e9e",
                   bgcolor: isSelected ? "#e3f2fd" : "#f5f5f5",
+                  "& .menu-button": {
+                    opacity: 1,
+                  },
                 },
               }}
             >
-              <Typography
-                variant="body2"
-                fontWeight={isSelected ? 600 : 400}
-                color={isSelected ? "primary" : "text.primary"}
+              <Box
+                onClick={() => {
+                  if (isSelected) {
+                    onRemoveComponent(component.id);
+                  } else {
+                    selectedComponents.forEach((comp) => {
+                      onRemoveComponent(comp.id);
+                    });
+                    onSelectComponent(component);
+                  }
+                }}
                 sx={{
-                  whiteSpace: "nowrap",
+                  flex: 1,
+                  cursor: "pointer",
                   overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
-                {component.name}
-              </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight={isSelected ? 600 : 400}
+                  color={isSelected ? "primary" : "text.primary"}
+                  sx={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {component.name}
+                </Typography>
+              </Box>
+              <IconButton
+                className="menu-button"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleContextMenu(e, component);
+                }}
+                sx={{
+                  opacity: 0,
+                  transition: "opacity 0.2s",
+                  p: 0.5,
+                }}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
             </Box>
           );
         })}
@@ -218,14 +245,17 @@ const ComponentsSlider = ({
 
       {/* Context Menu */}
       <Menu
-        open={contextMenu !== null}
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
         onClose={handleCloseContextMenu}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenu !== null
-            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-            : undefined
-        }
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
       >
         <MenuItem onClick={handleOpenEdit}>
           <ListItemIcon>

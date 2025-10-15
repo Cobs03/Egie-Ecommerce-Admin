@@ -13,23 +13,33 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import UpdateIcon from "@mui/icons-material/Update";
 import PersonIcon from "@mui/icons-material/Person";
+import { BundleService } from "../../../services/BundleService";
+import { StorageService } from "../../../services/StorageService";
 
 const BundleView = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const isEditMode = state?.isEditMode || false;
 
   if (!state) return <Typography>No bundle data.</Typography>;
   
   const {
+    bundleId = null,
     images = [],
     bundleName = "",
     description = "",
@@ -44,42 +54,74 @@ const BundleView = () => {
 
   // Calculate hours since last edit
   const getTimeSinceEdit = () => {
-    if (!lastEdit) return null;
+    if (!lastEdit) {
+      console.log('No lastEdit provided');
+      return null;
+    }
 
     try {
-      // Parse lastEdit format: "03/11/2025 3:12 PM"
-      const [datePart, timePart, meridiem] = lastEdit.split(" ");
-      const [month, day, year] = datePart.split("/");
-      let [hours, minutes] = timePart.split(":");
+      console.log('Parsing lastEdit:', lastEdit);
+      
+      let editDate;
+      
+      // Try parsing as ISO string first (from database)
+      if (lastEdit.includes('T') || lastEdit.includes('Z')) {
+        editDate = new Date(lastEdit);
+      } else {
+        // Parse format like "10/14/2025, 1:38:46 PM" or "03/11/2025 3:12 PM"
+        const dateStr = lastEdit.replace(',', ''); // Remove comma if present
+        const parts = dateStr.split(' ');
+        
+        if (parts.length < 3) {
+          console.error('Invalid date format:', lastEdit);
+          return null;
+        }
+        
+        const datePart = parts[0];
+        const timePart = parts[1];
+        const meridiem = parts[2];
+        
+        const [month, day, year] = datePart.split("/");
+        let [hours, minutes, seconds] = timePart.split(":");
+        
+        // Convert to 24-hour format
+        hours = parseInt(hours);
+        if (meridiem === "PM" && hours !== 12) {
+          hours += 12;
+        } else if (meridiem === "AM" && hours === 12) {
+          hours = 0;
+        }
 
-      // Convert to 24-hour format
-      hours = parseInt(hours);
-      if (meridiem === "PM" && hours !== 12) {
-        hours += 12;
-      } else if (meridiem === "AM" && hours === 12) {
-        hours = 0;
+        editDate = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          hours,
+          parseInt(minutes),
+          seconds ? parseInt(seconds) : 0
+        );
       }
-
-      const editDate = new Date(
-        year,
-        month - 1,
-        day,
-        hours,
-        parseInt(minutes)
-      );
+      
+      if (isNaN(editDate.getTime())) {
+        console.error('Invalid date result:', editDate);
+        return null;
+      }
+      
       const now = new Date();
       const diffMs = now - editDate;
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffHours / 24);
       const remainingHours = diffHours % 24;
 
+      console.log('Time calculation:', { diffHours, diffDays, remainingHours });
+
       return {
-        totalHours: diffHours,
-        days: diffDays,
-        hours: remainingHours,
+        totalHours: diffHours >= 0 ? diffHours : 0,
+        days: diffDays >= 0 ? diffDays : 0,
+        hours: remainingHours >= 0 ? remainingHours : 0,
       };
     } catch (error) {
-      console.error("Error parsing lastEdit date:", error);
+      console.error("Error parsing lastEdit date:", error, 'Input:', lastEdit);
       return null;
     }
   };
@@ -94,10 +136,73 @@ const BundleView = () => {
     setOpenDialog(false);
   };
 
-  const handleConfirmPublish = () => {
-    // TODO: Save the bundle data (e.g., via an API call)
-    navigate("/products");
-    handleCloseDialog();
+  const handleConfirmPublish = async () => {
+    setSaving(true);
+    try {
+      // Separate existing URLs from new files
+      const existingUrls = images.filter(img => !img.file).map(img => img.url);
+      const newFiles = images.filter(img => img.file).map(img => img.file);
+      
+      let newImageUrls = [];
+      
+      // Upload only new images
+      if (newFiles.length > 0) {
+        const uploadResult = await StorageService.uploadMultipleImages(newFiles, 'bundles');
+        
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.error || 'Failed to upload images');
+        }
+        
+        newImageUrls = uploadResult.data;
+      }
+
+      // Combine existing URLs with new uploaded URLs
+      const allImageUrls = [...existingUrls, ...newImageUrls];
+
+      // Prepare bundle data for saving
+      const bundleData = {
+        name: bundleName,
+        description: description,
+        originalPrice: initialPrice,
+        bundlePrice: parseFloat(officialPrice),
+        discountPercentage: discount,
+        warranty: warranty,
+        products: products,
+        images: allImageUrls,
+        isActive: true,
+      };
+
+      let result;
+      if (bundleId) {
+        // Update existing bundle
+        console.log('Updating bundle with ID:', bundleId);
+        result = await BundleService.updateBundle(bundleId, bundleData);
+      } else {
+        // Create new bundle
+        console.log('Creating new bundle');
+        result = await BundleService.createBundle(bundleData);
+      }
+
+      if (result.success) {
+        setShowSuccess(true);
+        handleCloseDialog();
+        
+        // Navigate back to products page after a short delay
+        setTimeout(() => {
+          navigate("/products", { state: { tab: 2 } }); // Tab 2 for Bundles
+        }, 1500);
+      } else {
+        setErrorMessage(result.error?.message || "Failed to save bundle");
+        setShowError(true);
+        handleCloseDialog();
+      }
+    } catch (error) {
+      setErrorMessage("Error saving bundle: " + error.message);
+      setShowError(true);
+      handleCloseDialog();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -154,26 +259,29 @@ const BundleView = () => {
             </Box>
 
             {/* Time Since Edit */}
-            {timeSinceEdit && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <UpdateIcon sx={{ fontSize: 16, color: "white" }} />
-                <Typography variant="body2" sx={{ color: "white" }}>
-                  <strong>Time Since:</strong>{" "}
-                  {timeSinceEdit.days > 0 && `${timeSinceEdit.days}d `}
-                  {timeSinceEdit.hours}h ago
-                </Typography>
-              </Box>
-            )}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <UpdateIcon sx={{ fontSize: 16, color: "white" }} />
+              <Typography variant="body2" sx={{ color: "white" }}>
+                <strong>Time Since:</strong>{" "}
+                {timeSinceEdit ? (
+                  <>
+                    {timeSinceEdit.days > 0 && `${timeSinceEdit.days}d `}
+                    {timeSinceEdit.hours}h ago
+                  </>
+                ) : (
+                  "Just now"
+                )}
+              </Typography>
+            </Box>
 
             {/* Total Hours */}
-            {timeSinceEdit && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <AccessTimeIcon sx={{ fontSize: 16, color: "white" }} />
-                <Typography variant="body2" sx={{ color: "white" }}>
-                  <strong>Total Hours:</strong> {timeSinceEdit.totalHours}h
-                </Typography>
-              </Box>
-            )}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <AccessTimeIcon sx={{ fontSize: 16, color: "white" }} />
+              <Typography variant="body2" sx={{ color: "white" }}>
+                <strong>Total Hours:</strong>{" "}
+                {timeSinceEdit ? `${timeSinceEdit.totalHours}h` : "0h"}
+              </Typography>
+            </Box>
           </Paper>
         )}
       </Box>
@@ -428,7 +536,7 @@ const BundleView = () => {
       {/* Confirmation Dialog */}
       <Dialog
         open={openDialog}
-        onClose={handleCloseDialog}
+        onClose={!saving ? handleCloseDialog : undefined}
         maxWidth="xs"
         fullWidth
       >
@@ -440,12 +548,13 @@ const BundleView = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="inherit">
+          <Button onClick={handleCloseDialog} color="inherit" disabled={saving}>
             Cancel
           </Button>
           <Button
             onClick={handleConfirmPublish}
             variant="contained"
+            disabled={saving}
             sx={{
               bgcolor: "black",
               color: "#fff",
@@ -455,10 +564,51 @@ const BundleView = () => {
               },
             }}
           >
-            Confirm
+            {saving ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
+                Saving...
+              </>
+            ) : (
+              "Confirm"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': { color: 'white' },
+            '& .MuiAlert-action': { color: 'white' }
+          }}
+        >
+          Bundle published successfully!
+        </Alert>
+      </Snackbar>
+
+      {/* Error Notification */}
+      <Snackbar
+        open={showError}
+        autoHideDuration={6000}
+        onClose={() => setShowError(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setShowError(false)} severity="error" sx={{ width: '100%' }}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -22,13 +22,22 @@ import {
   Checkbox,
   FormControlLabel,
   Divider,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  DialogContentText,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { useNavigate } from "react-router-dom";
-import bundleData from "../Data/BundleData.json";
+import { BundleService } from "../../../services/BundleService";
 
 const Bundles = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -47,20 +56,60 @@ const Bundles = () => {
   const [priceSort, setPriceSort] = useState(null); // "expensive", "cheap" - Added this
   const [statusFilter, setStatusFilter] = useState([]);
   
-  // Enhanced bundle data with status and lastEdit
-  const [bundles, setBundles] = useState(
-    bundleData.bundles.map(bundle => ({
-      ...bundle,
-      status: Math.random() > 0.3 ? "Available" : (Math.random() > 0.5 ? "Low Stock" : "Out of Stock"),
-      stock: Math.random() > 0.3 ? Math.floor(Math.random() * 50) + 11 : 
-             Math.random() > 0.5 ? Math.floor(Math.random() * 10) + 1 : 0,
-      lastEdit: "03/11/2025 3:12 PM",
-      numProducts: bundle.products ? bundle.products.length : Math.floor(Math.random() * 8) + 1
-    }))
-  );
+  // Bundle data state
+  const [bundles, setBundles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Filtered bundles
-  const [filteredBundles, setFilteredBundles] = useState(bundles);
+  const [filteredBundles, setFilteredBundles] = useState([]);
+
+  // Load bundles from database
+  useEffect(() => {
+    const loadBundles = async () => {
+      setLoading(true);
+      try {
+        const result = await BundleService.getAllBundles();
+        
+        if (result.success) {
+          const transformedBundles = result.data.map((bundle) => ({
+            id: bundle.id,
+            name: bundle.bundle_name,
+            code: bundle.id.substring(0, 8).toUpperCase(),
+            description: bundle.description,
+            officialPrice: bundle.official_price,
+            initialPrice: bundle.initial_price,
+            discount: bundle.discount,
+            images: bundle.images || [],
+            image: bundle.images && bundle.images.length > 0 ? bundle.images[0] : null,
+            products: bundle.bundle_products || [],
+            numProducts: bundle.bundle_products ? bundle.bundle_products.length : 0,
+            status: bundle.status === 'active' ? "Available" : "Inactive",
+            stock: bundle.stock || 0,
+            lastEdit: new Date(bundle.updated_at).toLocaleString(),
+            warranty: bundle.warranty,
+          }));
+          
+          setBundles(transformedBundles);
+        } else {
+          setError(result.error?.message || "Failed to load bundles");
+        }
+      } catch (error) {
+        console.error('Error loading bundles:', error);
+        setError("Error loading bundles: " + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBundles();
+  }, []);
   
   // Apply filters and sorting
   useEffect(() => {
@@ -107,24 +156,107 @@ const Bundles = () => {
   };
 
   const handleView = () => {
+    if (!selectedBundle) return;
+    
+    // Transform products to expected format
+    const formattedProducts = selectedBundle.products.map(p => ({
+      id: p.id,
+      name: p.product_name,
+      code: p.product_code,
+      price: p.product_price,
+      image: p.product_image,
+    }));
+    
     navigate("/bundles/view", { 
       state: {
-        ...selectedBundle,
-        editedBy: "Admin User", // Add this - can be dynamic from your data
+        bundleName: selectedBundle.name,
+        description: selectedBundle.description,
+        officialPrice: selectedBundle.officialPrice,
+        initialPrice: selectedBundle.initialPrice,
+        discount: selectedBundle.discount,
+        warranty: selectedBundle.warranty,
+        images: selectedBundle.images.map(url => ({ url, file: null })),
+        products: formattedProducts,
+        lastEdit: selectedBundle.lastEdit,
+        editedBy: "Admin User",
       }
     });
     handleMenuClose();
   };
 
   const handleUpdate = () => {
-    navigate("/bundles/create", { state: selectedBundle });
+    if (!selectedBundle) return;
+    
+    // Navigate to bundle create page with edit mode
+    navigate("/bundles/create", { 
+      state: {
+        bundleId: selectedBundle.id,
+        bundleName: selectedBundle.name,
+        description: selectedBundle.description,
+        officialPrice: selectedBundle.officialPrice,
+        initialPrice: selectedBundle.initialPrice,
+        discount: selectedBundle.discount,
+        warranty: selectedBundle.warranty,
+        images: selectedBundle.images.map(url => ({ url, file: null })),
+        products: selectedBundle.products.map(p => ({
+          id: p.product_id || p.id,
+          name: p.product_name || p.name,
+          code: p.product_code || p.code,
+          price: p.product_price || p.price,
+          image: p.product_image || p.image,
+          category: p.category || 'Unknown',
+          stock: p.stock || 0
+        })),
+        isEditMode: true
+      }
+    });
     handleMenuClose();
   };
 
-  const handleDelete = () => {
-    // TODO: Implement delete functionality
-    alert(`Delete bundle: ${selectedBundle.name}`);
-    handleMenuClose();
+  const handleDeleteClick = () => {
+    console.log('Delete clicked for bundle:', selectedBundle);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedBundle) {
+      console.error('No bundle selected for deletion');
+      return;
+    }
+    
+    console.log('Deleting bundle:', selectedBundle.id);
+    setDeleting(true);
+    
+    try {
+      const result = await BundleService.deleteBundle(selectedBundle.id);
+      console.log('Delete result:', result);
+      
+      if (result.success) {
+        // Remove from local state
+        setBundles(prev => prev.filter(b => b.id !== selectedBundle.id));
+        setSuccessMessage("Bundle deleted successfully!");
+        setShowSuccess(true);
+        setDeleteDialogOpen(false);
+        setSelectedBundle(null);
+      } else {
+        console.error('Delete failed:', result.error);
+        setErrorMessage("Failed to delete bundle: " + (result.error?.message || "Unknown error"));
+        setShowError(true);
+        setDeleteDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Error deleting bundle:', error);
+      setErrorMessage("Error deleting bundle: " + error.message);
+      setShowError(true);
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setSelectedBundle(null);
   };
   
   // Filter handlers
@@ -338,8 +470,25 @@ const Bundles = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {displayedBundles.map((bundle) => (
-              <TableRow 
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                  <CircularProgress />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    Loading bundles...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                  <Typography variant="body1" color="error">
+                    {error}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : displayedBundles.map((bundle) => (
+              <TableRow
                 key={bundle.id}
                 sx={{
                   "&:last-child td, &:last-child th": { border: 0 },
@@ -390,7 +539,7 @@ const Bundles = () => {
                 </TableCell>
               </TableRow>
             ))}
-            {displayedBundles.length === 0 && (
+            {!loading && !error && displayedBundles.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">
@@ -402,6 +551,44 @@ const Bundles = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': { color: 'white' },
+            '& .MuiAlert-action': { color: 'white' }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={showError}
+        autoHideDuration={4000}
+        onClose={() => setShowError(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowError(false)} 
+          severity="error" 
+          sx={{ width: '100%' }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
 
       {/* Pagination Component */}
       <TablePagination
@@ -456,10 +643,46 @@ const Bundles = () => {
       >
         <MenuItem onClick={handleView}>View Bundle</MenuItem>
         <MenuItem onClick={handleUpdate}>Update Bundle</MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
+        <MenuItem onClick={handleDeleteClick} sx={{ color: "error.main" }}>
           Delete Bundle
         </MenuItem>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Delete Bundle</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete <strong>"{selectedBundle?.name}"</strong>?
+            <br />
+            <br />
+            This action cannot be undone. All bundle data will be permanently removed.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button 
+            onClick={handleDeleteCancel} 
+            disabled={deleting}
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : null}
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

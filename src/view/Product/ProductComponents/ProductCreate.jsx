@@ -110,13 +110,12 @@ const ProductCreate = () => {
       const result = await CategoryService.getCategories();
       
       if (result.success) {
-        console.log("🎯 Loaded dynamic categories:", result.data);
         setCategories(result.data);
       } else {
-        console.error("❌ Failed to load categories:", result.error);
+        console.error("Failed to load categories:", result.error);
       }
     } catch (error) {
-      console.error("❌ Error loading categories:", error);
+      console.error("Error loading categories:", error);
     } finally {
       setLoadingCategories(false);
     }
@@ -577,33 +576,84 @@ const ProductCreate = () => {
     }));
   };
 
-  // Handle component edit
-  const handleEditComponent = (componentId, updatedData) => {
-    // Update in selectedComponents
-    setSelectedComponents((prev) =>
-      prev.map((comp) =>
-        comp.id === componentId
-          ? { ...comp, name: updatedData.name, description: updatedData.description }
-          : comp
-      )
-    );
+  // Handle component edit (updates category in database)
+  const handleEditComponent = async (componentId, updatedData) => {
+    try {
+      // Update in database
+      const result = await CategoryService.updateCategory(componentId, {
+        name: updatedData.name,
+        description: updatedData.description
+      });
 
-    console.log("Component edited:", componentId, updatedData);
+      if (result.success) {
+        // Update in local categories list
+        setCategories((prev) =>
+          prev.map((cat) =>
+            cat.id === componentId
+              ? { ...cat, name: updatedData.name, description: updatedData.description }
+              : cat
+          )
+        );
+
+        // Update in selectedComponents if it's selected
+        setSelectedComponents((prev) =>
+          prev.map((comp) =>
+            comp.id === componentId
+              ? { ...comp, name: updatedData.name, description: updatedData.description }
+              : comp
+          )
+        );
+
+        // Show success message
+        setSuccessMessage(`Category "${updatedData.name}" updated successfully!`);
+        setShowSuccess(true);
+      } else {
+        setErrorMessage(`Failed to update category: ${result.error}`);
+        setShowError(true);
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+      setErrorMessage(`Error updating category: ${error.message}`);
+      setShowError(true);
+    }
   };
 
-  // Handle component delete
-  const handleDeleteComponent = (componentId) => {
-    // Remove from selected components
-    setSelectedComponents((prev) => prev.filter((c) => c.id !== componentId));
-    
-    // Remove specifications for this component
-    setSpecifications((prev) => {
-      const newSpecs = { ...prev };
-      delete newSpecs[componentId];
-      return newSpecs;
-    });
+  // Handle component delete (deletes category from database)
+  const handleDeleteComponent = async (componentId) => {
+    try {
+      const componentToDelete = categories.find(c => c.id === componentId);
+      
+      // Delete from database
+      const result = await CategoryService.deleteCategory(componentId);
 
-    console.log("Component deleted:", componentId);
+      if (result.success) {
+        // Remove from local categories list
+        setCategories((prev) => prev.filter((c) => c.id !== componentId));
+        
+        // Remove from selected components if it's selected
+        setSelectedComponents((prev) => prev.filter((c) => c.id !== componentId));
+        
+        // Remove specifications for this component
+        setSpecifications((prev) => {
+          const newSpecs = { ...prev };
+          delete newSpecs[componentId];
+          return newSpecs;
+        });
+
+        // Show success message
+        if (componentToDelete) {
+          setSuccessMessage(`Category "${componentToDelete.name}" deleted successfully!`);
+          setShowSuccess(true);
+        }
+      } else {
+        setErrorMessage(`Failed to delete category: ${result.error}`);
+        setShowError(true);
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      setErrorMessage(`Error deleting category: ${error.message}`);
+      setShowError(true);
+    }
   };
 
   // Handle product selection from autocomplete
@@ -662,17 +712,6 @@ const ProductCreate = () => {
       </Typography>
 
       {/* Temporary Debug: Show category loading status */}
-      {loadingCategories && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          🔄 Loading dynamic categories...
-        </Alert>
-      )}
-      {!loadingCategories && categories.length > 0 && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          ✅ Loaded {categories.length} dynamic categories: {categories.map(c => c.name).join(', ')}
-        </Alert>
-      )}
-
       {/* Validation Error Snackbar */}
       <Snackbar
         open={showError}

@@ -1,27 +1,51 @@
 import { supabase, handleSupabaseError, handleSupabaseSuccess } from '../lib/supabase.js'
 
 export class BundleService {
-  // Create a new bundle
+  // Create a new bundle with products
   static async createBundle(bundleData) {
     try {
-      const { data, error } = await supabase
+      const { data: bundle, error: bundleError } = await supabase
         .from('bundles')
         .insert([{
-          name: bundleData.name,
+          bundle_name: bundleData.name,
           description: bundleData.description,
-          original_price: bundleData.originalPrice,
-          bundle_price: bundleData.bundlePrice,
-          discount_percentage: bundleData.discountPercentage,
-          product_ids: bundleData.productIds,
+          initial_price: bundleData.originalPrice,
+          official_price: bundleData.bundlePrice,
+          discount: bundleData.discountPercentage,
+          warranty: bundleData.warranty,
           images: bundleData.images || [],
-          is_active: bundleData.isActive || true,
+          status: bundleData.isActive ? 'active' : 'inactive',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])
         .select()
+        .single()
 
-      if (error) return handleSupabaseError(error)
-      return handleSupabaseSuccess(data[0])
+      if (bundleError) return handleSupabaseError(bundleError)
+
+      // Then, create bundle_products entries
+      if (bundleData.products && bundleData.products.length > 0) {
+        const bundleProducts = bundleData.products.map((product, index) => ({
+          bundle_id: bundle.id,
+          product_name: product.name,
+          product_code: product.code,
+          product_price: product.price,
+          product_image: product.image,
+          sort_order: index
+        }))
+
+        const { error: productsError } = await supabase
+          .from('bundle_products')
+          .insert(bundleProducts)
+
+        if (productsError) {
+          // Rollback: delete the bundle if products insertion fails
+          await supabase.from('bundles').delete().eq('id', bundle.id)
+          return handleSupabaseError(productsError)
+        }
+      }
+
+      return handleSupabaseSuccess(bundle)
     } catch (error) {
       return handleSupabaseError(error)
     }
@@ -34,11 +58,13 @@ export class BundleService {
         .from('bundles')
         .select(`
           *,
-          bundle_products:product_ids (
+          bundle_products (
             id,
-            name,
-            price,
-            images
+            product_name,
+            product_code,
+            product_price,
+            product_image,
+            sort_order
           )
         `)
         .order('created_at', { ascending: false })
@@ -57,12 +83,13 @@ export class BundleService {
         .from('bundles')
         .select(`
           *,
-          bundle_products:product_ids (
+          bundle_products (
             id,
-            name,
-            price,
-            images,
-            stock_quantity
+            product_name,
+            product_code,
+            product_price,
+            product_image,
+            sort_order
           )
         `)
         .eq('id', id)
@@ -78,17 +105,51 @@ export class BundleService {
   // Update bundle
   static async updateBundle(id, bundleData) {
     try {
-      const { data, error } = await supabase
+      // Update the bundle
+      const { data: bundle, error: bundleError } = await supabase
         .from('bundles')
         .update({
-          ...bundleData,
+          bundle_name: bundleData.name,
+          description: bundleData.description,
+          initial_price: bundleData.originalPrice,
+          official_price: bundleData.bundlePrice,
+          discount: bundleData.discountPercentage,
+          warranty: bundleData.warranty,
+          images: bundleData.images || [],
+          status: bundleData.isActive ? 'active' : 'inactive',
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select()
+        .single()
 
-      if (error) return handleSupabaseError(error)
-      return handleSupabaseSuccess(data[0])
+      if (bundleError) return handleSupabaseError(bundleError)
+
+      // Delete existing bundle_products
+      await supabase
+        .from('bundle_products')
+        .delete()
+        .eq('bundle_id', id)
+
+      // Insert new bundle_products
+      if (bundleData.products && bundleData.products.length > 0) {
+        const bundleProducts = bundleData.products.map((product, index) => ({
+          bundle_id: id,
+          product_name: product.name,
+          product_code: product.code,
+          product_price: product.price,
+          product_image: product.image,
+          sort_order: index
+        }))
+
+        const { error: productsError } = await supabase
+          .from('bundle_products')
+          .insert(bundleProducts)
+
+        if (productsError) return handleSupabaseError(productsError)
+      }
+
+      return handleSupabaseSuccess(bundle)
     } catch (error) {
       return handleSupabaseError(error)
     }
@@ -97,6 +158,13 @@ export class BundleService {
   // Delete bundle
   static async deleteBundle(id) {
     try {
+      // Delete bundle_products first (foreign key constraint)
+      await supabase
+        .from('bundle_products')
+        .delete()
+        .eq('bundle_id', id)
+
+      // Then delete the bundle
       const { data, error } = await supabase
         .from('bundles')
         .delete()

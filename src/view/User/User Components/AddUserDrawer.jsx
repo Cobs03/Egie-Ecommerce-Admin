@@ -8,15 +8,20 @@ import {
   IconButton,
   Drawer,
   Stack,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import { PersonAdd } from "@mui/icons-material";
+import { supabase } from "../../../lib/supabase";
 
 const AddUserDrawer = ({ open, onClose, onAddUser }) => {
   const fileInputRef = useRef();
   const [selectedImage, setSelectedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -36,31 +41,53 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    const newUser = {
-      name: formData.fullName,
-      email: formData.email,
-      avatar: selectedImage || "https://via.placeholder.com/40",
-      access: [formData.accessLevel],
-      dateAdded: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      lastLogin: "Never",
-    };
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    onAddUser(newUser);
-    
-    // Reset form
-    setFormData({
-      fullName: "",
-      email: "",
-      password: "",
-      accessLevel: "",
-    });
-    setSelectedImage(null);
-    onClose();
+      // Convert access level to lowercase role
+      const roleMap = {
+        'Admin': 'admin',
+        'Manager': 'manager',
+        'Employee': 'employee',
+      };
+      const role = roleMap[formData.accessLevel] || 'customer';
+
+      // Create user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            role: role, // This will be read by the trigger
+          },
+          emailRedirectTo: window.location.origin,
+        }
+      });
+
+      if (authError) throw authError;
+
+      console.log('User created:', authData);
+
+      // Call parent callback to refresh list
+      onAddUser();
+      
+      // Reset form
+      setFormData({
+        fullName: "",
+        email: "",
+        password: "",
+        accessLevel: "",
+      });
+      setSelectedImage(null);
+    } catch (err) {
+      console.error('Error creating user:', err);
+      setError(err.message || 'Failed to create user');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isFormValid = 
@@ -92,6 +119,12 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
           <CloseIcon />
         </IconButton>
       </Box>
+
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Stack spacing={3}>
         <Box>
@@ -187,8 +220,9 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
         <Button
           variant="contained"
           fullWidth
-          disabled={!isFormValid}
+          disabled={!isFormValid || loading}
           onClick={handleSubmit}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
           sx={{
             bgcolor: "#000",
             color: "#fff",
@@ -200,7 +234,7 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
             },
           }}
         >
-          Add User
+          {loading ? 'Adding User...' : 'Add User'}
         </Button>
       </Stack>
     </Drawer>
