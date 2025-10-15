@@ -17,12 +17,15 @@ import {
   InputAdornment,
   Alert,
   Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useLocation, useNavigate } from "react-router-dom";
-import productData from "../Data/ProductData.json";
+import { ProductService } from "../../../services/ProductService";
+import { BundleService } from "../../../services/BundleService";
+import { StorageService } from "../../../services/StorageService";
 
 const formatPrice = (price) => {
   if (typeof price !== "number") return "0.00";
@@ -56,6 +59,47 @@ const BundleCreate = () => {
   const [errors, setErrors] = useState({});
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Dynamic product loading states
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Load products from database
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const result = await ProductService.getAllProducts();
+        if (result.success) {
+          // Transform products for the bundle selector
+          const transformedProducts = result.data.map((product) => ({
+            id: product.id,
+            name: product.name,
+            code: product.sku || product.id,
+            price: parseFloat(product.price),
+            image: product.images && product.images.length > 0 ? product.images[0] : null,
+            category: product.metadata?.category || 'General',
+            stock: product.stock_quantity,
+          }));
+          setAvailableProducts(transformedProducts);
+        } else {
+          setErrorMessage("Failed to load products from database");
+          setShowError(true);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+        setErrorMessage("Error loading products: " + error.message);
+        setShowError(true);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   // Calculate initial price from products
   useEffect(() => {
@@ -178,6 +222,77 @@ const BundleCreate = () => {
     return isValid;
   };
 
+  const handleSaveBundle = async () => {
+    // Validate form before saving
+    if (!validateForm()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Separate existing URLs from new files
+      const existingUrls = images.filter(img => !img.file).map(img => img.url);
+      const newFiles = images.filter(img => img.file).map(img => img.file);
+      
+      let newImageUrls = [];
+      
+      // Upload only new images
+      if (newFiles.length > 0) {
+        const uploadResult = await StorageService.uploadMultipleImages(newFiles, 'bundles');
+        
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.error || 'Failed to upload images');
+        }
+        
+        newImageUrls = uploadResult.data;
+      }
+
+      // Combine existing URLs with new uploaded URLs
+      const allImageUrls = [...existingUrls, ...newImageUrls];
+
+      // Prepare bundle data with correct field names matching your schema
+      const bundleData = {
+        name: bundleName,
+        description: description,
+        originalPrice: initialPrice,
+        bundlePrice: parseFloat(officialPrice),
+        discountPercentage: discount,
+        warranty: warranty,
+        products: products,
+        images: allImageUrls,
+        isActive: true,
+      };
+
+      let result;
+      if (isEditMode && state?.bundleId) {
+        // Update existing bundle
+        result = await BundleService.updateBundle(state.bundleId, bundleData);
+      } else {
+        // Create new bundle
+        result = await BundleService.createBundle(bundleData);
+      }
+
+      if (result.success) {
+        setSuccessMessage(isEditMode ? "Bundle updated successfully!" : "Bundle created successfully!");
+        setShowSuccess(true);
+        
+        // Navigate back to products page after a short delay
+        setTimeout(() => {
+          navigate("/products", { state: { tab: 1 } }); // Tab 1 for Bundles
+        }, 2000);
+      } else {
+        setErrorMessage(result.error?.message || "Failed to save bundle");
+        setShowError(true);
+      }
+    } catch (error) {
+      console.error('Error saving bundle:', error);
+      setErrorMessage("Error saving bundle: " + error.message);
+      setShowError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleViewBundle = () => {
     // Validate form before navigating
     if (!validateForm()) {
@@ -187,6 +302,7 @@ const BundleCreate = () => {
     // If validation passes, navigate to view
     navigate("/bundles/view", {
       state: {
+        bundleId: isEditMode ? state?.bundleId : null, // Pass bundleId if editing
         images,
         bundleName,
         description,
@@ -195,7 +311,7 @@ const BundleCreate = () => {
         initialPrice,
         discount,
         products,
-        isEditMode: true,
+        isEditMode: isEditMode,
       },
     });
   };
@@ -228,6 +344,28 @@ const BundleCreate = () => {
       >
         <Alert onClose={handleCloseError} severity="error" sx={{ width: "100%" }}>
           {errorMessage}
+        </Alert>
+      </Snackbar>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': { color: 'white' },
+            '& .MuiAlert-action': { color: 'white' }
+          }}
+        >
+          {successMessage}
         </Alert>
       </Snackbar>
 
@@ -568,14 +706,33 @@ const BundleCreate = () => {
             </TextField>
 
             <Divider sx={{ my: 2 }} />
-            <Button
-              variant="contained"
-              color="primary"
-              sx={{ mt: 3, width: "100%" }}
-              onClick={handleViewBundle}
-            >
-              {isEditMode ? "Preview Changes" : "View Bundle"}
-            </Button>
+            
+            {/* Action Buttons */}
+            <Stack spacing={2} sx={{ mt: 3 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                sx={{ width: "100%" }}
+                onClick={handleSaveBundle}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
+                    Saving...
+                  </>
+                ) : (
+                  isEditMode ? "Update Bundle" : "Create Bundle"
+                )}
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{ width: "100%" }}
+                onClick={handleViewBundle}
+              >
+                Preview Bundle
+              </Button>
+            </Stack>
           </Stack>
         </Grid>
       </Grid>
@@ -595,7 +752,12 @@ const BundleCreate = () => {
           },
         }}
       >
-        <DialogTitle sx={{ color: "black" }}>Select Products</DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>
+          Select Products
+          {loadingProducts && (
+            <CircularProgress size={20} sx={{ ml: 2 }} />
+          )}
+        </DialogTitle>
         <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column" }}>
           <Box sx={{ p: 2, borderBottom: "1px solid #e0e0e0" }}>
             <TextField
@@ -606,6 +768,7 @@ const BundleCreate = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
+              disabled={loadingProducts}
             />
           </Box>
           <Box
@@ -629,78 +792,91 @@ const BundleCreate = () => {
               },
             }}
           >
-            <Stack spacing={1}>
-              {productData.products
-                .filter(
-                  (product) =>
-                    product.name
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase()) ||
-                    product.code
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase()) ||
-                    product.category
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase())
-                )
-                .map((product) => {
-                  const isAlreadyAdded = products.some(
-                    (p) => p.id === product.id
-                  );
+            {loadingProducts ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <CircularProgress />
+              </Box>
+            ) : availableProducts.length === 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No products found. Please add products first.
+                </Typography>
+              </Box>
+            ) : (
+              <Stack spacing={1}>
+                  {availableProducts
+                  .filter(
+                    (product) =>
+                      product.name
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                      product.code
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                      product.category
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
+                  )
+                  .map((product) => {
+                    const isAlreadyAdded = products.some(
+                      (p) => p.id === product.id
+                    );
 
-                  return (
-                    <Button
-                      key={product.id}
-                      variant={isAlreadyAdded ? "contained" : "outlined"}
-                      disabled={isAlreadyAdded}
-                      onClick={() => {
-                        setProducts((prev) => [
-                          ...prev,
-                          {
-                            id: product.id,
-                            name: product.name,
-                            code: product.code,
-                            price: Number(product.price),
-                            image: product.image,
-                            category: product.category,
+                    return (
+                      <Button
+                        key={product.id}
+                        variant={isAlreadyAdded ? "contained" : "outlined"}
+                        disabled={isAlreadyAdded}
+                        onClick={() => {
+                          setProducts((prev) => [
+                            ...prev,
+                            {
+                              id: product.id,
+                              name: product.name,
+                              code: product.code,
+                              price: Number(product.price),
+                              image: product.image,
+                              category: product.category,
+                            },
+                          ]);
+                          setProductDialogOpen(false);
+                          setSearchTerm("");
+                        }}
+                        sx={{
+                          justifyContent: "flex-start",
+                          textAlign: "left",
+                          p: 1,
+                          height: "auto",
+                          "&:hover": {
+                            backgroundColor: isAlreadyAdded
+                              ? undefined
+                              : "rgba(25, 118, 210, 0.04)",
                           },
-                        ]);
-                        setProductDialogOpen(false);
-                        setSearchTerm("");
-                      }}
-                      sx={{
-                        justifyContent: "flex-start",
-                        textAlign: "left",
-                        p: 1,
-                        height: "auto",
-                        "&:hover": {
-                          backgroundColor: isAlreadyAdded
-                            ? undefined
-                            : "rgba(25, 118, 210, 0.04)",
-                        },
-                      }}
-                    >
-                      <Box display="flex" alignItems="center" width="100%">
-                        <Avatar
-                          src={product.image}
-                          alt={product.name}
-                          sx={{ mr: 1, width: 40, height: 40 }}
-                        />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" fontWeight={500}>
-                            {product.name}
-                            {isAlreadyAdded && " (Already Added)"}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {product.code} - {product.category} - ₱
-                            {formatPrice(product.price)}
-                          </Typography>
+                        }}
+                      >
+                        <Box display="flex" alignItems="center" width="100%">
+                          <Avatar
+                            src={product.image}
+                            alt={product.name}
+                            sx={{ mr: 1, width: 40, height: 40 }}
+                          />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" fontWeight={500}>
+                              {product.name}
+                              {isAlreadyAdded && " (Already Added)"}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {product.code} - {product.category} - ₱
+                              {formatPrice(product.price)}
+                              {product.stock !== undefined && ` (Stock: ${product.stock})`}
+                            </Typography>
+                          </Box>
                         </Box>
-                      </Box>
-                    </Button>
-                  );
-                })}
-            </Stack>
+                      </Button>
+                    );
+                  })}
+              </Stack>
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #e0e0e0", p: 2 }}>

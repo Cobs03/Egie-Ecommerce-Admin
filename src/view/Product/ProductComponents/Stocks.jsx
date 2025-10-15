@@ -21,10 +21,8 @@ import {
   ListItemText,
   Checkbox,
   FormControlLabel,
-<<<<<<< HEAD
   Snackbar,
   Alert,
-=======
   Divider,
   Button,
   Drawer,
@@ -33,20 +31,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
->>>>>>> f6c2ad6 (Orders and other change)
+  Stack,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-<<<<<<< HEAD
 import { ProductService } from "../../../services/ProductService";
-=======
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
-import productData from "../Data/ProductData.json";
->>>>>>> f6c2ad6 (Orders and other change)
 
 const Stocks = () => {
   const [products, setProducts] = useState([]);
@@ -66,7 +60,6 @@ const Stocks = () => {
   const [statusFilter, setStatusFilter] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
-<<<<<<< HEAD
   // Success notification state
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -122,10 +115,7 @@ const Stocks = () => {
     loadProducts();
   }, []);
 
-  // All products (not just low stock)
-=======
   // All products
->>>>>>> f6c2ad6 (Orders and other change)
   const allProducts = useMemo(() => {
     return products;
   }, [products]);
@@ -237,15 +227,11 @@ const Stocks = () => {
       }
     }
     setConfirmOpen(false);
-    setDrawerClose();
+    handleDrawerClose();
     setSelectedProduct(null);
     setStockChange(0);
   };
 
-<<<<<<< HEAD
-  // Filter handlers
-=======
->>>>>>> f6c2ad6 (Orders and other change)
   const handleNameFilterOpen = (event) => {
     setNameFilterAnchor(event.currentTarget);
   };
@@ -281,13 +267,8 @@ const Stocks = () => {
     return "Available";
   };
 
-<<<<<<< HEAD
   // Use selectedProduct directly as it gets updated with variant changes
   const currentSelectedProduct = selectedProduct;
-=======
-  const currentSelectedProduct =
-    selectedProduct && products.find((p) => p.id === selectedProduct.id);
->>>>>>> f6c2ad6 (Orders and other change)
 
   return (
     <>
@@ -519,7 +500,6 @@ const Stocks = () => {
       >
         {currentSelectedProduct && (
           <Box>
-<<<<<<< HEAD
             {/* Blue Header Bar */}
             <Box sx={{ 
               bgcolor: "#e3f2fd", 
@@ -718,66 +698,6 @@ const Stocks = () => {
                   CANCEL
                 </Button>
               </Stack>
-=======
-            <Typography variant="h6" gutterBottom>
-              Update Stock
-            </Typography>
-            <Box display="flex" alignItems="center" my={2}>
-              <Avatar
-                src={currentSelectedProduct.image}
-                variant="square"
-                sx={{ width: 60, height: 60, mr: 2 }}
-              />
-              <Box>
-                <Typography fontWeight={600}>{currentSelectedProduct.name}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {currentSelectedProduct.code}
-                </Typography>
-              </Box>
-            </Box>
-            <Typography variant="subtitle2" gutterBottom>
-              Current Stock: {currentSelectedProduct.stock}
-            </Typography>
-            <Box display="flex" alignItems="center" gap={1} my={2}>
-              <IconButton
-                onClick={() => setStockChange(stockChange - 1)}
-                sx={{ bgcolor: "#f5f5f5" }}
-              >
-                <RemoveIcon />
-              </IconButton>
-              <TextField
-                type="number"
-                value={stockChange}
-                onChange={(e) => setStockChange(parseInt(e.target.value) || 0)}
-                sx={{ width: 100 }}
-                size="small"
-              />
-              <IconButton
-                onClick={() => setStockChange(stockChange + 1)}
-                sx={{ bgcolor: "#f5f5f5" }}
-              >
-                <AddIcon />
-              </IconButton>
-            </Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              New Stock: {Math.max(0, currentSelectedProduct.stock + stockChange)}
-            </Typography>
-            <Box display="flex" gap={1} mt={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={() => handleChangeStock('update')}
-              >
-                Update
-              </Button>
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={handleDrawerClose}
-              >
-                Cancel
-              </Button>
->>>>>>> f6c2ad6 (Orders and other change)
             </Box>
           </Box>
         )}

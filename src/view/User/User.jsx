@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box } from "@mui/material";
 import UserHeader from "./User Components/UserHeader";
 import EmployeeTable from "./User Components/EmployeeTable";
@@ -10,6 +10,7 @@ import PromotionDialog from "./User Components/PromotionDialog";
 import DeleteUserDialog from "./User Components/DeleteUserDialog";
 import DemotionDialog from "./User Components/DemotionDialog";
 import BanCustomerDialog from "./User Components/BanCustomerDialog";
+import { supabase } from "../../lib/supabase";
 
 const initialEmployees = [
   {
@@ -66,8 +67,9 @@ const initialCustomers = [
 ];
 
 const User = () => {
-  const [employeesList, setEmployeesList] = useState(initialEmployees);
-  const [customersList, setCustomersList] = useState(initialCustomers);
+  const [employeesList, setEmployeesList] = useState([]);
+  const [customersList, setCustomersList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isEmployeeDrawerOpen, setEmployeeDrawerOpen] = useState(false);
   const [isCustomerDrawerOpen, setCustomerDrawerOpen] = useState(false);
@@ -78,6 +80,66 @@ const User = () => {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [promotionRole, setPromotionRole] = useState(null);
   const [demotionRole, setDemotionRole] = useState(null);
+
+  // Fetch users from database
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all profiles from database
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform database data to UI format
+      const employees = [];
+      const customers = [];
+
+      data.forEach(user => {
+        const transformedUser = {
+          id: user.id,
+          name: user.full_name || user.email?.split('@')[0] || 'Unknown',
+          email: user.email,
+          phoneNumber: user.phone_number || 'N/A',
+          dateAdded: new Date(user.created_at).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          lastLogin: user.last_login 
+            ? `Active ${new Date(user.last_login).toLocaleDateString()}`
+            : 'Never',
+          avatar: user.avatar_url || 'https://via.placeholder.com/40',
+          access: [user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Customer'],
+          role: user.role || 'customer',
+          status: user.status || 'active',
+          isBanned: user.is_banned || false,
+        };
+
+        // Separate employees and customers by role
+        if (user.role === 'admin' || user.role === 'manager' || user.role === 'employee') {
+          employees.push(transformedUser);
+        } else {
+          customers.push(transformedUser);
+        }
+      });
+
+      setEmployeesList(employees);
+      setCustomersList(customers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      // Keep empty lists on error
+    } finally {
+      setLoading(false);
+    }
+  };
   const [employeePage, setEmployeePage] = useState(0);
   const [customerPage, setCustomerPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -118,12 +180,10 @@ const User = () => {
     setCustomerDrawerOpen(true);
   };
 
-  const handleAddUser = (newUser) => {
-    if (activeTab === "employees") {
-      setEmployeesList((prev) => [...prev, newUser]);
-    } else {
-      setCustomersList((prev) => [...prev, newUser]);
-    }
+  const handleAddUser = async (newUser) => {
+    // Refresh the users list from database
+    await fetchUsers();
+    setAddUserDrawerOpen(false);
   };
 
   const handlePromotionClick = () => {
