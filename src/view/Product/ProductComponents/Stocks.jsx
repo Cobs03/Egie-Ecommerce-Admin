@@ -71,7 +71,6 @@ const Stocks = () => {
       try {
         const result = await ProductService.getAllProducts();
         if (result.success) {
-          // Transform products to match existing component structure
           const transformedProducts = result.data.map((product) => ({
             id: product.id,
             name: product.name,
@@ -85,19 +84,12 @@ const Stocks = () => {
             brand_id: product.brand_id,
             brands: product.brands,
             category: product.metadata?.category || 'General',
-            
-            // Handle images properly
             image: product.images && product.images.length > 0 ? product.images[0] : null,
             images: product.images || [],
-            
             lastEdit: new Date(product.updated_at).toLocaleString(),
-            
-            // Direct database fields
             variants: product.variants || [],
             selectedComponents: product.selected_components || [],
             specifications: product.specifications || {},
-            
-            // Metadata fields
             officialPrice: product.metadata?.officialPrice || product.price,
             initialPrice: product.metadata?.initialPrice || product.price,
             discount: product.metadata?.discount || 0
@@ -115,7 +107,6 @@ const Stocks = () => {
     loadProducts();
   }, []);
 
-  // All products
   const allProducts = useMemo(() => {
     return products;
   }, [products]);
@@ -124,7 +115,6 @@ const Stocks = () => {
   useEffect(() => {
     let result = [...allProducts];
 
-    // Apply status filters
     if (statusFilter.length > 0) {
       result = result.filter(product => {
         const status = getStockStatus(product.stock);
@@ -132,7 +122,6 @@ const Stocks = () => {
       });
     }
 
-    // Apply name sorting
     if (nameSort === "az") {
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (nameSort === "za") {
@@ -179,22 +168,18 @@ const Stocks = () => {
         let newStock;
         let updatedProduct = { ...selectedProduct };
 
-        // If product has variants, calculate total stock from variants
         if (selectedProduct.variants && selectedProduct.variants.length > 0) {
           newStock = selectedProduct.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
           updatedProduct.variants = selectedProduct.variants;
         } else {
-          // Simple stock update
           newStock = Math.max(0, selectedProduct.stock + stockChange);
         }
 
-        // Update in database
         await ProductService.updateProduct(selectedProduct.id, {
           stock_quantity: newStock,
           variants: updatedProduct.variants
         });
 
-        // Update local state
         setProducts((prev) =>
           prev.map((p) => {
             if (p.id === selectedProduct.id) {
@@ -202,19 +187,13 @@ const Stocks = () => {
                 ...p,
                 stock: newStock,
                 variants: updatedProduct.variants,
-                stocks:
-                  newStock === 0
-                    ? "Out of Stock"
-                    : newStock <= 10
-                      ? "Low Stock"
-                      : "Available",
+                stocks: newStock === 0 ? "Out of Stock" : newStock <= 10 ? "Low Stock" : "Available",
               };
             }
             return p;
           })
         );
 
-        // Show success notification
         if (selectedProduct.variants && selectedProduct.variants.length > 0) {
           setSuccessMessage(`Variant stocks updated successfully! Total stock: ${newStock}`);
         } else {
@@ -228,8 +207,6 @@ const Stocks = () => {
     }
     setConfirmOpen(false);
     handleDrawerClose();
-    setSelectedProduct(null);
-    setStockChange(0);
   };
 
   const handleNameFilterOpen = (event) => {
@@ -267,7 +244,7 @@ const Stocks = () => {
     return "Available";
   };
 
-  // Use selectedProduct directly as it gets updated with variant changes
+  // FIXED: Only ONE declaration
   const currentSelectedProduct = selectedProduct;
 
   return (
@@ -287,10 +264,7 @@ const Stocks = () => {
                   open={Boolean(nameFilterAnchor)}
                   anchorEl={nameFilterAnchor}
                   onClose={handleFilterClose}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  }}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 >
                   <List sx={{ width: 200, pt: 0, pb: 0 }}>
                     <ListItem button onClick={() => { setNameSort("az"); handleFilterClose(); }}
@@ -318,9 +292,7 @@ const Stocks = () => {
                   </List>
                 </Popover>
               </TableCell>
-              <TableCell>
-                <b>Code</b>
-              </TableCell>
+              <TableCell><b>Code</b></TableCell>
               <TableCell>
                 <Box display="flex" alignItems="center">
                   <Typography fontWeight="bold">Stock Status</Typography>
@@ -332,10 +304,7 @@ const Stocks = () => {
                   open={Boolean(statusFilterAnchor)}
                   anchorEl={statusFilterAnchor}
                   onClose={handleFilterClose}
-                  anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  }}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 >
                   <List sx={{ width: 200, pt: 0, pb: 0 }}>
                     {["Available", "Low Stock", "Out of Stock"].map(status => (
@@ -363,12 +332,8 @@ const Stocks = () => {
                   </List>
                 </Popover>
               </TableCell>
-              <TableCell align="center">
-                <b>Stock Count</b>
-              </TableCell>
-              <TableCell>
-                <b></b>
-              </TableCell>
+              <TableCell align="center"><b>Stock Count</b></TableCell>
+              <TableCell><b></b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -399,10 +364,7 @@ const Stocks = () => {
                       color={getStockColor(product.stock)}
                       size="small"
                       variant="outlined"
-                      sx={{
-                        fontWeight: 600,
-                        borderWidth: "1.5px"
-                      }}
+                      sx={{ fontWeight: 600, borderWidth: "1.5px" }}
                     />
                   </TableCell>
                   <TableCell align="center">
@@ -455,9 +417,7 @@ const Stocks = () => {
               justifyContent: "flex-start",
               paddingLeft: 2,
             },
-            "& .MuiTablePagination-spacer": {
-              display: "none",
-            },
+            "& .MuiTablePagination-spacer": { display: "none" },
             "& .MuiTablePagination-displayedRows": {
               marginLeft: 0,
               color: "gray",
@@ -465,22 +425,14 @@ const Stocks = () => {
             "& .MuiTablePagination-actions": {
               marginLeft: 2,
               color: "gray",
-              "& .Mui-disabled": {
-                color: "#d3d3d3 !important",
-              },
-              "& button": {
-                "&:hover": {
-                  color: "#39FC1D",
-                  backgroundColor: "rgba(57, 252, 29, 0.08)",
-                },
+              "& .Mui-disabled": { color: "#d3d3d3 !important" },
+              "& button:hover": {
+                color: "#39FC1D",
+                backgroundColor: "rgba(57, 252, 29, 0.08)",
               },
             },
-            "& .MuiTablePagination-selectIcon": {
-              color: "gray",
-            },
-            "& .MuiTablePagination-select": {
-              color: "gray",
-            },
+            "& .MuiTablePagination-selectIcon": { color: "gray" },
+            "& .MuiTablePagination-select": { color: "gray" },
           }}
         />
       </TableContainer>
@@ -491,34 +443,22 @@ const Stocks = () => {
         open={drawerOpen}
         onClose={handleDrawerClose}
         PaperProps={{
-          sx: {
-            width: 350,
-            p: 3,
-            bgcolor: "#fff",
-          },
+          sx: { width: 350, p: 3, bgcolor: "#fff" },
         }}
       >
         {currentSelectedProduct && (
           <Box>
-            {/* Blue Header Bar */}
-            <Box sx={{ 
-              bgcolor: "#e3f2fd", 
-              py: 1.5, 
-              px: 2,
-              borderBottom: "1px solid #90caf9"
-            }}>
+            <Box sx={{ bgcolor: "#e3f2fd", py: 1.5, px: 2, borderBottom: "1px solid #90caf9" }}>
               <Typography variant="caption" sx={{ color: "#424242" }}>
                 Last Edit by: <b>Mark</b> at 03/11/2025 3:12 PM
               </Typography>
             </Box>
 
-            {/* Content */}
             <Box sx={{ p: 3 }}>
               <Typography variant="h5" fontWeight="bold" mb={4}>
                 Update Stock
               </Typography>
 
-              {/* Product Info */}
               <Box mb={4} display="flex" alignItems="center">
                 <Avatar
                   src={currentSelectedProduct.image}
@@ -535,29 +475,17 @@ const Stocks = () => {
                 </Box>
               </Box>
 
-              {/* Current Stock */}
               <Typography variant="body1" mb={3}>
                 Total Current Stock: <b>{currentSelectedProduct.stock}</b>
               </Typography>
 
-              {/* Show variants if they exist */}
               {currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0 ? (
                 <Box>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Variants
-                  </Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>Variants</Typography>
                   
                   {currentSelectedProduct.variants.map((variant, index) => (
                     <Paper key={index} elevation={1} sx={{ p: 2, mb: 2 }}>
-                      <Typography 
-                        variant="subtitle2" 
-                        sx={{ 
-                          mb: 1, 
-                          fontWeight: 'bold',
-                          color: '#000',
-                          fontSize: '1rem'
-                        }}
-                      >
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#000', fontSize: '1rem' }}>
                         {variant.name || `Variant ${index + 1}`}
                       </Typography>
                       
@@ -589,7 +517,6 @@ const Stocks = () => {
                   </Typography>
                 </Box>
               ) : (
-                /* No variants - simple stock update */
                 <Box mb={4}>
                   <Typography variant="caption" color="text.secondary" mb={1} display="block">
                     Stock Change
@@ -598,12 +525,7 @@ const Stocks = () => {
                     <IconButton
                       onClick={() => setStockChange((v) => v - 1)}
                       disabled={stockChange <= -currentSelectedProduct.stock}
-                      sx={{ 
-                        border: "1px solid #e0e0e0", 
-                        borderRadius: '50%',
-                        p: 1,
-                        color: "black"
-                      }}
+                      sx={{ border: "1px solid #e0e0e0", borderRadius: '50%', p: 1, color: "black" }}
                     >
                       <RemoveIcon />
                     </IconButton>
@@ -617,28 +539,14 @@ const Stocks = () => {
                       variant="outlined"
                       size="small"
                       InputProps={{
-                        inputProps: { 
-                          min: -currentSelectedProduct.stock, 
-                          style: { textAlign: 'center' } 
-                        }
+                        inputProps: { min: -currentSelectedProduct.stock, style: { textAlign: 'center' } }
                       }}
-                      sx={{ 
-                        mx: 2,
-                        width: 120,
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '4px',
-                        }
-                      }}
+                      sx={{ mx: 2, width: 120, '& .MuiOutlinedInput-root': { borderRadius: '4px' } }}
                     />
                     
                     <IconButton
                       onClick={() => setStockChange((v) => v + 1)}
-                      sx={{ 
-                        border: "1px solid #e0e0e0", 
-                        borderRadius: '50%',
-                        p: 1,
-                        color: "black"
-                      }}
+                      sx={{ border: "1px solid #e0e0e0", borderRadius: '50%', p: 1, color: "black" }}
                     >
                       <AddIcon />
                     </IconButton>
@@ -646,34 +554,28 @@ const Stocks = () => {
                 </Box>
               )}
 
-              {/* Action Buttons */}
               <Stack direction="row" spacing={2}>
                 <Button
                   variant="contained"
                   fullWidth
                   disabled={
                     currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0
-                      ? false // For variants, always allow update
-                      : stockChange === 0 // For simple products, only disable if no change
+                      ? false
+                      : stockChange === 0
                   }
                   onClick={() => {
                     if (currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0) {
-                      handleConfirm(); // Direct confirm for variants
+                      handleConfirm();
                     } else {
-                      handleChangeStock(stockChange > 0 ? "add" : "remove"); // Keep existing logic for simple products
+                      handleChangeStock(stockChange > 0 ? "add" : "remove");
                     }
                   }}
                   sx={{
                     bgcolor: "#39FC1D",
                     color: "black",
                     fontWeight: "bold",
-                    '&:hover': {
-                      bgcolor: "#32e019"
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: "#c8c8c8",
-                      color: "#666666"
-                    }
+                    '&:hover': { bgcolor: "#32e019" },
+                    '&.Mui-disabled': { bgcolor: "#c8c8c8", color: "#666666" }
                   }}
                 >
                   {currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0 
@@ -689,10 +591,7 @@ const Stocks = () => {
                     borderColor: "#e0e0e0",
                     color: "#424242",
                     fontWeight: "bold",
-                    '&:hover': {
-                      borderColor: "#bdbdbd",
-                      bgcolor: "transparent"
-                    }
+                    '&:hover': { borderColor: "#bdbdbd", bgcolor: "transparent" }
                   }}
                 >
                   CANCEL
@@ -703,7 +602,6 @@ const Stocks = () => {
         )}
       </Drawer>
 
-      {/* Confirmation Dialog */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Stock Update</DialogTitle>
         <DialogContent>
@@ -713,13 +611,10 @@ const Stocks = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} variant="contained">
-            Confirm
-          </Button>
+          <Button onClick={handleConfirm} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Success Notification */}
       <Snackbar
         open={showSuccess}
         autoHideDuration={3000}
@@ -733,12 +628,8 @@ const Stocks = () => {
             width: '100%',
             backgroundColor: '#4caf50',
             color: 'white',
-            '& .MuiAlert-icon': {
-              color: 'white'
-            },
-            '& .MuiAlert-action': {
-              color: 'white'
-            }
+            '& .MuiAlert-icon': { color: 'white' },
+            '& .MuiAlert-action': { color: 'white' }
           }}
         >
           {successMessage}
