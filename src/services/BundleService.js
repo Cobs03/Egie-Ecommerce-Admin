@@ -4,6 +4,27 @@ export class BundleService {
   // Create a new bundle with products
   static async createBundle(bundleData) {
     try {
+      // Check user role - managers and admins can create bundles
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return handleSupabaseError(new Error('No authenticated user'))
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Allow admin and manager roles to create bundles
+      if (profile.role !== 'admin' && profile.role !== 'manager') {
+        return handleSupabaseError(new Error('Only admins and managers can create bundles'))
+      }
+
       const { data: bundle, error: bundleError } = await supabase
         .from('bundles')
         .insert([{
@@ -21,7 +42,16 @@ export class BundleService {
         .select()
         .single()
 
-      if (bundleError) return handleSupabaseError(bundleError)
+      if (bundleError) {
+        // Provide more specific error message for RLS issues
+        if (bundleError.message.includes('row-level security') || bundleError.message.includes('RLS')) {
+          return handleSupabaseError(new Error(
+            'Permission denied: Only admins and managers can create bundles. ' +
+            'RLS Error: ' + bundleError.message
+          ))
+        }
+        return handleSupabaseError(bundleError)
+      }
 
       // Then, create bundle_products entries
       if (bundleData.products && bundleData.products.length > 0) {
@@ -105,6 +135,27 @@ export class BundleService {
   // Update bundle
   static async updateBundle(id, bundleData) {
     try {
+      // Check user role - managers and admins can update bundles
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return handleSupabaseError(new Error('No authenticated user'))
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Allow admin and manager roles to update bundles
+      if (profile.role !== 'admin' && profile.role !== 'manager') {
+        return handleSupabaseError(new Error('Only admins and managers can update bundles'))
+      }
+
       // Update the bundle
       const { data: bundle, error: bundleError } = await supabase
         .from('bundles')
@@ -123,7 +174,16 @@ export class BundleService {
         .select()
         .single()
 
-      if (bundleError) return handleSupabaseError(bundleError)
+      if (bundleError) {
+        // Provide more specific error message for RLS issues
+        if (bundleError.message.includes('row-level security') || bundleError.message.includes('RLS')) {
+          return handleSupabaseError(new Error(
+            'Permission denied: Only admins and managers can update bundles. ' +
+            'RLS Error: ' + bundleError.message
+          ))
+        }
+        return handleSupabaseError(bundleError)
+      }
 
       // Delete existing bundle_products
       await supabase

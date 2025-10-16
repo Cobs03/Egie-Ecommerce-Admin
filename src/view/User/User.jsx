@@ -11,6 +11,8 @@ import DeleteUserDialog from "./User Components/DeleteUserDialog";
 import DemotionDialog from "./User Components/DemotionDialog";
 import BanCustomerDialog from "./User Components/BanCustomerDialog";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../contexts/AuthContext";
+import AdminLogService from "../../services/AdminLogService";
 
 const initialEmployees = [
   {
@@ -67,6 +69,7 @@ const initialCustomers = [
 ];
 
 const User = () => {
+  const { user: currentUser } = useAuth();
   const [employeesList, setEmployeesList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -187,6 +190,12 @@ const User = () => {
   };
 
   const handlePromotionClick = () => {
+    // Only admin can promote employees
+    if (currentUser?.role !== 'admin') {
+      alert('Only administrators can promote employees');
+      return;
+    }
+
     const currentRole = getCurrentRole(selectedUser.access);
     const nextRole = getNextRole(currentRole);
 
@@ -196,31 +205,69 @@ const User = () => {
     }
   };
 
-  const handlePromotionConfirm = () => {
+  const handlePromotionConfirm = async () => {
     if (selectedUser && promotionRole) {
-      const updatedEmployees = employeesList.map((user) => {
-        if (user.email === selectedUser.email) {
-          return {
-            ...user,
-            access: [promotionRole],
-          };
+      try {
+        // Update role in database
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role: promotionRole.toLowerCase() })
+          .eq('id', selectedUser.id);
+
+        if (error) throw error;
+
+        // Create activity log
+        if (currentUser?.id) {
+          await AdminLogService.createLog({
+            userId: currentUser.id,
+            actionType: 'user_promote',
+            actionDescription: `Promoted ${selectedUser.name} to ${promotionRole}`,
+            targetType: 'user',
+            targetId: selectedUser.id,
+            metadata: {
+              oldRole: getCurrentRole(selectedUser.access),
+              newRole: promotionRole,
+            },
+          });
         }
-        return user;
-      });
 
-      setEmployeesList(updatedEmployees);
+        // Update local state
+        const updatedEmployees = employeesList.map((user) => {
+          if (user.email === selectedUser.email) {
+            return {
+              ...user,
+              access: [promotionRole],
+            };
+          }
+          return user;
+        });
 
-      const updatedUser = {
-        ...selectedUser,
-        access: [promotionRole],
-      };
-      setSelectedUser(updatedUser);
+        setEmployeesList(updatedEmployees);
+
+        const updatedUser = {
+          ...selectedUser,
+          access: [promotionRole],
+        };
+        setSelectedUser(updatedUser);
+
+        // Refresh user list
+        await fetchUsers();
+      } catch (error) {
+        console.error('Error promoting user:', error);
+        alert('Failed to promote user. Please try again.');
+      }
     }
     setPromotionDialogOpen(false);
     setPromotionRole(null);
   };
 
   const handleDemotionClick = () => {
+    // Only admin can demote employees
+    if (currentUser?.role !== 'admin') {
+      alert('Only administrators can demote employees');
+      return;
+    }
+
     const currentRole = getCurrentRole(selectedUser.access);
     const previousRole = getPreviousRole(currentRole);
 
@@ -230,54 +277,152 @@ const User = () => {
     }
   };
 
-  const handleDemotionConfirm = () => {
+  const handleDemotionConfirm = async () => {
     if (selectedUser && demotionRole) {
-      const updatedEmployees = employeesList.map((user) => {
-        if (user.email === selectedUser.email) {
-          return {
-            ...user,
-            access: [demotionRole],
-          };
+      try {
+        // Update role in database
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role: demotionRole.toLowerCase() })
+          .eq('id', selectedUser.id);
+
+        if (error) throw error;
+
+        // Create activity log
+        if (currentUser?.id) {
+          await AdminLogService.createLog({
+            userId: currentUser.id,
+            actionType: 'user_demote',
+            actionDescription: `Demoted ${selectedUser.name} to ${demotionRole}`,
+            targetType: 'user',
+            targetId: selectedUser.id,
+            metadata: {
+              oldRole: getCurrentRole(selectedUser.access),
+              newRole: demotionRole,
+            },
+          });
         }
-        return user;
-      });
 
-      setEmployeesList(updatedEmployees);
+        // Update local state
+        const updatedEmployees = employeesList.map((user) => {
+          if (user.email === selectedUser.email) {
+            return {
+              ...user,
+              access: [demotionRole],
+            };
+          }
+          return user;
+        });
 
-      const updatedUser = {
-        ...selectedUser,
-        access: [demotionRole],
-      };
-      setSelectedUser(updatedUser);
+        setEmployeesList(updatedEmployees);
+
+        const updatedUser = {
+          ...selectedUser,
+          access: [demotionRole],
+        };
+        setSelectedUser(updatedUser);
+
+        // Refresh user list
+        await fetchUsers();
+      } catch (error) {
+        console.error('Error demoting user:', error);
+        alert('Failed to demote user. Please try again.');
+      }
     }
     setDemotionDialogOpen(false);
     setDemotionRole(null);
   };
 
   const handleDeleteClick = () => {
+    // Only admin can delete employees
+    if (currentUser?.role !== 'admin') {
+      alert('Only administrators can delete employees');
+      return;
+    }
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setEmployeesList((prev) =>
-      prev.filter((user) => user.email !== selectedUser.email)
-    );
-    setDeleteDialogOpen(false);
-    setEmployeeDrawerOpen(false);
-    setSelectedUser(null);
+  const handleDeleteConfirm = async () => {
+    try {
+      // Only admin can delete employees
+      if (currentUser?.role !== 'admin') {
+        alert('Only administrators can delete employees');
+        return;
+      }
+
+      // Delete from database
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      // Create activity log
+      await AdminLogService.createLog(
+        currentUser.id,
+        'delete_employee',
+        `Deleted employee: ${selectedUser.name} (${selectedUser.email})`,
+        'user',
+        selectedUser.id,
+        {
+          deleted_user_name: selectedUser.name,
+          deleted_user_email: selectedUser.email,
+          deleted_user_role: selectedUser.role
+        }
+      );
+
+      // Update UI
+      setEmployeesList((prev) =>
+        prev.filter((user) => user.email !== selectedUser.email)
+      );
+      setDeleteDialogOpen(false);
+      setEmployeeDrawerOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert('Failed to delete employee');
+    }
   };
 
   const handleBanClick = () => {
     setBanDialogOpen(true);
   };
 
-  const handleBanConfirm = () => {
-    setCustomersList((prev) =>
-      prev.filter((customer) => customer.email !== selectedUser.email)
-    );
-    setBanDialogOpen(false);
-    setCustomerDrawerOpen(false);
-    setSelectedUser(null);
+  const handleBanConfirm = async () => {
+    try {
+      // Update user status to banned in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: 'banned' })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      // Create activity log
+      await AdminLogService.createLog(
+        currentUser.id,
+        'ban_customer',
+        `Banned customer: ${selectedUser.name} (${selectedUser.email})`,
+        'user',
+        selectedUser.id,
+        {
+          banned_user_name: selectedUser.name,
+          banned_user_email: selectedUser.email
+        }
+      );
+
+      // Update UI
+      setCustomersList((prev) =>
+        prev.filter((customer) => customer.email !== selectedUser.email)
+      );
+      setBanDialogOpen(false);
+      setCustomerDrawerOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error banning customer:', error);
+      alert('Failed to ban customer');
+    }
   };
 
   const filteredEmployees = employeesList.filter(

@@ -107,6 +107,27 @@ export class ProductService {
   // Update product
   static async updateProduct(id, productData) {
     try {
+      // Check user role - managers and admins can update products
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return handleSupabaseError(new Error('No authenticated user'))
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Allow admin and manager roles to update products
+      if (profile.role !== 'admin' && profile.role !== 'manager') {
+        return handleSupabaseError(new Error('Only admins and managers can update products'))
+      }
+
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -116,7 +137,16 @@ export class ProductService {
         .eq('id', id)
         .select()
 
-      if (error) return handleSupabaseError(error)
+      if (error) {
+        // Provide more specific error message for RLS issues
+        if (error.message.includes('row-level security') || error.message.includes('RLS')) {
+          return handleSupabaseError(new Error(
+            'Permission denied: Only admins and managers can update products. ' +
+            'RLS Error: ' + error.message
+          ))
+        }
+        return handleSupabaseError(error)
+      }
       return handleSupabaseSuccess(data[0])
     } catch (error) {
       return handleSupabaseError(error)

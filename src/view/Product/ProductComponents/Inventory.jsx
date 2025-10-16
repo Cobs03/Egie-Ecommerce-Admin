@@ -35,12 +35,18 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // Import ProductService to get real data
 import { ProductService } from "../../../services/ProductService";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 const Inventory = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuProductId, setMenuProductId] = useState(null);
   
@@ -58,7 +64,8 @@ const Inventory = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   
-  const navigate = useNavigate();
+  // Track if we should show update success message
+  const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
 
   // Load real products from database
   const loadProducts = async () => {
@@ -137,6 +144,23 @@ const Inventory = () => {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // Reload products when returning to this page (e.g., after editing)
+  useEffect(() => {
+    if (location.state?.reloadProducts) {
+      console.log("🔄 Reloading products after update...");
+      loadProducts();
+      
+      // Show success message if provided
+      if (location.state?.successMessage) {
+        setSuccessMessage(location.state.successMessage);
+        setShowUpdateSuccess(true);
+      }
+      
+      // Clear the state to prevent reloading on subsequent renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
   
   // Pagination state
   const [page, setPage] = useState(0);
@@ -330,7 +354,7 @@ const Inventory = () => {
       warranty: product.warranty,
       brand_id: product.brand_id,
       price: product.price,
-      stock_quantity: product.stock,
+      stock: product.stock, // Use 'stock' to match ProductCreate state initialization
       sku: product.sku,
       status: product.status,
       
@@ -375,6 +399,23 @@ const Inventory = () => {
       
       if (result.success) {
         console.log("✅ Product deleted successfully");
+        
+        // Create activity log
+        if (user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'product_delete',
+            actionDescription: `Deleted product: ${productToDelete.name}`,
+            targetType: 'product',
+            targetId: productToDelete.id,
+            metadata: {
+              productName: productToDelete.name,
+              sku: productToDelete.sku,
+              price: productToDelete.price,
+            },
+          });
+        }
+        
         // Refresh the products list
         await loadProducts();
         
@@ -829,7 +870,7 @@ const Inventory = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Success Notification */}
+      {/* Success Notification for Delete */}
       <Snackbar
         open={showSuccess}
         autoHideDuration={3000}
@@ -842,6 +883,32 @@ const Inventory = () => {
           sx={{ 
             width: '100%',
             backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
+
+      {/* Success Notification for Update */}
+      <Snackbar
+        open={showUpdateSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowUpdateSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowUpdateSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#2196f3',
             color: 'white',
             '& .MuiAlert-icon': {
               color: 'white'

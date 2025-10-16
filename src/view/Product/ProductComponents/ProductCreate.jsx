@@ -15,6 +15,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ProductService } from "../../../services/ProductService";
 import { CategoryService } from "../../../services/CategoryService";
 import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 // Import separated components
 import MediaUpload from "./ProductCreate Components/MediaUpload";
@@ -26,6 +28,7 @@ import AddComponentDialog from "./ProductCreate Components/AddComponentDialog";
 import ConfirmDialog from "./ProductCreate Components/ConfirmDialog";
 
 const ProductCreate = () => {
+  const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
   const isEditMode = state !== null;
@@ -168,8 +171,30 @@ const ProductCreate = () => {
     );
   };
 
-  const handleRemoveVariant = (idx) => {
+  const handleRemoveVariant = async (idx) => {
+    const removedVariant = variants[idx];
     setVariants((prev) => prev.filter((_, i) => i !== idx));
+
+    // If editing an existing product, log the variant removal
+    if (product && user?.id) {
+      try {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'variant_remove',
+          actionDescription: `Removed variant "${removedVariant.name}" from product: ${product.name}`,
+          targetType: 'product',
+          targetId: product.id,
+          metadata: {
+            productName: product.name,
+            variantName: removedVariant.name,
+            variantPrice: removedVariant.price,
+            variantStock: removedVariant.stock,
+          },
+        });
+      } catch (error) {
+        console.error('Error logging variant removal:', error);
+      }
+    }
   };
 
   // Validate form before viewing product
@@ -408,10 +433,114 @@ const ProductCreate = () => {
       let result;
       if (isEditMode && state?.id) {
         console.log("🔄 Updating existing product with ID:", state.id);
+        console.log("🔄 Product data being sent:", productData);
         result = await ProductService.updateProduct(state.id, productData);
+        console.log("🔄 Update result:", result);
+        
+        // Create activity log for update
+        if (result.success && user?.id) {
+          const changes = [];
+          const detailedChanges = {};
+          
+          if (name !== state.name) {
+            changes.push('name');
+            detailedChanges.name = { old: state.name, new: name };
+          }
+          if (parseFloat(officialPrice) !== parseFloat(state.officialPrice)) {
+            changes.push('price');
+            detailedChanges.price = { old: state.officialPrice, new: officialPrice };
+          }
+          if (description !== state.description) {
+            changes.push('description');
+            detailedChanges.description = { old: state.description?.substring(0, 50), new: description?.substring(0, 50) };
+          }
+          if (stock !== state.stock) {
+            changes.push('stock');
+            detailedChanges.stock = { old: state.stock, new: stock };
+          }
+          if (warranty !== state.warranty) {
+            changes.push('warranty');
+            detailedChanges.warranty = { old: state.warranty, new: warranty };
+          }
+          if (officialPrice !== state.officialPrice) {
+            changes.push('officialPrice');
+            detailedChanges.officialPrice = { old: state.officialPrice, new: officialPrice };
+          }
+          if (initialPrice !== state.initialPrice) {
+            changes.push('initialPrice');
+            detailedChanges.initialPrice = { old: state.initialPrice, new: initialPrice };
+          }
+          if (discount !== state.discount) {
+            changes.push('discount');
+            detailedChanges.discount = { old: state.discount, new: discount };
+          }
+          
+          // Track image changes
+          const oldImages = state.images || [];
+          const newImages = uploadedImageUrls || [];
+          if (JSON.stringify(oldImages) !== JSON.stringify(newImages)) {
+            changes.push('images');
+            detailedChanges.images = { 
+              oldCount: oldImages.length, 
+              newCount: newImages.length,
+              added: newImages.filter(img => !oldImages.includes(img)).length,
+              removed: oldImages.filter(img => !newImages.includes(img)).length
+            };
+          }
+          
+          // Track variant changes
+          const oldVariants = state.variants || [];
+          const newVariants = variants || [];
+          if (JSON.stringify(oldVariants) !== JSON.stringify(newVariants)) {
+            changes.push('variants');
+            detailedChanges.variants = {
+              oldCount: oldVariants.length,
+              newCount: newVariants.length,
+              added: newVariants.filter(v => !oldVariants.some(ov => ov.name === v.name)).length,
+              removed: oldVariants.filter(ov => !newVariants.some(v => v.name === ov.name)).length,
+              modified: newVariants.filter(v => {
+                const old = oldVariants.find(ov => ov.name === v.name);
+                return old && (old.price !== v.price || old.stock !== v.stock);
+              }).length
+            };
+          }
+          
+          const changesText = changes.length > 0 ? ` (changed: ${changes.join(', ')})` : '';
+          
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'product_update',
+            actionDescription: `Updated product: ${name}${changesText}`,
+            targetType: 'product',
+            targetId: state.id,
+            metadata: {
+              productName: name,
+              sku: productData.sku,
+              changes: changes,
+              detailedChanges: detailedChanges,
+            },
+          });
+        }
       } else {
         console.log("🔄 Creating new product");
         result = await ProductService.createProduct(productData);
+        
+        // Create activity log for creation
+        if (result.success && user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'product_create',
+            actionDescription: `Created product: ${name}`,
+            targetType: 'product',
+            targetId: result.data?.id,
+            metadata: {
+              productName: name,
+              sku: productData.sku,
+              price: officialPrice,
+              stock: productData.stock_quantity,
+            },
+          });
+        }
       }
 
       if (result.success) {
@@ -423,7 +552,12 @@ const ProductCreate = () => {
         
         // Navigate back to products list after short delay
         setTimeout(() => {
-          navigate('/products');
+          navigate('/products', {
+            state: {
+              reloadProducts: true,
+              successMessage: successMsg
+            }
+          });
         }, 1500);
       } else {
         const errorMsg = isEditMode && state?.id 

@@ -38,8 +38,11 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { useNavigate } from "react-router-dom";
 import { BundleService } from "../../../services/BundleService";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 const Bundles = () => {
+  const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBundle, setSelectedBundle] = useState(null);
   const navigate = useNavigate();
@@ -232,6 +235,21 @@ const Bundles = () => {
       console.log('Delete result:', result);
       
       if (result.success) {
+        // Create activity log
+        if (user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'bundle_delete',
+            actionDescription: `Deleted bundle: ${selectedBundle.bundle_name || selectedBundle.name}`,
+            targetType: 'bundle',
+            targetId: selectedBundle.id,
+            metadata: {
+              bundleName: selectedBundle.bundle_name || selectedBundle.name,
+              price: selectedBundle.official_price,
+            },
+          });
+        }
+
         // Remove from local state
         setBundles(prev => prev.filter(b => b.id !== selectedBundle.id));
         setSuccessMessage("Bundle deleted successfully!");

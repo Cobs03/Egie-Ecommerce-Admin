@@ -26,6 +26,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ProductService } from "../../../services/ProductService";
 import { BundleService } from "../../../services/BundleService";
 import { StorageService } from "../../../services/StorageService";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 const formatPrice = (price) => {
   if (typeof price !== "number") return "0.00";
@@ -36,9 +38,10 @@ const formatPrice = (price) => {
 };
 
 const BundleCreate = () => {
+  const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const isEditMode = state !== null;
+  const isEditMode = state?.bundleId ? true : false;
 
   // Initialize state with bundle data if in edit mode
   const [images, setImages] = useState(state?.images || []);
@@ -267,9 +270,61 @@ const BundleCreate = () => {
       if (isEditMode && state?.bundleId) {
         // Update existing bundle
         result = await BundleService.updateBundle(state.bundleId, bundleData);
+        
+        // Create activity log for update
+        if (result.success && user?.id) {
+          // Build description of changes
+          const changes = [];
+          if (bundleName !== state.bundleName) changes.push(`name`);
+          if (parseFloat(officialPrice) !== parseFloat(state.officialPrice)) changes.push(`price`);
+          if (description !== state.description) changes.push(`description`);
+          if (warranty !== state.warranty) changes.push(`warranty`);
+          if (discount !== state.discount) changes.push(`discount`);
+          
+          const changesText = changes.length > 0 ? ` (changed: ${changes.join(', ')})` : '';
+          
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'bundle_update',
+            actionDescription: `Updated bundle: ${bundleName}${changesText}`,
+            targetType: 'bundle',
+            targetId: state.bundleId,
+            metadata: {
+              bundleName: bundleName,
+              price: officialPrice,
+              changes: changes,
+              oldValues: {
+                name: state.bundleName,
+                price: state.officialPrice,
+                description: state.description,
+              },
+              newValues: {
+                name: bundleName,
+                price: officialPrice,
+                description: description,
+              }
+            },
+          });
+        }
       } else {
         // Create new bundle
         result = await BundleService.createBundle(bundleData);
+        
+        // Create activity log for creation
+        if (result.success && user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'bundle_create',
+            actionDescription: `Created bundle: ${bundleName}`,
+            targetType: 'bundle',
+            targetId: result.data?.id,
+            metadata: {
+              bundleName: bundleName,
+              price: officialPrice,
+              productCount: products.length,
+            },
+          });
+        }
       }
 
       if (result.success) {
