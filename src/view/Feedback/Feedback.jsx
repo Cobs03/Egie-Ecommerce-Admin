@@ -1,88 +1,192 @@
 import React, { useState } from "react";
-import { Box, Tabs, Tab, Button, Stack, Typography } from "@mui/material";
-import ProductFeedback from "./ProductFeedback";
-import Inqueries from "./Inqueries";
-
-const productReviews = [
-  {
-    productImg: "https://cdn-icons-png.flaticon.com/512/69/69525.png",
-    productName: "EGIE Wireless Controller",
-    username: "Sarah Lee",
-    rating: 4,
-    review: "Great controller, works perfectly with my PC and PS5!",
-    date: "Mar 15, 2024",
-  },
-  {
-    productImg: "https://cdn-icons-png.flaticon.com/512/69/69526.png",
-    productName: "EGIE Pro Gamepad",
-    username: "John Smith",
-    rating: 3,
-    review: "Good value for the price, but the battery life could be better.",
-    date: "Feb 28, 2024",
-  },
-  {
-    productImg: "https://cdn-icons-png.flaticon.com/512/69/69527.png",
-    productName: "EGIE Turbo Joystick",
-    username: "Priya Patel",
-    rating: 5,
-    review: "Absolutely love it! Fast shipping and great packaging.",
-    date: "Jan 10, 2024",
-  },
-  {
-    productImg: "https://cdn-icons-png.flaticon.com/512/69/69528.png",
-    productName: "EGIE Classic Pad",
-    username: "Carlos Rivera",
-    rating: 2,
-    review:
-      "Had some issues connecting to Bluetooth, but customer service helped.",
-    date: "Dec 22, 2023",
-  },
-  {
-    productImg: "https://cdn-icons-png.flaticon.com/512/69/69529.png",
-    productName: "EGIE Elite Controller",
-    username: "Anna Müller",
-    rating: 5,
-    review: "Best purchase this year! Highly recommend to gamers.",
-    date: "Nov 5, 2023",
-  },
-];
-
-function a11yProps(index) {
-  return {
-    id: `feedback-tab-${index}`,
-    "aria-controls": `feedback-tabpanel-${index}`,
-  };
-}
-
-const REVIEWS_PER_PAGE = 40;
+import { Box, Typography, TextField, Button, Stack } from "@mui/material";
+import { Search, FileDownload } from "@mui/icons-material";
+import ProductFeedback from "./Feedback Components/ProductFeedback";
+import Inqueries from "./Feedback Components/Inqueries";
+import { productReviews, REVIEWS_PER_PAGE } from "./Feedback Components/feedbackData";
 
 const Feedback = () => {
-  const [tab, setTab] = useState(0);
+  const [activeTab, setActiveTab] = useState("reviews");
   const [inquiryFilter, setInquiryFilter] = useState("Question");
   const [expanded, setExpanded] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const paginatedReviews = productReviews.slice(
     (reviewPage - 1) * REVIEWS_PER_PAGE,
     reviewPage * REVIEWS_PER_PAGE
   );
 
-  const handleTabChange = (event, newValue) => {
-    setTab(newValue);
+  const handleDownloadFile = () => {
+    console.log("Downloading feedback data...");
   };
 
+  // Filter reviews based on search
+  const filteredReviews = paginatedReviews.filter(
+    (review) =>
+      review.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      review.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      review.review.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" fontWeight="bold" gutterBottom>
-        Feedback
+    <Box p={4}>
+      {/* Title */}
+      <Typography variant="h4" fontWeight={700} mb={3}>
+        FEEDBACK MANAGEMENT
       </Typography>
-      <Tabs value={tab} onChange={handleTabChange} aria-label="feedback tabs">
-        <Tab label="Product Reviews" {...a11yProps(0)} />
-        <Tab label="Inquiries" {...a11yProps(1)} />
-      </Tabs>
+
+      {/* Search Bar & Pill Tabs */}
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={2}
+        p={1.5}
+        bgcolor="#000"
+        borderRadius={2}
+        boxShadow={2}
+      >
+        <TextField
+          size="small"
+          placeholder="Search Feedback"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <Search fontSize="small" sx={{ mr: 1, color: "#000" }} />
+            ),
+          }}
+          sx={{
+            bgcolor: "#fff",
+            borderRadius: 1,
+            minWidth: 300,
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { border: "none" },
+            },
+          }}
+        />
+        <Box flex={1} />
+
+        {/* Pill-Style Tabs */}
+        <Stack direction="row" spacing={0.5}>
+          <Button
+            onClick={() => setActiveTab("reviews")}
+            sx={{
+              bgcolor: activeTab === "reviews" ? "#00E676" : "transparent",
+              color: activeTab === "reviews" ? "#000" : "#fff",
+              fontWeight: 700,
+              textTransform: "none",
+              borderRadius: "20px",
+              px: 3,
+              py: 0.75,
+              minWidth: 140,
+              border: activeTab === "reviews" ? "none" : "2px solid #fff",
+              "&:hover": {
+                bgcolor: activeTab === "reviews" ? "#00C853" : "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            Product Reviews
+          </Button>
+          <Button
+            onClick={() => setActiveTab("inquiries")}
+            sx={{
+              bgcolor: activeTab === "inquiries" ? "#00E676" : "transparent",
+              color: activeTab === "inquiries" ? "#000" : "#fff",
+              fontWeight: 700,
+              textTransform: "none",
+              borderRadius: "20px",
+              px: 3,
+              py: 0.75,
+              minWidth: 140,
+              border: activeTab === "inquiries" ? "none" : "2px solid #fff",
+              "&:hover": {
+                bgcolor: activeTab === "inquiries" ? "#00C853" : "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            Inquiries
+          </Button>
+        </Stack>
+      </Box>
+
+      {/* Filter Buttons & Export Button */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+      >
+        {/* Filter buttons for Inquiries tab */}
+        {activeTab === "inquiries" ? (
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant={inquiryFilter === "Question" ? "contained" : "outlined"}
+              onClick={() => setInquiryFilter("Question")}
+              sx={{
+                bgcolor: inquiryFilter === "Question" ? "#00E676" : "transparent",
+                color: inquiryFilter === "Question" ? "#000" : "#00E676",
+                borderColor: "#00E676",
+                fontWeight: 700,
+                textTransform: "none",
+                borderRadius: "20px",
+                px: 3,
+                "&:hover": {
+                  bgcolor: inquiryFilter === "Question" ? "#00C853" : "rgba(0, 230, 118, 0.1)",
+                  borderColor: "#00C853",
+                },
+              }}
+            >
+              Question
+            </Button>
+            <Button
+              variant={inquiryFilter === "Replied" ? "contained" : "outlined"}
+              onClick={() => setInquiryFilter("Replied")}
+              sx={{
+                bgcolor: inquiryFilter === "Replied" ? "#00E676" : "transparent",
+                color: inquiryFilter === "Replied" ? "#000" : "#00E676",
+                borderColor: "#00E676",
+                fontWeight: 700,
+                textTransform: "none",
+                borderRadius: "20px",
+                px: 3,
+                "&:hover": {
+                  bgcolor: inquiryFilter === "Replied" ? "#00C853" : "rgba(0, 230, 118, 0.1)",
+                  borderColor: "#00C853",
+                },
+              }}
+            >
+              Replied
+            </Button>
+          </Stack>
+        ) : (
+          <Box /> // Empty box to maintain layout spacing
+        )}
+
+        <Button
+          variant="outlined"
+          startIcon={<FileDownload />}
+          onClick={handleDownloadFile}
+          sx={{
+            borderColor: "#1976d2",
+            color: "#1976d2",
+            fontWeight: 600,
+            textTransform: "none",
+            "&:hover": {
+              borderColor: "#115293",
+              bgcolor: "rgba(25, 118, 210, 0.04)",
+            },
+          }}
+        >
+          {activeTab === "reviews" ? "Export Reviews" : "Export Inquiries"}
+        </Button>
+      </Box>
+
       {/* Product Reviews Tab */}
-      {tab === 0 && (
+      {activeTab === "reviews" && (
         <ProductFeedback
-          paginatedReviews={paginatedReviews}
+          paginatedReviews={filteredReviews}
           expanded={expanded}
           setExpanded={setExpanded}
           reviewPage={reviewPage}
@@ -91,29 +195,10 @@ const Feedback = () => {
           totalReviews={productReviews.length}
         />
       )}
+
       {/* Inquiries Tab */}
-      {tab === 1 && (
-        <Box sx={{ mt: 2 }}>
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-            <Button
-              variant={inquiryFilter === "Question" ? "contained" : "outlined"}
-              color="success"
-              onClick={() => setInquiryFilter("Question")}
-              sx={{ borderRadius: 3 }}
-            >
-              Question
-            </Button>
-            <Button
-              variant={inquiryFilter === "Replied" ? "contained" : "outlined"}
-              color="success"
-              onClick={() => setInquiryFilter("Replied")}
-              sx={{ borderRadius: 3 }}
-            >
-              Replied
-            </Button>
-          </Stack>
-          <Inqueries filter={inquiryFilter} />
-        </Box>
+      {activeTab === "inquiries" && (
+        <Inqueries filter={inquiryFilter} searchQuery={searchQuery} />
       )}
     </Box>
   );
