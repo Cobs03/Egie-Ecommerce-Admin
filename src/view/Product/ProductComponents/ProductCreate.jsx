@@ -14,7 +14,10 @@ import SaveIcon from "@mui/icons-material/Save";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ProductService } from "../../../services/ProductService";
 import { CategoryService } from "../../../services/CategoryService";
+import { StorageService } from "../../../services/StorageService";
 import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 // Import separated components
 import MediaUpload from "./ProductCreate Components/MediaUpload";
@@ -26,6 +29,7 @@ import AddComponentDialog from "./ProductCreate Components/AddComponentDialog";
 import ConfirmDialog from "./ProductCreate Components/ConfirmDialog";
 
 const ProductCreate = () => {
+  const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
   const isEditMode = state !== null;
@@ -86,18 +90,23 @@ const ProductCreate = () => {
     console.log("🔍 State selected_components:", state?.selected_components);
     console.log("🔍 State selectedComponents:", state?.selectedComponents);
     
-    if (isEditMode && state?.selected_components) {
-      // Handle both array and single component cases
-      let components = [];
+    if (isEditMode) {
+      // Try both field names (selected_components from DB, selectedComponents from transformed data)
+      const componentsData = state?.selected_components || state?.selectedComponents;
       
-      if (Array.isArray(state.selected_components)) {
-        components = state.selected_components;
-      } else if (typeof state.selected_components === 'object') {
-        components = [state.selected_components];
+      if (componentsData) {
+        // Handle both array and single component cases
+        let components = [];
+        
+        if (Array.isArray(componentsData)) {
+          components = componentsData;
+        } else if (typeof componentsData === 'object') {
+          components = [componentsData];
+        }
+        
+        console.log("🔍 Components to set:", components);
+        return components;
       }
-      
-      console.log("🔍 Components to set:", components);
-      return components;
     }
     
     return [];
@@ -125,6 +134,43 @@ const ProductCreate = () => {
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Sync selected components after categories load (for edit mode)
+  useEffect(() => {
+    console.log("🔍 useEffect triggered - Edit mode check:");
+    console.log("  - isEditMode:", isEditMode);
+    console.log("  - categories.length:", categories.length);
+    console.log("  - state?.selected_components:", state?.selected_components);
+    
+    // In edit mode, selected_components should already have full category objects
+    // from ProductService.getAllProducts() enrichment
+    if (isEditMode && state?.selected_components && state.selected_components.length > 0) {
+      console.log("✅ Product has selected_components from database");
+      console.log("📝 Components:", state.selected_components);
+      
+      // Check if components are already full objects (have 'name' property)
+      const firstComp = state.selected_components[0]
+      if (firstComp && firstComp.name) {
+        console.log("✨ Components already enriched with full data - using directly!");
+        setSelectedComponents(state.selected_components)
+      } else if (categories.length > 0) {
+        // Fallback: Components only have IDs, need to match with categories
+        console.log("🔄 Components need enrichment - matching with loaded categories...");
+        
+        const componentIds = state.selected_components.map(comp => comp.id || comp)
+        const matchedComponents = categories.filter(cat => componentIds.includes(cat.id))
+        
+        if (matchedComponents.length > 0) {
+          console.log("✅ Matched components:", matchedComponents)
+          setSelectedComponents(matchedComponents)
+        } else {
+          console.log("⚠️ No matching components found")
+        }
+      }
+    } else {
+      console.log("ℹ️ No components to pre-select (new product or empty components)")
+    }
+  }, [isEditMode, state, categories]); // Re-run when state or categories change
 
   // Track the last auto-formatted description to avoid overwriting manual edits was moved to state section above
 
@@ -168,8 +214,30 @@ const ProductCreate = () => {
     );
   };
 
-  const handleRemoveVariant = (idx) => {
+  const handleRemoveVariant = async (idx) => {
+    const removedVariant = variants[idx];
     setVariants((prev) => prev.filter((_, i) => i !== idx));
+
+    // If editing an existing product, log the variant removal
+    if (product && user?.id) {
+      try {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'variant_remove',
+          actionDescription: `Removed variant "${removedVariant.name}" from product: ${product.name}`,
+          targetType: 'product',
+          targetId: product.id,
+          metadata: {
+            productName: product.name,
+            variantName: removedVariant.name,
+            variantPrice: removedVariant.price,
+            variantStock: removedVariant.stock,
+          },
+        });
+      } catch (error) {
+        console.error('Error logging variant removal:', error);
+      }
+    }
   };
 
   // Validate form before viewing product
@@ -270,19 +338,10 @@ const ProductCreate = () => {
     return true;
   };
 
-  // Function to upload images to Supabase Storage
+  // Function to upload images to Supabase Storage using StorageService
   const uploadImages = async (imageFiles) => {
     console.log("🔄 Starting image upload process...");
     console.log("Images to upload:", imageFiles);
-    
-    // Quick bucket check
-    try {
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      console.log("Available buckets:", buckets?.map(b => b.name));
-      if (bucketError) console.error("Bucket check error:", bucketError);
-    } catch (e) {
-      console.error("Error checking buckets:", e);
-    }
     
     const uploadedUrls = [];
     
@@ -291,62 +350,49 @@ const ProductCreate = () => {
       return uploadedUrls;
     }
     
-    for (let i = 0; i < imageFiles.length; i++) {
-      const image = imageFiles[i];
-      console.log(`Processing image ${i + 1}:`, image);
-      
-      // Skip if no file (only URL)
+    // Separate files that need uploading from existing URLs
+    const filesToUpload = [];
+    const existingUrls = [];
+    
+    for (const image of imageFiles) {
       if (!image.file) {
-        console.log("Skipping image - no file object");
+        // This is an existing URL (no file object)
         if (image.url && !image.url.startsWith('blob:')) {
-          uploadedUrls.push(image.url);
-          console.log("Added existing URL:", image.url);
+          existingUrls.push(image.url);
+          console.log("✅ Keeping existing URL:", image.url);
         }
-        continue;
+      } else {
+        // This is a new file that needs uploading
+        filesToUpload.push(image.file);
+        console.log("� Will upload file:", image.file.name);
       }
-
+    }
+    
+    // Add existing URLs to the result
+    uploadedUrls.push(...existingUrls);
+    
+    // Upload new files using StorageService
+    if (filesToUpload.length > 0) {
+      console.log(`🔄 Uploading ${filesToUpload.length} new files to 'products' bucket...`);
+      
       try {
-        console.log("🔄 Uploading file:", image.file.name);
+        const uploadResult = await StorageService.uploadMultipleImages(
+          filesToUpload, 
+          'products', // folder
+          'products'  // bucket name
+        );
         
-        // Generate unique filename
-        const fileExt = image.file.name.split('.').pop();
-        const fileName = `${Date.now()}-${i}.${fileExt}`;
-        const filePath = `products/${fileName}`;
-        
-        console.log("Upload path:", filePath);
-
-        // Upload to Supabase Storage
-        const { data, error } = await supabase.storage
-          .from('products')
-          .upload(filePath, image.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (error) {
-          console.error('❌ Error uploading image:', error);
-          console.error('Error details:', {
-            message: error.message,
-            statusCode: error.statusCode,
-            error: error.error
-          });
-          // Continue with other images
-          continue;
+        if (uploadResult.success) {
+          console.log("✅ All files uploaded successfully!");
+          console.log("📸 Uploaded URLs:", uploadResult.data);
+          uploadedUrls.push(...uploadResult.data);
+        } else {
+          console.error("❌ Upload failed:", uploadResult.error);
+          throw new Error(`Failed to upload images: ${uploadResult.error}`);
         }
-
-        console.log("✅ Upload successful:", data);
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('products')
-          .getPublicUrl(filePath);
-
-        console.log("📄 Public URL:", urlData.publicUrl);
-        uploadedUrls.push(urlData.publicUrl);
-        
       } catch (error) {
-        console.error('💥 Error processing image:', error);
-        // Continue with other images
+        console.error("💥 Upload exception:", error);
+        throw error;
       }
     }
     
@@ -381,7 +427,10 @@ const ProductCreate = () => {
         price: variants.length > 0 ? variants[0].price : 0, // Use first variant price as base price
         stock_quantity: variants.reduce((sum, v) => sum + (v.stock || 0), 0), // Total stock
         images: uploadedImageUrls, // Direct array of image URLs
-        selected_components: selectedComponents, // From ComponentsSlider (use correct field name)
+        selected_components: selectedComponents.map(comp => ({
+          id: comp.id,
+          name: comp.name
+        })), // Save only id and name (not full category object)
         specifications: specifications, // From ComponentSpecifications
         variants: variants, // From VariantManager
         metadata: {
@@ -392,6 +441,8 @@ const ProductCreate = () => {
         },
         status: 'active'
       };
+      
+      console.log("💾 Saving selected_components:", productData.selected_components);
 
       // For edit mode, don't regenerate SKU - keep existing one
       if (isEditMode && state?.sku) {
@@ -408,10 +459,386 @@ const ProductCreate = () => {
       let result;
       if (isEditMode && state?.id) {
         console.log("🔄 Updating existing product with ID:", state.id);
+        console.log("🔄 Product data being sent:", productData);
+        
+        // PRE-CHECK: Detect if there are ANY changes before updating
+        const preCheckChanges = [];
+        
+        // Quick pre-check for basic fields
+        if (name.trim() !== state.name?.trim()) preCheckChanges.push('name');
+        if (description.trim() !== state.description?.trim()) preCheckChanges.push('description');
+        if (warranty?.trim() !== state.warranty?.trim()) preCheckChanges.push('warranty');
+        if (brandId !== state.brand_id) preCheckChanges.push('brand');
+        
+        // Pre-check prices
+        const oldMetadata = state.metadata || {};
+        // Prices can be either at top level (from Inventory transform) or in metadata (from database)
+        const oldOfficialPrice = parseFloat(state.officialPrice || oldMetadata.officialPrice) || 0;
+        const oldInitialPrice = parseFloat(state.initialPrice || oldMetadata.initialPrice) || 0;
+        const oldDiscount = parseFloat(state.discount || oldMetadata.discount) || 0;
+        const newOfficialPrice = parseFloat(officialPrice) || 0;
+        const newInitialPrice = parseFloat(initialPrice) || 0;
+        const newDiscount = parseFloat(discount) || 0;
+        
+        if (oldOfficialPrice !== newOfficialPrice) preCheckChanges.push('price');
+        if (oldInitialPrice !== newInitialPrice) preCheckChanges.push('initialPrice');
+        if (oldDiscount !== newDiscount) preCheckChanges.push('discount');
+        
+        // Pre-check images
+        const oldImages = (state.images || []).map(img => typeof img === 'string' ? img : img.url).filter(Boolean).sort();
+        const newImages = (uploadedImageUrls || []).filter(Boolean).sort();
+        if (JSON.stringify(oldImages) !== JSON.stringify(newImages)) preCheckChanges.push('images');
+        
+        // Pre-check variants
+        const oldVariants = state.variants || [];
+        const newVariants = variants || [];
+        if (oldVariants.length !== newVariants.length) preCheckChanges.push('variants');
+        else if (JSON.stringify(oldVariants) !== JSON.stringify(newVariants)) preCheckChanges.push('variants');
+        
+        // Pre-check components
+        const oldCompIds = (state.selected_components || []).map(c => c.id).sort();
+        const newCompIds = selectedComponents.map(c => c.id).sort();
+        if (JSON.stringify(oldCompIds) !== JSON.stringify(newCompIds)) preCheckChanges.push('components');
+        
+        // Pre-check specifications
+        const oldSpecs = state.specifications || {};
+        const newSpecs = specifications || {};
+        if (JSON.stringify(oldSpecs) !== JSON.stringify(newSpecs)) preCheckChanges.push('specifications');
+        
+        console.log("🔍 PRE-CHECK: Changes detected:", preCheckChanges);
+        
+        // If NO changes detected, skip the update entirely
+        if (preCheckChanges.length === 0) {
+          console.log("ℹ️ No changes detected - skipping database update and logging");
+          setSuccessMessage("No changes made to the product");
+          setShowSuccess(true);
+          setIsSaving(false);
+          
+          // Navigate back after a short delay
+          setTimeout(() => {
+            try {
+              console.log('✅ Navigating to /products (no changes)');
+              navigate('/products', { 
+                state: { 
+                  successMessage: "No changes were made" 
+                },
+                replace: true
+              });
+            } catch (navError) {
+              console.error('❌ Navigation error:', navError);
+              navigate('/products', { replace: true });
+            }
+          }, 1500);
+          
+          return; // EXIT EARLY - don't update or log
+        }
+        
+        // Continue with update if changes were detected
         result = await ProductService.updateProduct(state.id, productData);
+        console.log("🔄 Update result:", result);
+        
+        // Create activity log for update
+        if (result.success && user?.id) {
+          const changes = [];
+          const detailedChanges = {};
+          
+          console.log("🔍 Starting change detection...");
+          
+          // Compare basic text fields
+          if (name.trim() !== state.name?.trim()) {
+            console.log("📝 Name changed:", state.name, "→", name);
+            changes.push('name');
+            detailedChanges.name = { old: state.name, new: name };
+          }
+          
+          if (description.trim() !== state.description?.trim()) {
+            console.log("📝 Description changed");
+            changes.push('description');
+            detailedChanges.description = { 
+              old: state.description?.substring(0, 50), 
+              new: description?.substring(0, 50) 
+            };
+          }
+          
+          if (warranty?.trim() !== state.warranty?.trim()) {
+            console.log("📝 Warranty changed:", state.warranty, "→", warranty);
+            changes.push('warranty');
+            detailedChanges.warranty = { old: state.warranty, new: warranty };
+          }
+          
+          // Compare brand
+          if (brandId !== state.brand_id) {
+            console.log("📝 Brand changed:", state.brand_id, "→", brandId);
+            changes.push('brand');
+            detailedChanges.brand = { old: state.brand_id, new: brandId };
+          }
+          
+          // Compare prices from metadata (handle undefined/null properly)
+          // Prices can be either at top level (from Inventory transform) or in metadata (from database)
+          const oldMetadata = state.metadata || {};
+          const oldPrice = parseFloat(state.officialPrice || oldMetadata.officialPrice) || 0;
+          const newPrice = parseFloat(officialPrice) || 0;
+          if (oldPrice !== newPrice) {
+            console.log("📝 Price changed:", oldPrice, "→", newPrice);
+            changes.push('price');
+            detailedChanges.price = { 
+              old: oldPrice, 
+              new: newPrice 
+            };
+          }
+          
+          const oldInitialPrice = parseFloat(state.initialPrice || oldMetadata.initialPrice) || 0;
+          const newInitialPrice = parseFloat(initialPrice) || 0;
+          if (oldInitialPrice !== newInitialPrice) {
+            console.log("📝 Initial price changed:", oldInitialPrice, "→", newInitialPrice);
+            changes.push('initialPrice');
+            detailedChanges.initialPrice = { 
+              old: oldInitialPrice, 
+              new: newInitialPrice 
+            };
+          }
+          
+          const oldDiscount = parseFloat(state.discount || oldMetadata.discount) || 0;
+          const newDiscount = parseFloat(discount) || 0;
+          if (oldDiscount !== newDiscount) {
+            console.log("📝 Discount changed:", oldDiscount, "→", newDiscount);
+            changes.push('discount');
+            detailedChanges.discount = { 
+              old: oldDiscount, 
+              new: newDiscount 
+            };
+          }
+          
+          // Smart image comparison - normalize and sort URLs for accurate comparison
+          const oldImages = (state.images || [])
+            .map(img => typeof img === 'string' ? img : img.url)
+            .filter(Boolean)
+            .sort();
+          const newImages = (uploadedImageUrls || [])
+            .filter(Boolean)
+            .sort();
+          
+          // Only log if there's an actual difference in image URLs
+          const imagesAdded = newImages.filter(img => !oldImages.includes(img));
+          const imagesRemoved = oldImages.filter(img => !newImages.includes(img));
+          
+          if (imagesAdded.length > 0 || imagesRemoved.length > 0) {
+            changes.push('images');
+            
+            // Extract filenames for better readability
+            const getFilename = (url) => {
+              try {
+                return url.split('/').pop().split('?')[0];
+              } catch {
+                return 'unknown';
+              }
+            };
+            
+            detailedChanges.images = { 
+              oldCount: oldImages.length, 
+              newCount: newImages.length,
+              added: imagesAdded.length,
+              removed: imagesRemoved.length,
+              addedFiles: imagesAdded.map(getFilename),
+              removedFiles: imagesRemoved.map(getFilename)
+            };
+          }
+          
+          // Enhanced variant comparison with detailed tracking
+          const oldVariants = state.variants || [];
+          const newVariants = variants || [];
+          
+          console.log("🔍 Comparing variants:");
+          console.log("  Old variants:", oldVariants);
+          console.log("  New variants:", newVariants);
+          
+          const variantCountChanged = oldVariants.length !== newVariants.length;
+          
+          // Track added, removed, and modified variants
+          const variantsAdded = [];
+          const variantsRemoved = [];
+          const variantsModified = [];
+          const variantModifications = [];
+          
+          // Match variants by position (index) first - this handles renames properly
+          const maxLength = Math.max(oldVariants.length, newVariants.length);
+          
+          // First pass: Match by index position to detect modifications including renames
+          for (let i = 0; i < Math.min(oldVariants.length, newVariants.length); i++) {
+            const oldVar = oldVariants[i];
+            const newVar = newVariants[i];
+            
+            const modifications = [];
+            
+            // Check if name changed (variant renamed)
+            if (oldVar.name !== newVar.name) {
+              modifications.push(`name: "${oldVar.name}" → "${newVar.name}"`);
+            }
+            
+            // Check if price changed
+            const oldPrice = parseFloat(oldVar.price) || 0;
+            const newPrice = parseFloat(newVar.price) || 0;
+            if (oldPrice !== newPrice) {
+              modifications.push(`price: ₱${oldPrice} → ₱${newPrice}`);
+            }
+            
+            // Check if stock changed
+            const oldStock = parseInt(oldVar.stock) || 0;
+            const newStock = parseInt(newVar.stock) || 0;
+            if (oldStock !== newStock) {
+              modifications.push(`stock: ${oldStock} → ${newStock}`);
+            }
+            
+            // If any modifications detected, track them
+            if (modifications.length > 0) {
+              variantsModified.push(newVar);
+              variantModifications.push({
+                position: i + 1,
+                oldName: oldVar.name,
+                newName: newVar.name,
+                changes: modifications.join(', ')
+              });
+            }
+          }
+          
+          // Track added variants (new variants beyond old count)
+          if (newVariants.length > oldVariants.length) {
+            for (let i = oldVariants.length; i < newVariants.length; i++) {
+              variantsAdded.push({
+                name: newVariants[i].name,
+                price: newVariants[i].price,
+                stock: newVariants[i].stock,
+                position: i + 1
+              });
+            }
+          }
+          
+          // Track removed variants (old variants beyond new count)
+          if (oldVariants.length > newVariants.length) {
+            for (let i = newVariants.length; i < oldVariants.length; i++) {
+              variantsRemoved.push({
+                name: oldVariants[i].name,
+                price: oldVariants[i].price,
+                stock: oldVariants[i].stock,
+                position: i + 1
+              });
+            }
+          }
+          
+          console.log("🔍 Variant analysis:");
+          console.log("  Added:", variantsAdded);
+          console.log("  Removed:", variantsRemoved);
+          console.log("  Modified:", variantModifications);
+          
+          // Only log if there's an actual variant change
+          if (variantCountChanged || variantsAdded.length > 0 || 
+              variantsRemoved.length > 0 || variantsModified.length > 0) {
+            changes.push('variants');
+            detailedChanges.variants = {
+              oldCount: oldVariants.length,
+              newCount: newVariants.length,
+              added: variantsAdded.length,
+              removed: variantsRemoved.length,
+              modified: variantsModified.length,
+              addedDetails: variantsAdded.map(v => 
+                `${v.name} (₱${v.price}, stock: ${v.stock})`
+              ),
+              removedDetails: variantsRemoved.map(v => 
+                `${v.name} (₱${v.price}, stock: ${v.stock})`
+              ),
+              modifiedDetails: variantModifications
+            };
+          }
+          
+          // Compare components/categories
+          const oldComponents = (state.selected_components || []);
+          const newComponents = selectedComponents;
+          
+          const oldCompIds = oldComponents.map(c => c.id).sort();
+          const newCompIds = newComponents.map(c => c.id).sort();
+          
+          if (JSON.stringify(oldCompIds) !== JSON.stringify(newCompIds)) {
+            changes.push('components');
+            const addedCompIds = newCompIds.filter(id => !oldCompIds.includes(id));
+            const removedCompIds = oldCompIds.filter(id => !newCompIds.includes(id));
+            
+            detailedChanges.components = {
+              oldCount: oldComponents.length,
+              newCount: newComponents.length,
+              added: addedCompIds.length,
+              removed: removedCompIds.length,
+              addedNames: newComponents
+                .filter(c => addedCompIds.includes(c.id))
+                .map(c => c.name || 'Unknown'),
+              removedNames: oldComponents
+                .filter(c => removedCompIds.includes(c.id))
+                .map(c => c.name || 'Unknown')
+            };
+          }
+          
+          // Compare specifications (only if structure changed)
+          const oldSpecs = state.specifications || {};
+          const newSpecs = specifications || {};
+          const oldSpecKeys = Object.keys(oldSpecs).sort();
+          const newSpecKeys = Object.keys(newSpecs).sort();
+          
+          if (JSON.stringify(oldSpecKeys) !== JSON.stringify(newSpecKeys) ||
+              !oldSpecKeys.every(key => 
+                JSON.stringify(oldSpecs[key]) === JSON.stringify(newSpecs[key])
+              )) {
+            changes.push('specifications');
+            detailedChanges.specifications = {
+              fieldsChanged: newSpecKeys.filter(key => 
+                JSON.stringify(oldSpecs[key]) !== JSON.stringify(newSpecs[key])
+              ).length
+            };
+          }
+          
+          // CRITICAL FIX: Only create log if there are actual changes
+          console.log("🔍 Total changes detected:", changes.length);
+          console.log("🔍 Changes:", changes);
+          
+          if (changes.length > 0) {
+            const changesText = ` (changed: ${changes.join(', ')})`;
+            
+            console.log("✅ Creating log entry for changes");
+            await AdminLogService.createLog({
+              userId: user.id,
+              actionType: 'product_update',
+              actionDescription: `Updated product: ${name}${changesText}`,
+              targetType: 'product',
+              targetId: state.id,
+              metadata: {
+                productName: name,
+                sku: productData.sku,
+                changes: changes,
+                detailedChanges: detailedChanges,
+              },
+            });
+          } else {
+            console.log("ℹ️ No changes detected - skipping log creation");
+          }
+        }
       } else {
         console.log("🔄 Creating new product");
         result = await ProductService.createProduct(productData);
+        
+        // Create activity log for creation
+        if (result.success && user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'product_create',
+            actionDescription: `Created product: ${name}`,
+            targetType: 'product',
+            targetId: result.data?.id,
+            metadata: {
+              productName: name,
+              sku: productData.sku,
+              price: officialPrice,
+              stock: productData.stock_quantity,
+            },
+          });
+        }
       }
 
       if (result.success) {
@@ -423,7 +850,23 @@ const ProductCreate = () => {
         
         // Navigate back to products list after short delay
         setTimeout(() => {
-          navigate('/products');
+          try {
+            console.log('✅ Navigating to /products with state:', {
+              reloadProducts: true,
+              successMessage: successMsg
+            });
+            navigate('/products', {
+              state: {
+                reloadProducts: true,
+                successMessage: successMsg
+              },
+              replace: true // Use replace to avoid back button issues
+            });
+          } catch (navError) {
+            console.error('❌ Navigation error:', navError);
+            // Fallback: try navigating without state
+            navigate('/products', { replace: true });
+          }
         }, 1500);
       } else {
         const errorMsg = isEditMode && state?.id 
@@ -433,8 +876,13 @@ const ProductCreate = () => {
         setShowError(true);
       }
     } catch (error) {
+      console.error('❌ Error saving product:', error);
+      console.error('Error stack:', error.stack);
       setValidationError(`Error saving product: ${error.message}`);
       setShowError(true);
+      
+      // Ensure we don't leave the page in a broken state
+      setIsSaving(false);
     } finally {
       setIsSaving(false);
     }
@@ -464,6 +912,24 @@ const ProductCreate = () => {
         variants,
         stock: variants.reduce((sum, v) => sum + (v.stock || 0), 0),
         isEditMode: isEditMode,
+        
+        // ✅ CRITICAL FIX: Pass original data for change detection
+        // This allows ProductView to compare old vs new values
+        originalData: isEditMode && state ? {
+          name: state.name,
+          description: state.description,
+          warranty: state.warranty,
+          brand_id: state.brand_id,
+          officialPrice: state.officialPrice,
+          initialPrice: state.initialPrice,
+          discount: state.discount,
+          images: state.images,
+          variants: state.variants,
+          selected_components: state.selected_components || state.selectedComponents,
+          specifications: state.specifications,
+          stock: state.stock,
+          metadata: state.metadata,
+        } : null,
       },
     });
   };
@@ -801,6 +1267,7 @@ const ProductCreate = () => {
               selectedComponents={selectedComponents}
               specifications={specifications}
               onSpecificationChange={handleSpecificationChange}
+              isEditMode={isEditMode} // Pass edit mode status
             />
 
             {/* Variant Manager */}

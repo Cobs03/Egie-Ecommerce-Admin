@@ -14,9 +14,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { user, profile, loading, isAdmin } = useAuth();
-
-  console.log('ProtectedRoute state:', { user: !!user, profile, loading, isAdmin });
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -30,32 +28,9 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!user) {
-    console.log('No user, redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
 
-  if (!isAdmin) {
-    console.log('User is not admin, showing access denied');
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
-          <p className="text-gray-600 mb-4">This portal is for administrators only.</p>
-          <p className="text-sm text-gray-500 mb-4">
-            User: {user?.email}, Admin: {isAdmin ? 'Yes' : 'No'}
-          </p>
-          <button
-            onClick={() => window.location.href = "/auth"}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  console.log('User is admin, rendering children');
   return children;
 };
 

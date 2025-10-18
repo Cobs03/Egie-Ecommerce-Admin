@@ -41,19 +41,22 @@ const SignIn = () => {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("is_admin, first_name, last_name")
+        .select("role, first_name, last_name")
         .eq("id", data.user.id)
         .single();
 
       if (profileError) {
+        await supabase.auth.signOut();
         setError("Error loading user profile. Please contact administrator.");
         setLoading(false);
         return;
       }
 
-      if (!profile?.is_admin) {
+      // Allow admin, manager, and employee to access
+      const allowedRoles = ['admin', 'manager', 'employee'];
+      if (!profile?.role || !allowedRoles.includes(profile.role.toLowerCase())) {
         await supabase.auth.signOut();
-        setError("Access denied. This portal is for administrators only.");
+        setError("Access denied. This portal is for staff members only.");
         setLoading(false);
         return;
       }

@@ -41,8 +41,11 @@ import { ProductService } from "../../../services/ProductService";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 const Stocks = () => {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -165,6 +168,7 @@ const Stocks = () => {
   const handleConfirm = async () => {
     if (selectedProduct) {
       try {
+        const oldStock = selectedProduct.stock;
         let newStock;
         let updatedProduct = { ...selectedProduct };
 
@@ -179,6 +183,23 @@ const Stocks = () => {
           stock_quantity: newStock,
           variants: updatedProduct.variants
         });
+
+        // Create activity log for stock update
+        if (user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'stock_update',
+            actionDescription: `Updated stock for ${selectedProduct.name}: ${oldStock} → ${newStock}`,
+            targetType: 'product',
+            targetId: selectedProduct.id,
+            metadata: {
+              productName: selectedProduct.name,
+              oldStock: oldStock,
+              newStock: newStock,
+              change: stockChange,
+            },
+          });
+        }
 
         setProducts((prev) =>
           prev.map((p) => {

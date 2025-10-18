@@ -165,8 +165,12 @@ function Navbar() {
   
   const handleLogoutClick = async () => {
     try {
-      await signOut();
       handleProfileMenuClose();
+      const { error } = await signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        return;
+      }
       navigate("/auth", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);

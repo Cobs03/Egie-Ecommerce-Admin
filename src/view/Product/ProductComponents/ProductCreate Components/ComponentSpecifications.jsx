@@ -14,8 +14,11 @@ const ComponentSpecifications = ({
   selectedComponents,
   specifications,
   onSpecificationChange,
+  isEditMode = false, // Add isEditMode prop
 }) => {
   console.log("Selected Components:", selectedComponents); // Debug log
+  console.log("Specifications:", specifications); // Debug log
+  console.log("Is Edit Mode:", isEditMode); // Debug log
 
   // Handle specification field change for a specific component
   const handleFieldChange = (componentId, field, value) => {
@@ -337,7 +340,7 @@ const ComponentSpecifications = ({
           return (
             <Accordion
               key={component.id}
-              defaultExpanded={selectedComponents.length === 1}
+              defaultExpanded={isEditMode || selectedComponents.length === 1} // Auto-expand in edit mode or if only one component
               sx={{
                 border: "1px solid #e0e0e0",
                 boxShadow: "none",

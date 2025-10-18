@@ -7,21 +7,32 @@ import {
   Tabs,
   Tab,
   InputAdornment,
-  Typography
+  Typography,
+  Alert
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import DownloadIcon from "@mui/icons-material/Download";
 import Inventory from "./ProductComponents/Inventory";
 import Stocks from "./ProductComponents/Stocks";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Bundles from "./ProductComponents/Bundles";
 
 const Product = () => {
+  const location = useLocation();
   const [tab, setTab] = useState(() => {
     const savedTab = localStorage.getItem("productTab");
     return savedTab ? parseInt(savedTab) : 0;
   });
+  
+  const [error, setError] = useState(null);
+
+  // Log location state for debugging
+  useEffect(() => {
+    if (location.state) {
+      console.log('📍 Product page received state:', location.state);
+    }
+  }, [location.state]);
 
   const handleTabChange = (e, newValue) => {
     setTab(newValue);
@@ -66,6 +77,12 @@ const Product = () => {
 
   return (
     <Box p={2}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+      
       <Typography variant="h4" fontWeight={700} mb={2}>
         PRODUCT MANAGEMENT
       </Typography>
@@ -153,11 +170,46 @@ const Product = () => {
         </Button>
       </Box>
 
-      {tab === 0 && <Inventory />}
-      {tab === 1 && <Stocks />}
-      {tab === 2 && <Bundles />}
+      {tab === 0 && (
+        <ErrorBoundary fallback={<Alert severity="error">Error loading inventory. Please refresh the page.</Alert>}>
+          <Inventory key={location.state?.reloadProducts ? Date.now() : 'inventory'} />
+        </ErrorBoundary>
+      )}
+      {tab === 1 && (
+        <ErrorBoundary fallback={<Alert severity="error">Error loading stocks. Please refresh the page.</Alert>}>
+          <Stocks />
+        </ErrorBoundary>
+      )}
+      {tab === 2 && (
+        <ErrorBoundary fallback={<Alert severity="error">Error loading bundles. Please refresh the page.</Alert>}>
+          <Bundles />
+        </ErrorBoundary>
+      )}
     </Box>
   );
 };
+
+// Simple Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('❌ Component Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || <div>Something went wrong.</div>;
+    }
+    return this.props.children;
+  }
+}
 
 export default Product;

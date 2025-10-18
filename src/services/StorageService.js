@@ -52,10 +52,14 @@ export class StorageService {
    * Upload a single image to Supabase Storage
    * @param {File} file - The file to upload
    * @param {string} folder - Optional folder path (e.g., 'bundles', 'products')
+   * @param {string} bucketName - Optional bucket name (defaults to 'bundles')
    * @returns {Promise<{success: boolean, data?: string, error?: string}>}
    */
-  static async uploadImage(file, folder = 'bundles') {
+  static async uploadImage(file, folder = 'bundles', bucketName = null) {
     try {
+      // Use provided bucket name or default to BUCKET_NAME
+      const targetBucket = bucketName || this.BUCKET_NAME;
+      
       // Ensure bucket exists before uploading
       const bucketCheck = await this.ensureBucketExists()
       if (!bucketCheck.success) {
@@ -69,7 +73,7 @@ export class StorageService {
 
       // Upload file
       const { data, error } = await supabase.storage
-        .from(this.BUCKET_NAME)
+        .from(targetBucket)
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
@@ -82,7 +86,7 @@ export class StorageService {
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from(this.BUCKET_NAME)
+        .from(targetBucket)
         .getPublicUrl(filePath)
 
       return { success: true, data: publicUrl }
@@ -96,11 +100,12 @@ export class StorageService {
    * Upload multiple images
    * @param {File[]} files - Array of files to upload
    * @param {string} folder - Optional folder path
+   * @param {string} bucketName - Optional bucket name (defaults to 'bundles')
    * @returns {Promise<{success: boolean, data?: string[], error?: string}>}
    */
-  static async uploadMultipleImages(files, folder = 'bundles') {
+  static async uploadMultipleImages(files, folder = 'bundles', bucketName = null) {
     try {
-      const uploadPromises = files.map(file => this.uploadImage(file, folder))
+      const uploadPromises = files.map(file => this.uploadImage(file, folder, bucketName))
       const results = await Promise.all(uploadPromises)
 
       // Check if any uploads failed

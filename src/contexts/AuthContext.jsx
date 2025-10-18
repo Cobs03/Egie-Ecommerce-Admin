@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import activityTracker from '../utils/activityTracker';
 
 const AuthContext = createContext({});
 
@@ -43,16 +44,24 @@ export const AuthProvider = ({ children }) => {
         
         if (session?.user) {
           await loadUserProfile(session.user.id);
+          // Start activity tracking when user logs in
+          activityTracker.startTracking(session.user.id);
         } else {
           setProfile(null);
           setIsAdmin(false);
+          // Stop activity tracking when user logs out
+          activityTracker.stopTracking();
         }
         
         setLoading(false);
       }
     );
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+      // Clean up activity tracking on unmount
+      activityTracker.stopTracking();
+    };
   }, []);
 
   const loadUserProfile = async (userId) => {
@@ -125,6 +134,9 @@ export const AuthProvider = ({ children }) => {
         setProfile(data);
         setIsAdmin(data.is_admin === true);
         console.log('Is admin:', data.is_admin);
+        
+        // Update last_login timestamp
+        await updateLastLogin(userId);
       } else {
         console.log('No profile found');
       }
@@ -133,7 +145,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateLastLogin = async (userId) => {
+    try {
+      // Update last_login timestamp using RPC function
+      const { error } = await supabase.rpc('update_user_last_login', { 
+        user_id: userId 
+      });
+
+      if (error) {
+        console.error('Error updating last login:', error);
+        // Fallback: try direct update
+        await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', userId);
+      }
+    } catch (error) {
+      console.error('Failed to update last login:', error);
+      // Non-critical error, don't block user
+    }
+  };
+
   const signOut = async () => {
+    // Stop activity tracking before signing out
+    activityTracker.stopTracking();
+    
     const { error } = await supabase.auth.signOut();
     if (!error) {
       setUser(null);
