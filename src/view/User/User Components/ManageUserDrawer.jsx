@@ -20,6 +20,7 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import AdminLogService from "../../../services/AdminLogService";
+import { formatLastLogin, getLastLoginChipStyle } from "../../../utils/dateUtils";
 
 const badgeColors = {
   Admin: { bgcolor: "#00E676", color: "#000" },
@@ -99,47 +100,20 @@ const ManageUserDrawer = ({
 
   // Determine status chip based on lastLogin
   const getStatusChip = () => {
-    const status = user.lastLogin || "Never";
-    let chipProps = {
-      label: status,
+    const lastLoginText = formatLastLogin(user.lastLoginRaw);
+    const chipStyle = getLastLoginChipStyle(user.lastLoginRaw);
+    
+    return {
+      label: lastLoginText,
       size: "small",
       sx: {
         fontWeight: 700,
         fontSize: "0.7rem",
         borderRadius: "12px",
         px: 1.5,
+        ...chipStyle,
       }
     };
-
-    if (status === "Active Now") {
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#00E676",
-        color: "#000",
-      };
-    } else if (status.includes("yesterday")) {
-      chipProps.label = "Active yesterday";
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#FFA726",
-        color: "#000",
-      };
-    } else if (status.includes("month")) {
-      chipProps.label = "Active last month";
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#757575",
-        color: "#fff",
-      };
-    } else {
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#424242",
-        color: "#fff",
-      };
-    }
-
-    return chipProps;
   };
 
   const statusChip = getStatusChip();
@@ -216,6 +190,9 @@ const handleSeeMoreLogs = () => {
         </Typography>
         <Typography variant="caption" color="#666" display="block">
           Date Joined: {user.dateAdded}
+        </Typography>
+        <Typography variant="caption" color="#666" display="block">
+          Last Login: {user.lastLogin}
         </Typography>
         {user.phoneNumber && user.phoneNumber !== 'N/A' && (
           <Typography variant="caption" color="#666" display="block">

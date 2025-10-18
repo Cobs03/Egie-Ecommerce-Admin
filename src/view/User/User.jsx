@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box } from "@mui/material";
+import { Box, Snackbar, Alert } from "@mui/material";
 import UserHeader from "./User Components/UserHeader";
 import EmployeeTable from "./User Components/EmployeeTable";
 import CustomerTable from "./User Components/CustomerTable";
@@ -10,9 +10,15 @@ import PromotionDialog from "./User Components/PromotionDialog";
 import DeleteUserDialog from "./User Components/DeleteUserDialog";
 import DemotionDialog from "./User Components/DemotionDialog";
 import BanCustomerDialog from "./User Components/BanCustomerDialog";
+import UnbanCustomerDialog from "./User Components/UnbanCustomerDialog";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import AdminLogService from "../../services/AdminLogService";
+import { formatLastLogin } from "../../utils/dateUtils";
+
+// Import permission system
+import { usePermissions } from "../../hooks/usePermissions";
+import { PERMISSIONS } from "../../utils/permissions";
 
 const initialEmployees = [
   {
@@ -69,7 +75,8 @@ const initialCustomers = [
 ];
 
 const User = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, profile } = useAuth();
+  const permissions = usePermissions(); // Add permission hook
   const [employeesList, setEmployeesList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,9 +85,14 @@ const User = () => {
   const [isCustomerDrawerOpen, setCustomerDrawerOpen] = useState(false);
   const [isAddUserDrawerOpen, setAddUserDrawerOpen] = useState(false);
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
+  
+  // Error notification state
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showError, setShowError] = useState(false);
   const [demotionDialogOpen, setDemotionDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [unbanDialogOpen, setUnbanDialogOpen] = useState(false);
   const [promotionRole, setPromotionRole] = useState(null);
   const [demotionRole, setDemotionRole] = useState(null);
 
@@ -105,6 +117,9 @@ const User = () => {
       const employees = [];
       const customers = [];
 
+      console.log('📊 Fetched users from database:', data.length);
+      console.log('🔍 Sample user data:', data[0]);
+
       data.forEach(user => {
         const transformedUser = {
           id: user.id,
@@ -116,15 +131,20 @@ const User = () => {
             month: 'long', 
             day: 'numeric' 
           }),
-          lastLogin: user.last_login 
-            ? `Active ${new Date(user.last_login).toLocaleDateString()}`
-            : 'Never',
+          lastLogin: formatLastLogin(user.last_login),
+          lastLoginRaw: user.last_login, // Keep raw timestamp for chip styling
           avatar: user.avatar_url || 'https://via.placeholder.com/40',
           access: [user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Customer'],
           role: user.role || 'customer',
           status: user.status || 'active',
           isBanned: user.is_banned || false,
         };
+
+        // Debug logging for first user
+        if (employees.length === 0 && customers.length === 0) {
+          console.log('👤 First user last_login from DB:', user.last_login);
+          console.log('📅 Formatted lastLogin:', transformedUser.lastLogin);
+        }
 
         // Separate employees and customers by role
         if (user.role === 'admin' || user.role === 'manager' || user.role === 'employee') {
@@ -184,6 +204,13 @@ const User = () => {
   };
 
   const handleAddUser = async (newUser) => {
+    // Check if user is admin
+    if (profile?.role !== 'admin') {
+      setErrorMessage("Only administrators can add users");
+      setShowError(true);
+      return;
+    }
+    
     // Refresh the users list from database
     await fetchUsers();
     setAddUserDrawerOpen(false);
@@ -191,8 +218,9 @@ const User = () => {
 
   const handlePromotionClick = () => {
     // Only admin can promote employees
-    if (currentUser?.role !== 'admin') {
-      alert('Only administrators can promote employees');
+    if (profile?.role !== 'admin') {
+      setErrorMessage("Only administrators can promote employees");
+      setShowError(true);
       return;
     }
 
@@ -263,8 +291,9 @@ const User = () => {
 
   const handleDemotionClick = () => {
     // Only admin can demote employees
-    if (currentUser?.role !== 'admin') {
-      alert('Only administrators can demote employees');
+    if (profile?.role !== 'admin') {
+      setErrorMessage("Only administrators can demote employees");
+      setShowError(true);
       return;
     }
 
@@ -335,8 +364,9 @@ const User = () => {
 
   const handleDeleteClick = () => {
     // Only admin can delete employees
-    if (currentUser?.role !== 'admin') {
-      alert('Only administrators can delete employees');
+    if (profile?.role !== 'admin') {
+      setErrorMessage("Only administrators can delete employees");
+      setShowError(true);
       return;
     }
     setDeleteDialogOpen(true);
@@ -345,8 +375,9 @@ const User = () => {
   const handleDeleteConfirm = async () => {
     try {
       // Only admin can delete employees
-      if (currentUser?.role !== 'admin') {
-        alert('Only administrators can delete employees');
+      if (profile?.role !== 'admin') {
+        setErrorMessage("Only administrators can delete employees");
+        setShowError(true);
         return;
       }
 
@@ -386,18 +417,35 @@ const User = () => {
   };
 
   const handleBanClick = () => {
+    // Check if user has permission to ban customers
+    if (!permissions.can(PERMISSIONS.USER_BAN)) {
+      setErrorMessage('Access Denied: You do not have permission to ban customers. Only Managers and Admins can ban customers.');
+      setShowError(true);
+      return;
+    }
+    
     setBanDialogOpen(true);
   };
 
   const handleBanConfirm = async () => {
     try {
+      console.log('🚫 Banning customer:', selectedUser);
+      
       // Update user status to banned in database
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({ status: 'banned' })
-        .eq('id', selectedUser.id);
+        .eq('id', selectedUser.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Ban update result:', { data, error });
+
+      if (error) {
+        console.error('❌ Ban error:', error);
+        throw error;
+      }
+
+      console.log('✅ Customer banned successfully');
 
       // Create activity log
       await AdminLogService.createLog(
@@ -412,16 +460,95 @@ const User = () => {
         }
       );
 
-      // Update UI
+      // Update UI - update customer status in the list
       setCustomersList((prev) =>
-        prev.filter((customer) => customer.email !== selectedUser.email)
+        prev.map((customer) => 
+          customer.id === selectedUser.id 
+            ? { ...customer, status: 'banned' }
+            : customer
+        )
       );
+      
+      // Update selected user
+      setSelectedUser({ ...selectedUser, status: 'banned' });
+      
       setBanDialogOpen(false);
-      setCustomerDrawerOpen(false);
-      setSelectedUser(null);
+      // Keep drawer open so they can see the status change
+      
+      // Refresh the full list
+      await fetchUsers();
     } catch (error) {
       console.error('Error banning customer:', error);
-      alert('Failed to ban customer');
+      setErrorMessage(`Failed to ban customer: ${error.message}`);
+      setShowError(true);
+    }
+  };
+
+  const handleUnbanClick = () => {
+    // Check if user has permission to unban customers
+    if (!permissions.can(PERMISSIONS.USER_BAN)) {
+      setErrorMessage('Access Denied: You do not have permission to unban customers. Only Managers and Admins can unban customers.');
+      setShowError(true);
+      return;
+    }
+    
+    setUnbanDialogOpen(true);
+  };
+
+  const handleUnbanConfirm = async () => {
+    try {
+      console.log('✅ Unbanning customer:', selectedUser);
+      
+      // Update user status to active in database
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ status: 'active' })
+        .eq('id', selectedUser.id)
+        .select();
+
+      console.log('Unban update result:', { data, error });
+
+      if (error) {
+        console.error('❌ Unban error:', error);
+        throw error;
+      }
+
+      console.log('✅ Customer unbanned successfully');
+
+      // Create activity log
+      await AdminLogService.createLog(
+        currentUser.id,
+        'unban_customer',
+        `Unbanned customer: ${selectedUser.name} (${selectedUser.email})`,
+        'user',
+        selectedUser.id,
+        {
+          unbanned_user_name: selectedUser.name,
+          unbanned_user_email: selectedUser.email
+        }
+      );
+
+      // Update UI - update customer status in the list
+      setCustomersList((prev) =>
+        prev.map((customer) => 
+          customer.id === selectedUser.id 
+            ? { ...customer, status: 'active' }
+            : customer
+        )
+      );
+      
+      // Update selected user
+      setSelectedUser({ ...selectedUser, status: 'active' });
+
+      setUnbanDialogOpen(false);
+      // Keep drawer open so they can see the status change
+      
+      // Refresh the full list
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error unbanning customer:', error);
+      setErrorMessage(`Failed to unban customer: ${error.message}`);
+      setShowError(true);
     }
   };
 
@@ -452,6 +579,7 @@ const User = () => {
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        currentUserRole={profile?.role}
       />
 
       {activeTab === "employees" ? (
@@ -496,6 +624,7 @@ const User = () => {
         onClose={() => setCustomerDrawerOpen(false)}
         customer={selectedUser}
         onBan={handleBanClick}
+        onUnban={handleUnbanClick}
       />
 
       <AddUserDrawer
@@ -533,6 +662,39 @@ const User = () => {
         onConfirm={handleBanConfirm}
         customerName={selectedUser?.name}
       />
+
+      <UnbanCustomerDialog
+        open={unbanDialogOpen}
+        onClose={() => setUnbanDialogOpen(false)}
+        onConfirm={handleUnbanConfirm}
+        customerName={selectedUser?.name}
+      />
+
+      {/* Error Notification */}
+      <Snackbar
+        open={showError}
+        autoHideDuration={4000}
+        onClose={() => setShowError(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowError(false)} 
+          severity="error" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#f44336',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

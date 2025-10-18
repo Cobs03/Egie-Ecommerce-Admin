@@ -31,18 +31,25 @@ import {
   DialogActions,
   Button,
   DialogContentText,
+  Tooltip,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import BlockIcon from "@mui/icons-material/Block";
 import { useNavigate } from "react-router-dom";
 import { BundleService } from "../../../services/BundleService";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminLogService from "../../../services/AdminLogService";
 
+// Import permission system
+import { usePermissions } from "../../../hooks/usePermissions";
+import { PERMISSIONS } from "../../../utils/permissions";
+
 const Bundles = () => {
   const { user } = useAuth();
+  const permissions = usePermissions(); // Add permission hook
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBundle, setSelectedBundle] = useState(null);
   const navigate = useNavigate();
@@ -217,6 +224,14 @@ const Bundles = () => {
   };
 
   const handleDeleteClick = () => {
+    // Check if user has permission to delete bundles
+    if (!permissions.canDeleteBundle) {
+      setErrorMessage('Access Denied: You do not have permission to delete bundles. Contact a Manager or Admin if you need to delete this item.');
+      setShowError(true);
+      handleMenuClose();
+      return;
+    }
+    
     console.log('Delete clicked for bundle:', selectedBundle);
     setDeleteDialogOpen(true);
   };
@@ -661,9 +676,30 @@ const Bundles = () => {
       >
         <MenuItem onClick={handleView}>View Bundle</MenuItem>
         <MenuItem onClick={handleUpdate}>Update Bundle</MenuItem>
-        <MenuItem onClick={handleDeleteClick} sx={{ color: "error.main" }}>
-          Delete Bundle
-        </MenuItem>
+        <Tooltip 
+          title={!permissions.canDeleteBundle ? "You don't have permission to delete bundles" : ""}
+          arrow
+        >
+          <span>
+            <MenuItem 
+              onClick={handleDeleteClick} 
+              disabled={!permissions.canDeleteBundle}
+              sx={{ 
+                color: permissions.canDeleteBundle ? 'error.main' : 'text.disabled',
+                '&:hover': {
+                  backgroundColor: permissions.canDeleteBundle ? 'error.light' : 'transparent',
+                  color: permissions.canDeleteBundle ? 'white' : 'text.disabled'
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.5
+                }
+              }}
+            >
+              {!permissions.canDeleteBundle && <BlockIcon fontSize="small" sx={{ mr: 1 }} />}
+              Delete Bundle
+            </MenuItem>
+          </span>
+        </Tooltip>
       </Menu>
 
       {/* Delete Confirmation Dialog */}

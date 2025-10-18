@@ -75,6 +75,22 @@ export class BundleService {
         }
       }
 
+      // Create admin log for bundle creation
+      try {
+        await supabase.from('admin_logs').insert({
+          user_id: user.id,
+          action_type: 'bundle_create',
+          action_description: `Created bundle: ${bundle.bundle_name}`,
+          metadata: {
+            bundle_id: bundle.id,
+            bundle_name: bundle.bundle_name,
+            product_count: bundleData.products?.length || 0
+          }
+        })
+      } catch (logError) {
+        console.error('Failed to create admin log:', logError)
+      }
+
       return handleSupabaseSuccess(bundle)
     } catch (error) {
       return handleSupabaseError(error)
@@ -156,6 +172,13 @@ export class BundleService {
         return handleSupabaseError(new Error('Only admins and managers can update bundles'))
       }
 
+      // Get original bundle data to track changes
+      const { data: originalBundle } = await supabase
+        .from('bundles')
+        .select('*')
+        .eq('id', id)
+        .single()
+
       // Update the bundle
       const { data: bundle, error: bundleError } = await supabase
         .from('bundles')
@@ -209,6 +232,9 @@ export class BundleService {
         if (productsError) return handleSupabaseError(productsError)
       }
 
+      // Note: Admin logging is handled by BundleCreate.jsx component
+      // to provide detailed change tracking with before/after comparison
+
       return handleSupabaseSuccess(bundle)
     } catch (error) {
       return handleSupabaseError(error)
@@ -218,6 +244,16 @@ export class BundleService {
   // Delete bundle
   static async deleteBundle(id) {
     try {
+      // Get user for logging
+      const { data: { user } } = await supabase.auth.getUser()
+
+      // Get bundle info before deleting for logging
+      const { data: bundleInfo } = await supabase
+        .from('bundles')
+        .select('bundle_name')
+        .eq('id', id)
+        .single()
+
       // Delete bundle_products first (foreign key constraint)
       await supabase
         .from('bundle_products')
@@ -231,6 +267,24 @@ export class BundleService {
         .eq('id', id)
 
       if (error) return handleSupabaseError(error)
+
+      // Create admin log for bundle deletion
+      if (user && bundleInfo) {
+        try {
+          await supabase.from('admin_logs').insert({
+            user_id: user.id,
+            action_type: 'bundle_delete',
+            action_description: `Deleted bundle: ${bundleInfo.bundle_name}`,
+            metadata: {
+              bundle_id: id,
+              bundle_name: bundleInfo.bundle_name
+            }
+          })
+        } catch (logError) {
+          console.error('Failed to create admin log:', logError)
+        }
+      }
+
       return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)

@@ -8,7 +8,8 @@ const UserHeader = ({
   activeTab, 
   onTabChange,
   searchQuery,
-  onSearchChange 
+  onSearchChange,
+  currentUserRole
 }) => {
   return (
     <>
@@ -99,8 +100,8 @@ const UserHeader = ({
         alignItems="center"
         mb={2}
       >
-        {/* Only show Add Employee button when on Employees tab */}
-        {activeTab === "employees" ? (
+        {/* Only show Add Employee button when on Employees tab AND user is admin */}
+        {activeTab === "employees" && currentUserRole === "admin" ? (
           <Button
             variant="contained"
             startIcon={<PersonAdd />}

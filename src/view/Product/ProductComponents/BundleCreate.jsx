@@ -273,38 +273,173 @@ const BundleCreate = () => {
         
         // Create activity log for update
         if (result.success && user?.id) {
-          // Build description of changes
+          // Build description of changes with detailed tracking
           const changes = [];
-          if (bundleName !== state.bundleName) changes.push(`name`);
-          if (parseFloat(officialPrice) !== parseFloat(state.officialPrice)) changes.push(`price`);
-          if (description !== state.description) changes.push(`description`);
-          if (warranty !== state.warranty) changes.push(`warranty`);
-          if (discount !== state.discount) changes.push(`discount`);
+          const detailedChanges = {};
           
-          const changesText = changes.length > 0 ? ` (changed: ${changes.join(', ')})` : '';
+          // Track text field changes
+          if (bundleName?.trim() !== state.bundleName?.trim()) {
+            changes.push('name');
+            detailedChanges.name = { old: state.bundleName, new: bundleName };
+          }
           
-          await AdminLogService.createLog({
-            userId: user.id,
-            actionType: 'bundle_update',
-            actionDescription: `Updated bundle: ${bundleName}${changesText}`,
-            targetType: 'bundle',
-            targetId: state.bundleId,
-            metadata: {
-              bundleName: bundleName,
-              price: officialPrice,
-              changes: changes,
-              oldValues: {
-                name: state.bundleName,
-                price: state.officialPrice,
-                description: state.description,
-              },
-              newValues: {
-                name: bundleName,
-                price: officialPrice,
-                description: description,
+          if (description?.trim() !== state.description?.trim()) {
+            changes.push('description');
+            detailedChanges.description = { 
+              old: state.description?.substring(0, 50), 
+              new: description?.substring(0, 50) 
+            };
+          }
+          
+          if (warranty?.trim() !== state.warranty?.trim()) {
+            changes.push('warranty');
+            detailedChanges.warranty = { old: state.warranty, new: warranty };
+          }
+          
+          // Track price changes (use parseFloat and handle undefined/null)
+          const oldOfficialPrice = parseFloat(state.officialPrice) || 0;
+          const newOfficialPrice = parseFloat(officialPrice) || 0;
+          if (oldOfficialPrice !== newOfficialPrice) {
+            changes.push('price');
+            detailedChanges.price = { 
+              old: oldOfficialPrice, 
+              new: newOfficialPrice 
+            };
+          }
+          
+          const oldInitialPrice = parseFloat(state.originalPrice || state.initialPrice) || 0;
+          const newInitialPrice = parseFloat(initialPrice) || 0;
+          if (oldInitialPrice !== newInitialPrice) {
+            changes.push('originalPrice');
+            detailedChanges.originalPrice = { 
+              old: oldInitialPrice, 
+              new: newInitialPrice 
+            };
+          }
+          
+          // Fix: Handle discount properly - use state.discount directly, default to 0
+          const oldDiscount = parseFloat(state.discount) || 0;
+          const newDiscount = parseFloat(discount) || 0;
+          if (oldDiscount !== newDiscount) {
+            changes.push('discount');
+            detailedChanges.discount = { 
+              old: oldDiscount, 
+              new: newDiscount 
+            };
+          }
+          
+          // Smart image comparison - normalize and sort URLs
+          const oldImages = (state.images || [])
+            .map(img => typeof img === 'string' ? img : img.url)
+            .filter(Boolean)
+            .sort();
+          const newImages = (allImageUrls || [])
+            .filter(Boolean)
+            .sort();
+          
+          // Calculate actual differences
+          const imagesAdded = newImages.filter(img => !oldImages.includes(img));
+          const imagesRemoved = oldImages.filter(img => !newImages.includes(img));
+          
+          if (imagesAdded.length > 0 || imagesRemoved.length > 0) {
+            changes.push('images');
+            
+            // Extract filenames for better readability
+            const getFilename = (url) => {
+              try {
+                return url.split('/').pop().split('?')[0];
+              } catch {
+                return 'unknown';
               }
-            },
-          });
+            };
+            
+            detailedChanges.images = { 
+              oldCount: oldImages.length, 
+              newCount: newImages.length,
+              added: imagesAdded.length,
+              removed: imagesRemoved.length,
+              addedFiles: imagesAdded.map(getFilename),
+              removedFiles: imagesRemoved.map(getFilename)
+            };
+          }
+          
+          // Enhanced product comparison with detailed tracking
+          const oldProducts = state.products || [];
+          const newProducts = products || [];
+          
+          console.log("🔍 Comparing bundle products:");
+          console.log("  Old products:", oldProducts);
+          console.log("  New products:", newProducts);
+          
+          // Normalize product IDs - handle both id and product_id fields
+          const oldProductIds = oldProducts
+            .map(p => String(p.id || p.product_id))
+            .filter(Boolean)
+            .sort();
+          const newProductIds = newProducts
+            .map(p => String(p.id || p.product_id))
+            .filter(Boolean)
+            .sort();
+          
+          const productsAddedIds = newProductIds.filter(id => !oldProductIds.includes(id));
+          const productsRemovedIds = oldProductIds.filter(id => !newProductIds.includes(id));
+          
+          console.log("🔍 Product analysis:");
+          console.log("  Added IDs:", productsAddedIds);
+          console.log("  Removed IDs:", productsRemovedIds);
+          
+          if (productsAddedIds.length > 0 || productsRemovedIds.length > 0) {
+            changes.push('products');
+            
+            // Get full product details for better logging
+            const addedProducts = newProducts
+              .filter(p => productsAddedIds.includes(String(p.id || p.product_id)))
+              .map(p => ({
+                name: p.name || p.product_name || 'Unknown',
+                price: p.price || p.product_price || 0,
+                code: p.code || p.product_code || 'N/A'
+              }));
+            
+            const removedProducts = oldProducts
+              .filter(p => productsRemovedIds.includes(String(p.id || p.product_id)))
+              .map(p => ({
+                name: p.name || p.product_name || 'Unknown',
+                price: p.price || p.product_price || 0,
+                code: p.code || p.product_code || 'N/A'
+              }));
+            
+            detailedChanges.products = {
+              oldCount: oldProductIds.length,
+              newCount: newProductIds.length,
+              added: productsAddedIds.length,
+              removed: productsRemovedIds.length,
+              addedDetails: addedProducts.map(p => 
+                `${p.name} (${p.code}, ₱${p.price})`
+              ),
+              removedDetails: removedProducts.map(p => 
+                `${p.name} (${p.code}, ₱${p.price})`
+              )
+            };
+          }
+          
+          // CRITICAL FIX: Only create log if there are actual changes
+          if (changes.length > 0) {
+            const changesText = ` (changed: ${changes.join(', ')})`;
+            
+            await AdminLogService.createLog({
+              userId: user.id,
+              actionType: 'bundle_update',
+              actionDescription: `Updated bundle: ${bundleName}${changesText}`,
+              targetType: 'bundle',
+              targetId: state.bundleId,
+              metadata: {
+                bundleName: bundleName,
+                price: officialPrice,
+                changes: changes,
+                detailedChanges: detailedChanges,
+              },
+            });
+          }
         }
       } else {
         // Create new bundle
@@ -873,8 +1008,17 @@ const BundleCreate = () => {
                         .includes(searchTerm.toLowerCase())
                   )
                   .map((product) => {
+                    // Check if product is already added by comparing both id and code
+                    // This handles cases where bundle products might use product_id differently
                     const isAlreadyAdded = products.some(
-                      (p) => p.id === product.id
+                      (p) => {
+                        const pId = String(p.id || p.product_id || '');
+                        const productId = String(product.id || '');
+                        const pCode = String(p.code || '');
+                        const productCode = String(product.code || '');
+                        
+                        return (pId === productId) || (pCode && productCode && pCode === productCode);
+                      }
                     );
 
                     return (

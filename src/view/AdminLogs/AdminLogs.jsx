@@ -23,11 +23,15 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import DownloadIcon from "@mui/icons-material/Download";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CloseIcon from "@mui/icons-material/Close";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import AdminLogService from "../../services/AdminLogService";
 import { supabase } from "../../lib/supabase";
 import LogDetailDrawer from "./LogDetailDrawer";
@@ -45,6 +49,11 @@ const AdminLogs = () => {
   const [selectedModules, setSelectedModules] = useState([]);
   const [selectedActions, setSelectedActions] = useState([]);
   const [dateRange, setDateRange] = useState("all");
+  
+  // Custom date range states
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [useCustomRange, setUseCustomRange] = useState(false);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -67,7 +76,8 @@ const AdminLogs = () => {
           profiles:user_id (
             full_name,
             email,
-            role
+            role,
+            avatar_url
           )
         `)
         .order('created_at', { ascending: false });
@@ -93,6 +103,7 @@ const AdminLogs = () => {
           user: log.profiles?.email || 'Unknown User',
           userName: log.profiles?.full_name || 'Unknown',
           userRole: userRole,
+          userAvatar: log.profiles?.avatar_url || null,
           action: formatActionType(log.action_type),
           module: getModuleFromActionType(log.action_type),
           details: log.action_description,
@@ -123,6 +134,7 @@ const AdminLogs = () => {
       'user_demote': 'Demoted User',
       'delete_employee': 'Deleted Employee',
       'ban_customer': 'Banned Customer',
+      'unban_customer': 'Unbanned Customer',
       'variant_remove': 'Removed Variant',
     };
     return actionMap[actionType] || actionType;
@@ -180,9 +192,12 @@ const AdminLogs = () => {
     setSelectedModules([]);
     setSelectedActions([]);
     setDateRange("all");
+    setStartDate(null);
+    setEndDate(null);
+    setUseCustomRange(false);
   };
 
-  const hasActiveFilters = selectedRoles.length > 0 || selectedModules.length > 0 || selectedActions.length > 0 || dateRange !== "all";
+  const hasActiveFilters = selectedRoles.length > 0 || selectedModules.length > 0 || selectedActions.length > 0 || dateRange !== "all" || useCustomRange;
 
   // Handle log row click
   const handleLogClick = (log) => {
@@ -230,11 +245,60 @@ const AdminLogs = () => {
     if (dateRange !== "all") {
       const logDate = new Date(log.timestamp);
       const now = new Date();
-      const daysDiff = Math.floor((now - logDate) / (1000 * 60 * 60 * 24));
+      
+      // Set both dates to start of day for accurate comparison
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const logDateStart = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+      
+      const daysDiff = Math.floor((todayStart - logDateStart) / (1000 * 60 * 60 * 24));
 
-      if (dateRange === "today" && daysDiff > 0) return false;
-      if (dateRange === "week" && daysDiff > 7) return false;
-      if (dateRange === "month" && daysDiff > 30) return false;
+      console.log(`🔍 Date filter check for log: ${log.details}`);
+      console.log(`  - Log date: ${logDate.toLocaleString()}`);
+      console.log(`  - Days diff: ${daysDiff}`);
+      console.log(`  - Date range: ${dateRange}`);
+
+      if (dateRange === "today" && daysDiff !== 0) {
+        console.log(`  ❌ Filtered out (not today)`);
+        return false;
+      }
+      if (dateRange === "week" && daysDiff > 7) {
+        console.log(`  ❌ Filtered out (older than 7 days)`);
+        return false;
+      }
+      if (dateRange === "month" && daysDiff > 30) {
+        console.log(`  ❌ Filtered out (older than 30 days)`);
+        return false;
+      }
+      
+      console.log(`  ✅ Passed date filter`);
+    }
+
+    // Custom date range filter
+    if (useCustomRange && (startDate || endDate)) {
+      const logDate = new Date(log.timestamp);
+      
+      // Set all dates to start of day for accurate comparison
+      const logDateStart = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+      
+      if (startDate) {
+        const startDateStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        if (logDateStart < startDateStart) {
+          console.log(`❌ Log filtered out: before start date (${logDate.toLocaleDateString()} < ${startDate.toLocaleDateString()})`);
+          return false;
+        }
+      }
+      
+      if (endDate) {
+        const endDateStart = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        // Include the end date by comparing if log date is after end of end date
+        const endDateEnd = new Date(endDateStart.getTime() + 86400000); // Add 24 hours
+        if (logDateStart >= endDateEnd) {
+          console.log(`❌ Log filtered out: after end date (${logDate.toLocaleDateString()} > ${endDate.toLocaleDateString()})`);
+          return false;
+        }
+      }
+      
+      console.log(`✅ Log passed custom date range filter`);
     }
 
     return true;
@@ -276,6 +340,10 @@ const AdminLogs = () => {
         justifyContent="space-between"
         alignItems="center"
         mb={3}
+        p={1.5}
+        bgcolor="#000"
+        borderRadius={2}
+        boxShadow={2}
         gap={2}
       >
         <TextField
@@ -286,7 +354,7 @@ const AdminLogs = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon />
+                <SearchIcon sx={{ color: "#000" }} />
               </InputAdornment>
             ),
           }}
@@ -294,6 +362,9 @@ const AdminLogs = () => {
             bgcolor: "#fff",
             borderRadius: 1,
             minWidth: 300,
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { border: "none" },
+            },
           }}
         />
 
@@ -303,18 +374,18 @@ const AdminLogs = () => {
             startIcon={<FilterListIcon />}
             onClick={handleFilterClick}
             sx={{
-              color: "#000",
-              borderColor: hasActiveFilters ? "#00E676" : "#E0E0E0",
+              color: hasActiveFilters ? "#000" : "#fff",
+              borderColor: hasActiveFilters ? "#00E676" : "#fff",
               textTransform: "none",
               fontWeight: 600,
-              bgcolor: hasActiveFilters ? "rgba(0, 230, 118, 0.1)" : "transparent",
+              bgcolor: hasActiveFilters ? "#00E676" : "transparent",
               "&:hover": {
                 borderColor: "#00E676",
-                bgcolor: "rgba(0, 230, 118, 0.1)",
+                bgcolor: hasActiveFilters ? "#00C853" : "rgba(0, 230, 118, 0.1)",
               },
             }}
           >
-            FILTER {hasActiveFilters && `(${selectedRoles.length + selectedModules.length + selectedActions.length + (dateRange !== 'all' ? 1 : 0)})`}
+            FILTER {hasActiveFilters && `(${selectedRoles.length + selectedModules.length + selectedActions.length + (dateRange !== 'all' ? 1 : 0) + (useCustomRange ? 1 : 0)})`}
           </Button>
 
           <Button
@@ -394,6 +465,27 @@ const AdminLogs = () => {
             <Chip
               label={`Date: ${dateRange === 'today' ? 'Today' : dateRange === 'week' ? 'Last 7 Days' : 'Last 30 Days'}`}
               onDelete={() => setDateRange("all")}
+              sx={{
+                bgcolor: "rgba(0, 230, 118, 0.2)",
+                fontWeight: 600,
+                "& .MuiChip-deleteIcon": {
+                  color: "#00E676",
+                  "&:hover": {
+                    color: "#00C853",
+                  },
+                },
+              }}
+            />
+          )}
+          {useCustomRange && (startDate || endDate) && (
+            <Chip
+              icon={<CalendarTodayIcon sx={{ fontSize: 16 }} />}
+              label={`Date: ${startDate ? startDate.toLocaleDateString() : 'Start'} - ${endDate ? endDate.toLocaleDateString() : 'End'}`}
+              onDelete={() => {
+                setStartDate(null);
+                setEndDate(null);
+                setUseCustomRange(false);
+              }}
               sx={{
                 bgcolor: "rgba(0, 230, 118, 0.2)",
                 fontWeight: 600,
@@ -503,7 +595,20 @@ const AdminLogs = () => {
             ACTION TYPE
           </Typography>
           <Box>
-            {['Created Product', 'Updated Product', 'Deleted Product', 'Created Bundle', 'Updated Bundle', 'Deleted Bundle', 'Updated Stock', 'Promoted User', 'Demoted User'].map((action) => (
+            {[
+              'Created Product', 
+              'Updated Product', 
+              'Deleted Product', 
+              'Created Bundle', 
+              'Updated Bundle', 
+              'Deleted Bundle', 
+              'Updated Stock', 
+              'Promoted User', 
+              'Demoted User',
+              'Deleted Employee',
+              'Banned Customer',
+              'Unbanned Customer'
+            ].map((action) => (
               <FormControlLabel
                 key={action}
                 control={
@@ -561,6 +666,72 @@ const AdminLogs = () => {
               </Button>
             ))}
           </Stack>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          {/* Custom Date Range */}
+          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={1}>
+            CUSTOM DATE RANGE
+          </Typography>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <Stack spacing={1.5}>
+              <DatePicker
+                label="Start Date"
+                value={startDate}
+                onChange={(newValue) => {
+                  setStartDate(newValue);
+                  setUseCustomRange(true);
+                  setDateRange("all");
+                }}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    fullWidth: true,
+                    sx: {
+                      '& .MuiOutlinedInput-root': {
+                        color: '#333',
+                        '& fieldset': { borderColor: '#E0E0E0' },
+                        '&:hover fieldset': { borderColor: '#00E676' },
+                        '&.Mui-focused fieldset': { borderColor: '#00E676' },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#666',
+                        '&.Mui-focused': { color: '#00E676' },
+                      },
+                    },
+                  },
+                }}
+              />
+              <DatePicker
+                label="End Date"
+                value={endDate}
+                onChange={(newValue) => {
+                  setEndDate(newValue);
+                  setUseCustomRange(true);
+                  setDateRange("all");
+                }}
+                minDate={startDate}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    fullWidth: true,
+                    sx: {
+                      '& .MuiOutlinedInput-root': {
+                        color: '#333',
+                        '& fieldset': { borderColor: '#E0E0E0' },
+                        '&:hover fieldset': { borderColor: '#00E676' },
+                        '&.Mui-focused fieldset': { borderColor: '#00E676' },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#666',
+                        '&.Mui-focused': { color: '#00E676' },
+                      },
+                    },
+                  },
+                }}
+              />
+            </Stack>
+          </LocalizationProvider>
 
           <Divider sx={{ my: 1.5 }} />
 

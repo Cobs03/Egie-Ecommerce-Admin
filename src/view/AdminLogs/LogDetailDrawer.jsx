@@ -178,6 +178,7 @@ const LogDetailDrawer = ({ open, onClose, log }) => {
           </Typography>
           <Box display="flex" alignItems="center" gap={1.5}>
             <Avatar
+              src={log.userAvatar || log.avatar_url}
               sx={{
                 bgcolor: "#00E676",
                 color: "#000",
@@ -186,7 +187,7 @@ const LogDetailDrawer = ({ open, onClose, log }) => {
                 fontWeight: 700,
               }}
             >
-              {log.userName?.charAt(0) || log.user?.charAt(0) || "?"}
+              {!log.userAvatar && !log.avatar_url && (log.userName?.charAt(0) || log.user?.charAt(0) || "?")}
             </Avatar>
             <Box>
               <Typography variant="body2" fontWeight={600}>
@@ -510,6 +511,38 @@ const LogDetailDrawer = ({ open, onClose, log }) => {
                     </Typography>
                   </Box>
                 </Box>
+                
+                {/* Show detailed modification list if available */}
+                {log.metadata.detailedChanges.variants.modifiedDetails && 
+                 log.metadata.detailedChanges.variants.modifiedDetails.length > 0 && (
+                  <Box mt={2} pt={2} borderTop="1px solid rgba(255, 255, 255, 0.1)">
+                    <Typography
+                      variant="caption"
+                      color="rgba(255, 255, 255, 0.5)"
+                      mb={1}
+                      display="block"
+                    >
+                      MODIFIED VARIANTS
+                    </Typography>
+                    {log.metadata.detailedChanges.variants.modifiedDetails.map((mod, idx) => (
+                      <Box
+                        key={idx}
+                        mb={1}
+                        p={1}
+                        bgcolor="rgba(255, 193, 7, 0.1)"
+                        borderRadius={1}
+                        border="1px solid rgba(255, 193, 7, 0.3)"
+                      >
+                        <Typography variant="body2" fontWeight={600} color="#FFC107" mb={0.5}>
+                          {mod.name}
+                        </Typography>
+                        <Typography variant="caption" color="rgba(255, 255, 255, 0.7)">
+                          {mod.changes}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
               </Paper>
             )}
           </Box>
@@ -554,7 +587,7 @@ const LogDetailDrawer = ({ open, onClose, log }) => {
                     variant="caption"
                     color="rgba(255, 255, 255, 0.5)"
                   >
-                    SKU
+                    Code
                   </Typography>
                   <Typography variant="body2" fontWeight={600} color="#fff">
                     {log.metadata.sku}
