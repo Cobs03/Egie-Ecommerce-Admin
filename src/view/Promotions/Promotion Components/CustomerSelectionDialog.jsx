@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -23,114 +23,13 @@ import {
   ListItemIcon,
   Divider,
   Avatar,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-
-// Sample customer data
-const sampleCustomers = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    type: "New",
-    totalOrders: 2,
-    totalSpent: 15499,
-    joinDate: "2025-09-15",
-    avatar: "👤",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    type: "Existing",
-    totalOrders: 15,
-    totalSpent: 125000,
-    joinDate: "2024-03-22",
-    avatar: "👩",
-  },
-  {
-    id: 3,
-    name: "Michael Johnson",
-    email: "michael.j@example.com",
-    type: "Existing",
-    totalOrders: 8,
-    totalSpent: 67500,
-    joinDate: "2024-07-10",
-    avatar: "👨",
-  },
-  {
-    id: 4,
-    name: "Emily Brown",
-    email: "emily.brown@example.com",
-    type: "New",
-    totalOrders: 1,
-    totalSpent: 8999,
-    joinDate: "2025-10-01",
-    avatar: "👩",
-  },
-  {
-    id: 5,
-    name: "David Wilson",
-    email: "david.wilson@example.com",
-    type: "Existing",
-    totalOrders: 22,
-    totalSpent: 189000,
-    joinDate: "2023-11-05",
-    avatar: "👨",
-  },
-  {
-    id: 6,
-    name: "Sarah Martinez",
-    email: "sarah.m@example.com",
-    type: "Existing",
-    totalOrders: 12,
-    totalSpent: 98000,
-    joinDate: "2024-01-18",
-    avatar: "👩",
-  },
-  {
-    id: 7,
-    name: "Robert Lee",
-    email: "robert.lee@example.com",
-    type: "New",
-    totalOrders: 3,
-    totalSpent: 22500,
-    joinDate: "2025-08-20",
-    avatar: "👨",
-  },
-  {
-    id: 8,
-    name: "Lisa Anderson",
-    email: "lisa.anderson@example.com",
-    type: "Existing",
-    totalOrders: 18,
-    totalSpent: 142000,
-    joinDate: "2024-05-12",
-    avatar: "👩",
-  },
-  {
-    id: 9,
-    name: "Christopher Taylor",
-    email: "chris.taylor@example.com",
-    type: "New",
-    totalOrders: 1,
-    totalSpent: 5999,
-    joinDate: "2025-09-28",
-    avatar: "👨",
-  },
-  {
-    id: 10,
-    name: "Jessica White",
-    email: "jessica.w@example.com",
-    type: "Existing",
-    totalOrders: 9,
-    totalSpent: 74500,
-    joinDate: "2024-06-30",
-    avatar: "👩",
-  },
-];
+import { CustomerService } from "../../../services/CustomerService";
 
 const CustomerSelectionDialog = ({ open, onClose, selectedCustomers, onSave }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,10 +38,64 @@ const CustomerSelectionDialog = ({ open, onClose, selectedCustomers, onSave }) =
   const [spendFilter, setSpendFilter] = useState("All");
   const [localSelectedCustomers, setLocalSelectedCustomers] = useState(selectedCustomers || []);
   const [selectAll, setSelectAll] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Load customers from database
+  useEffect(() => {
+    if (open) {
+      loadCustomers();
+    }
+  }, [open]);
+
+  const loadCustomers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await CustomerService.getAllCustomers();
+      if (result.success) {
+        // Transform customer data to match the expected format
+        const transformedCustomers = result.data.map(customer => {
+          // Calculate total orders and spent
+          const totalOrders = customer.orders?.length || 0;
+          const totalSpent = customer.orders?.reduce((sum, order) => {
+            return sum + (order.status === 'completed' ? order.total_amount : 0);
+          }, 0) || 0;
+
+          // Determine customer type (New if registered within last 30 days)
+          const joinDate = new Date(customer.created_at);
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const type = joinDate > thirtyDaysAgo ? "New" : "Existing";
+
+          return {
+            id: customer.id,
+            name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown',
+            email: customer.email,
+            type: type,
+            totalOrders: totalOrders,
+            totalSpent: totalSpent,
+            joinDate: customer.created_at,
+            avatar: customer.first_name?.charAt(0)?.toUpperCase() || '👤',
+          };
+        });
+        
+        setCustomers(transformedCustomers);
+      } else {
+        setError('Failed to load customers');
+      }
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      setError('Error loading customers');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtered customers based on search and filters
   const filteredCustomers = useMemo(() => {
-    let result = [...sampleCustomers];
+    let result = [...customers];
 
     // Search filter
     if (searchQuery.trim()) {
@@ -177,7 +130,7 @@ const CustomerSelectionDialog = ({ open, onClose, selectedCustomers, onSave }) =
     }
 
     return result;
-  }, [searchQuery, typeFilter, ordersFilter, spendFilter]);
+  }, [customers, searchQuery, typeFilter, ordersFilter, spendFilter]);
 
   // Handle individual customer selection
   const handleToggleCustomer = (customer) => {
@@ -347,7 +300,22 @@ const CustomerSelectionDialog = ({ open, onClose, selectedCustomers, onSave }) =
 
           <Divider />
 
+          {/* Loading State */}
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
           {/* Customer List */}
+          {!loading && !error && (
           <Box
             sx={{
               maxHeight: "calc(80vh - 400px)",
@@ -448,6 +416,7 @@ const CustomerSelectionDialog = ({ open, onClose, selectedCustomers, onSave }) =
               )}
             </List>
           </Box>
+          )}
         </Stack>
       </DialogContent>
 

@@ -43,10 +43,14 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
 
   const [errors, setErrors] = useState({});
   const [showExpirationWarning, setShowExpirationWarning] = useState(false);
+  const [daysUntilExpiry, setDaysUntilExpiry] = useState(0);
+  const [hoursUntilExpiry, setHoursUntilExpiry] = useState(0);
 
   useEffect(() => {
     if (voucher) {
+  console.log('🔍 Voucher data received:', JSON.stringify(voucher, null, 2));
       const [activeFrom, activeTo] = voucher.active.split(" - ");
+  console.log('📅 Split dates:', JSON.stringify({ activeFrom, activeTo }, null, 2));
       setFormData({
         name: voucher.name || "",
         code: voucher.code || "",
@@ -65,8 +69,27 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
 
       if (activeTo) {
         const expiryDate = dayjs(activeTo, "MM/DD/YY");
-        const daysUntilExpiry = expiryDate.diff(dayjs(), "day");
-        setShowExpirationWarning(daysUntilExpiry >= 0 && daysUntilExpiry <= 7);
+        const now = dayjs();
+        const daysLeft = expiryDate.diff(now, "day");
+        const hoursLeft = expiryDate.diff(now, "hour");
+        const willShow = daysLeft >= 0 && daysLeft <= 7;
+        console.log('⚠️ Voucher expiration check:', JSON.stringify({ 
+          activeTo, 
+          expiryDate: expiryDate.format(), 
+          now: now.format(),
+          daysLeft, 
+          hoursLeft, 
+          willShow,
+          calculation: `${expiryDate.format()} - ${now.format()} = ${daysLeft} days`
+        }, null, 2));
+        setDaysUntilExpiry(daysLeft);
+        setHoursUntilExpiry(hoursLeft);
+        setShowExpirationWarning(willShow);
+      } else {
+        console.log('❌ No activeTo date found for voucher');
+        setShowExpirationWarning(false);
+        setDaysUntilExpiry(0);
+        setHoursUntilExpiry(0);
       }
     } else {
       setFormData({
@@ -85,6 +108,8 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
         usageCount: 0,
       });
       setShowExpirationWarning(false);
+      setDaysUntilExpiry(0);
+      setHoursUntilExpiry(0);
     }
     setErrors({});
   }, [voucher, open]);
@@ -111,8 +136,12 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
     setErrors({ ...errors, [field]: "" });
 
     if (field === "activeTo" && date) {
-      const daysUntilExpiry = date.diff(dayjs(), "day");
-      setShowExpirationWarning(daysUntilExpiry >= 0 && daysUntilExpiry <= 7);
+      const now = dayjs();
+      const daysLeft = date.diff(now, "day");
+      const hoursLeft = date.diff(now, "hour");
+      setDaysUntilExpiry(daysLeft);
+      setHoursUntilExpiry(hoursLeft);
+      setShowExpirationWarning(daysLeft >= 0 && daysLeft <= 7);
     }
   };
 
@@ -160,25 +189,25 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
       ...voucher,
       name: formData.name,
       code: formData.code,
-      type: formData.type,
-      price: formData.type === "fixed" ? `₱ ${formData.amount}` : `${formData.amount}%`,
-      active: `${formData.activeFrom.format("MM/DD/YY")} - ${formData.activeTo.format("MM/DD/YY")}`,
+      discountType: formData.type, // Send the discount type (fixed or percent)
+      price: parseFloat(formData.amount), // Send as number for service layer
+      validFrom: formData.activeFrom.toISOString(), // Send as ISO date for database
+      validUntil: formData.activeTo.toISOString(), // Send as ISO date for database
       limit: parseInt(formData.limit),
-      minSpend: formData.minSpend ? parseFloat(formData.minSpend) : null,
+      minPurchase: formData.minSpend ? parseFloat(formData.minSpend) : null,
       applicableProducts: formData.applicableProducts,
       userRestriction: formData.userRestriction,
       description: formData.description,
       isActive: formData.isActive,
+      perCustomerLimit: 1, // Default value
+      // Also keep the formatted versions for UI display
+      type: formData.type, // Keep type for UI
+      active: `${formData.activeFrom.format("MM/DD/YY")} - ${formData.activeTo.format("MM/DD/YY")}`,
       used: formData.usageCount,
     };
 
     onSave(voucherData);
-    showSnackbar(
-      isAddMode
-        ? `Voucher "${formData.code}" created successfully!`
-        : `Voucher "${formData.code}" updated successfully!`,
-      "success"
-    );
+    // Don't show snackbar here - let the parent component handle it after save completes
     onClose();
   };
 
@@ -227,9 +256,22 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
               },
             }}
           >
+            {console.log('💡 Rendering voucher dialog,', JSON.stringify({ showExpirationWarning, daysUntilExpiry, hoursUntilExpiry }, null, 2))}
             {showExpirationWarning && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                ⚠️ This voucher will expire within 7 days!
+                ⚠️ This voucher will expire {
+                  daysUntilExpiry === 0 && hoursUntilExpiry < 24
+                    ? hoursUntilExpiry === 0
+                      ? 'very soon'
+                      : hoursUntilExpiry === 1
+                      ? 'in 1 hour'
+                      : `in ${hoursUntilExpiry} hours`
+                    : daysUntilExpiry === 0
+                    ? 'today'
+                    : daysUntilExpiry === 1
+                    ? 'tomorrow'
+                    : `in ${daysUntilExpiry} days`
+                }!
               </Alert>
             )}
 

@@ -63,6 +63,7 @@ const ProductCreate = () => {
   const [newComponent, setNewComponent] = useState({
     name: "",
     description: "",
+    imageFile: null,
   });
 
   // Validation error state
@@ -944,12 +945,12 @@ const ProductCreate = () => {
 
   const handleOpenAddComponent = () => {
     setOpenAddComponent(true);
-    setNewComponent({ name: "", description: "" });
+    setNewComponent({ name: "", description: "", imageFile: null });
   };
 
   const handleCloseAddComponent = () => {
     setOpenAddComponent(false);
-    setNewComponent({ name: "", description: "" });
+    setNewComponent({ name: "", description: "", imageFile: null });
   };
 
   const handleAddComponent = () => {
@@ -960,6 +961,22 @@ const ProductCreate = () => {
 
   const handleConfirmAddComponent = async () => {
     try {
+      // Upload image first if provided
+      let imageUrl = '';
+      if (newComponent.imageFile) {
+        const uploadResult = await CategoryService.uploadCategoryImage(
+          newComponent.imageFile, 
+          newComponent.name
+        );
+        
+        if (uploadResult.success) {
+          imageUrl = uploadResult.data;
+        } else {
+          console.warn('Image upload failed:', uploadResult.error);
+          // Continue without image
+        }
+      }
+
       // Create category in database using CategoryService
       const slug = newComponent.name.toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -969,6 +986,7 @@ const ProductCreate = () => {
         name: newComponent.name,
         slug: slug,
         description: newComponent.description,
+        image_url: imageUrl || null,
         is_active: true,
         display_order: categories.length + 1
       };
@@ -1003,7 +1021,7 @@ const ProductCreate = () => {
     // Close dialogs
     setOpenConfirmDialog(false);
     setOpenAddComponent(false);
-    setNewComponent({ name: "", description: "" });
+    setNewComponent({ name: "", description: "", imageFile: null });
   };
 
   const handleRemoveComponent = (componentId) => {
@@ -1045,10 +1063,42 @@ const ProductCreate = () => {
   // Handle component edit (updates category in database)
   const handleEditComponent = async (componentId, updatedData) => {
     try {
+      // Find the current category to get its current image_url
+      const currentCategory = categories.find(cat => cat.id === componentId);
+      let imageUrl = currentCategory?.image_url || '';
+
+      // Handle image upload if a new image was provided
+      if (updatedData.imageFile) {
+        const uploadResult = await CategoryService.uploadCategoryImage(
+          updatedData.imageFile,
+          updatedData.name
+        );
+
+        if (uploadResult.success) {
+          imageUrl = uploadResult.data;
+
+          // Delete old image if it exists and is different from the new one
+          if (currentCategory?.image_url && currentCategory.image_url !== imageUrl) {
+            await CategoryService.deleteCategoryImage(currentCategory.image_url);
+          }
+        } else {
+          setErrorMessage(`Failed to upload image: ${uploadResult.error}`);
+          setShowError(true);
+          return;
+        }
+      } else if (updatedData.removeImage) {
+        // Remove image if requested
+        if (currentCategory?.image_url) {
+          await CategoryService.deleteCategoryImage(currentCategory.image_url);
+        }
+        imageUrl = null;
+      }
+
       // Update in database
       const result = await CategoryService.updateCategory(componentId, {
         name: updatedData.name,
-        description: updatedData.description
+        description: updatedData.description,
+        image_url: imageUrl
       });
 
       if (result.success) {
@@ -1056,7 +1106,12 @@ const ProductCreate = () => {
         setCategories((prev) =>
           prev.map((cat) =>
             cat.id === componentId
-              ? { ...cat, name: updatedData.name, description: updatedData.description }
+              ? { 
+                  ...cat, 
+                  name: updatedData.name, 
+                  description: updatedData.description,
+                  image_url: imageUrl 
+                }
               : cat
           )
         );
@@ -1065,7 +1120,12 @@ const ProductCreate = () => {
         setSelectedComponents((prev) =>
           prev.map((comp) =>
             comp.id === componentId
-              ? { ...comp, name: updatedData.name, description: updatedData.description }
+              ? { 
+                  ...comp, 
+                  name: updatedData.name, 
+                  description: updatedData.description,
+                  image_url: imageUrl 
+                }
               : comp
           )
         );

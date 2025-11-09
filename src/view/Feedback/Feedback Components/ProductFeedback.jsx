@@ -17,17 +17,64 @@ import {
   Rating,
   Menu,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
   FilterList,
+  Delete as DeleteIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 
-const ReviewRow = ({ review }) => {
+const ReviewRow = ({ review, onDelete }) => {
   const [open, setOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Extract data from database format
+  const productName = review.products?.name || review.products?.title || 'Unknown Product';
+  const productImage = review.products?.images?.[0] || null;
+  
+  // Get customer name and avatar from profile (first priority) or fallback to review fields
+  const customerFirstName = review.customer?.first_name || '';
+  const customerLastName = review.customer?.last_name || '';
+  const customerFullName = `${customerFirstName} ${customerLastName}`.trim();
+  const userName = customerFullName || review.user_name || review.user_email?.split('@')[0] || 'Anonymous';
+  const userAvatar = review.customer?.avatar_url || null;
+  
+  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'A';
+  const reviewText = review.comment || 'No comment';
+  const reviewTitle = review.title || '';
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setShowDeleteModal(false);
+    onDelete(review.id, review);
+  };
+  
+  // Format date
+  const createdDate = new Date(review.created_at);
+  const formattedDate = createdDate.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+  const formattedTime = createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Avatar color (same logic as e-commerce)
+  const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#f59e0b', '#06b6d4', '#ec4899', '#6366f1'];
+  const colorIndex = parseInt(review.user_id?.substring(0, 8) || '0', 16) % colors.length;
+  const avatarColor = colors[colorIndex];
 
   return (
     <>
@@ -48,19 +95,33 @@ const ReviewRow = ({ review }) => {
         </TableCell>
         <TableCell>
           <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar src={review.productImg} variant="square" />
+            {productImage ? (
+              <Avatar src={productImage} variant="square" sx={{ width: 40, height: 40 }} />
+            ) : (
+              <Avatar variant="square" sx={{ width: 40, height: 40, bgcolor: '#e0e0e0', color: '#666' }}>
+                {productName.charAt(0)}
+              </Avatar>
+            )}
             <Typography variant="body2" fontWeight={500}>
-              {review.productName}
+              {productName}
             </Typography>
           </Stack>
         </TableCell>
         <TableCell>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar sx={{ width: 32, height: 32 }}>
-              {review.username.charAt(0)}
+            <Avatar 
+              src={userAvatar} 
+              sx={{ 
+                width: 32, 
+                height: 32, 
+                bgcolor: userAvatar ? 'transparent' : avatarColor, 
+                color: 'white' 
+              }}
+            >
+              {!userAvatar && userInitials}
             </Avatar>
             <Typography variant="body2" fontWeight={500}>
-              {review.username}
+              {userName}
             </Typography>
           </Stack>
         </TableCell>
@@ -84,61 +145,270 @@ const ReviewRow = ({ review }) => {
               whiteSpace: "nowrap",
             }}
           >
-            {review.review.length > 15
-              ? `${review.review.substring(0, 15)}...`
-              : review.review}
+            {reviewText.length > 50
+              ? `${reviewText.substring(0, 50)}...`
+              : reviewText}
           </Typography>
         </TableCell>
         <TableCell>
           <Typography variant="body2" color="text.secondary">
-            {review.date}
+            {formattedDate}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {review.time}
+            {formattedTime}
           </Typography>
+        </TableCell>
+        <TableCell>
+          {onDelete && (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(review.id);
+              }}
+              sx={{
+                color: 'error.main',
+                '&:hover': {
+                  bgcolor: 'error.light',
+                  color: 'white'
+                }
+              }}
+              title="Delete Review"
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 2, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-              <Stack direction="row" spacing={2} alignItems="flex-start" mb={2}>
-                <Avatar src={review.productImg} variant="square" sx={{ width: 60, height: 60 }} />
+            <Box sx={{ margin: 2, p: 3, bgcolor: "#f5f5f5", borderRadius: 2, boxShadow: 1 }}>
+              <Stack direction="row" spacing={3} alignItems="flex-start" mb={2}>
+                {productImage ? (
+                  <Avatar src={productImage} variant="square" sx={{ width: 80, height: 80 }} />
+                ) : (
+                  <Avatar variant="square" sx={{ width: 80, height: 80, bgcolor: '#e0e0e0', color: '#666', fontSize: '2rem' }}>
+                    {productName.charAt(0)}
+                  </Avatar>
+                )}
                 <Box flex={1}>
-                  <Typography variant="subtitle2" fontWeight={600} mb={0.5}>
-                    {review.productName}
+                  <Typography variant="h6" fontWeight={700} mb={0.5}>
+                    {productName}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-                    <Avatar sx={{ width: 24, height: 24 }}>
-                      {review.username.charAt(0)}
+                    <Avatar 
+                      src={userAvatar} 
+                      sx={{ 
+                        width: 32, 
+                        height: 32, 
+                        bgcolor: userAvatar ? 'transparent' : avatarColor, 
+                        color: 'white' 
+                      }}
+                    >
+                      {!userAvatar && userInitials}
                     </Avatar>
-                    <Typography variant="body2" fontWeight={500}>
-                      {review.username}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      • {review.date} / {review.time}
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {userName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {review.customer?.email || review.user_email || 'No email'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      • {formattedDate} at {formattedTime}
                     </Typography>
                   </Stack>
                   <Rating
                     value={review.rating}
                     readOnly
-                    size="small"
+                    size="medium"
                     icon={<StarIcon fontSize="inherit" htmlColor="#FFD600" />}
                     emptyIcon={<StarBorderIcon fontSize="inherit" />}
                     sx={{ mb: 1 }}
                   />
                 </Box>
               </Stack>
-              <Typography variant="body2" fontWeight={600} mb={1}>
+              
+              {reviewTitle && (
+                <>
+                  <Typography variant="subtitle1" fontWeight={700} mb={1}>
+                    {reviewTitle}
+                  </Typography>
+                </>
+              )}
+              
+              <Typography variant="body2" fontWeight={600} mb={1} color="text.secondary">
                 Review:
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {review.review}
+              <Typography variant="body1" color="text.primary" mb={2} sx={{ whiteSpace: 'pre-wrap' }}>
+                {reviewText}
               </Typography>
+
+              {onDelete && (
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  <IconButton 
+                    size="small" 
+                    onClick={handleDeleteClick}
+                    sx={{ 
+                      color: 'error.main',
+                      border: '1.5px solid',
+                      borderColor: 'error.main',
+                      borderRadius: 1,
+                      px: 1.5,
+                      py: 0.5,
+                      '&:hover': { 
+                        bgcolor: 'error.main', 
+                        color: 'white',
+                        borderColor: 'error.main'
+                      }
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" sx={{ mr: 0.5 }} />
+                    <Typography variant="caption" fontWeight={600}>Delete Review</Typography>
+                  </IconButton>
+                </Stack>
+              )}
             </Box>
           </Collapse>
         </TableCell>
       </TableRow>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog 
+        open={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+          }
+        }}
+      >
+        <DialogTitle>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                bgcolor: 'error.light',
+              }}
+            >
+              <WarningIcon sx={{ color: 'error.main', fontSize: 24 }} />
+            </Box>
+            <Typography variant="h6" fontWeight={600}>
+              Delete Review?
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary" mb={2.5} sx={{ fontSize: '0.95rem' }}>
+            This action cannot be undone. The review will be permanently deleted and this activity will be logged.
+          </Typography>
+          
+          {/* Review Preview Card */}
+          <Box 
+            sx={{ 
+              p: 2.5, 
+              bgcolor: '#f8f9fa', 
+              borderRadius: 2,
+              border: '1px solid #e0e0e0'
+            }}
+          >
+            <Stack direction="row" spacing={1.5} mb={1.5}>
+              {userAvatar ? (
+                <Avatar src={userAvatar} sx={{ width: 40, height: 40 }} />
+              ) : (
+                <Avatar sx={{ width: 40, height: 40, bgcolor: avatarColor, color: 'white' }}>
+                  {userInitials}
+                </Avatar>
+              )}
+              <Box flex={1}>
+                <Typography variant="subtitle2" fontWeight={600}>
+                  {userName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {review.customer?.email || review.user_email}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Typography variant="body2" fontWeight={600} color="primary.main" mb={0.5}>
+              {productName}
+            </Typography>
+            
+            <Rating 
+              value={review.rating} 
+              readOnly 
+              size="small" 
+              sx={{ mb: 1 }}
+              icon={<StarIcon fontSize="inherit" htmlColor="#FFD600" />}
+              emptyIcon={<StarBorderIcon fontSize="inherit" />}
+            />
+            
+            {reviewTitle && (
+              <Typography variant="subtitle2" fontWeight={600} mb={0.5}>
+                {reviewTitle}
+              </Typography>
+            )}
+            
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                lineHeight: 1.5
+              }}
+            >
+              {reviewText}
+            </Typography>
+            
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Posted on {formattedDate} at {formattedTime}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button 
+            onClick={() => setShowDeleteModal(false)}
+            variant="outlined"
+            sx={{ 
+              borderRadius: 1.5,
+              textTransform: 'none',
+              px: 2.5
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            variant="contained" 
+            color="error"
+            startIcon={<DeleteIcon />}
+            sx={{ 
+              borderRadius: 1.5,
+              textTransform: 'none',
+              px: 2.5,
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: '0 2px 8px rgba(211, 47, 47, 0.25)'
+              }
+            }}
+          >
+            Delete Review
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
@@ -196,11 +466,13 @@ const FilterHeader = ({ title, options, currentFilter, onFilterChange }) => {
 };
 
 const ProductFeedback = ({
-  paginatedReviews,
+  reviews = [],
+  loading = false,
+  onDelete,
   reviewPage,
   setReviewPage,
-  REVIEWS_PER_PAGE,
   totalReviews,
+  reviewsPerPage,
 }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -232,7 +504,7 @@ const ProductFeedback = ({
   ];
 
   const filteredAndSortedReviews = useMemo(() => {
-    let filtered = [...paginatedReviews];
+    let filtered = [...reviews];
 
     // Filter by rating
     if (ratingFilter !== "all") {
@@ -243,7 +515,7 @@ const ProductFeedback = ({
     if (dateFilter !== "all") {
       const now = new Date();
       filtered = filtered.filter(review => {
-        const reviewDate = new Date(review.date);
+        const reviewDate = new Date(review.created_at);
         const diffTime = Math.abs(now - reviewDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -263,16 +535,18 @@ const ProductFeedback = ({
     }
 
     // Sort by product
+    const getProductName = (review) => review.products?.name || review.products?.title || 'Unknown';
+    
     if (productFilter === "a-z") {
-      filtered.sort((a, b) => a.productName.localeCompare(b.productName));
+      filtered.sort((a, b) => getProductName(a).localeCompare(getProductName(b)));
     } else if (productFilter === "z-a") {
-      filtered.sort((a, b) => b.productName.localeCompare(a.productName));
+      filtered.sort((a, b) => getProductName(b).localeCompare(getProductName(a)));
     } else if (productFilter === "recent") {
-      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
     return filtered;
-  }, [paginatedReviews, productFilter, ratingFilter, dateFilter]);
+  }, [reviews, productFilter, ratingFilter, dateFilter]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -316,22 +590,37 @@ const ProductFeedback = ({
                   onFilterChange={setDateFilter}
                 />
               </TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 120 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredAndSortedReviews
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((review) => (
-                <ReviewRow key={review.id} review={review} />
-              ))}
-            {filteredAndSortedReviews.length === 0 && (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No reviews found
-                  </Typography>
+                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                  <Stack alignItems="center" spacing={2}>
+                    <Typography variant="body1" color="text.secondary">
+                      Loading reviews...
+                    </Typography>
+                  </Stack>
                 </TableCell>
               </TableRow>
+            ) : (
+              <>
+                {filteredAndSortedReviews
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((review) => (
+                    <ReviewRow key={review.id} review={review} onDelete={onDelete} />
+                  ))}
+                {filteredAndSortedReviews.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        No reviews found
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>

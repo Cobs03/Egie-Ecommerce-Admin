@@ -18,6 +18,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 const ComponentsSlider = ({
   selectedComponents,
@@ -41,6 +42,8 @@ const ComponentsSlider = ({
   // Edit dialog state
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [editData, setEditData] = useState({ name: "", description: "" });
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState(null);
 
   // Delete dialog state
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -64,6 +67,10 @@ const ComponentsSlider = ({
       name: selectedComponentForAction.name,
       description: selectedComponentForAction.description || "",
     });
+    // Show existing image if available
+    if (selectedComponentForAction.image_url) {
+      setEditImagePreview(selectedComponentForAction.image_url);
+    }
     setOpenEditDialog(true);
     handleCloseContextMenu();
   };
@@ -72,12 +79,51 @@ const ComponentsSlider = ({
   const handleCloseEdit = () => {
     setOpenEditDialog(false);
     setEditData({ name: "", description: "" });
+    setEditImageFile(null);
+    setEditImagePreview(null);
+  };
+
+  // Handle image change for edit
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a valid image file (JPG, PNG, WEBP, or GIF)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+
+      setEditImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle remove image for edit
+  const handleRemoveEditImage = () => {
+    setEditImageFile(null);
+    setEditImagePreview(null);
   };
 
   // Save edit
   const handleSaveEdit = () => {
     if (onEditComponent) {
-      onEditComponent(selectedComponentForAction.id, editData);
+      const updatedData = {
+        ...editData,
+        imageFile: editImageFile,
+        removeImage: !editImagePreview, // Flag to indicate image should be removed
+      };
+      onEditComponent(selectedComponentForAction.id, updatedData);
     }
     handleCloseEdit();
   };
@@ -307,6 +353,65 @@ const ComponentsSlider = ({
                 setEditData({ ...editData, description: e.target.value })
               }
             />
+
+            {/* Image Upload Section */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Component Image
+              </Typography>
+              {editImagePreview ? (
+                <Box sx={{ position: "relative", display: "inline-block", maxWidth: 200 }}>
+                  <Box
+                    component="img"
+                    src={editImagePreview}
+                    alt="Preview"
+                    sx={{
+                      width: "100%",
+                      height: 150,
+                      objectFit: "cover",
+                      borderRadius: 1,
+                      border: "1px solid #e0e0e0",
+                    }}
+                  />
+                  <IconButton
+                    onClick={handleRemoveEditImage}
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      bgcolor: "background.paper",
+                      boxShadow: 1,
+                      "&:hover": { bgcolor: "error.light", color: "white" },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ) : (
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{
+                    borderColor: "#e0e0e0",
+                    color: "#424242",
+                    width: "fit-content",
+                  }}
+                >
+                  Upload Image
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={handleEditImageChange}
+                  />
+                </Button>
+              )}
+              <Typography variant="caption" color="text.secondary">
+                Recommended: JPG, PNG, WEBP, or GIF (max 5MB)
+              </Typography>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>

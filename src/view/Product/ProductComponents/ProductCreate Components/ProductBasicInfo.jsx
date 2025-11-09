@@ -149,9 +149,9 @@ const ProductBasicInfo = ({
           onChange={(e) => onWarrantyChange(e.target.value)}
         >
           <MenuItem value="">None</MenuItem>
-          <MenuItem value="warranty1">1 Year Warranty</MenuItem>
-          <MenuItem value="warranty2">2 Year Warranty</MenuItem>
-          <MenuItem value="warranty3">3 Year Warranty</MenuItem>
+          <MenuItem value="1 Year Warranty">1 Year Warranty</MenuItem>
+          <MenuItem value="2 Year Warranty">2 Year Warranty</MenuItem>
+          <MenuItem value="3 Year Warranty">3 Year Warranty</MenuItem>
         </TextField>
       </Stack>
 

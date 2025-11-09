@@ -18,12 +18,15 @@ import {
   Chip,
   Alert,
   InputAdornment,
+  Avatar,
+  IconButton,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import ProductSelectionDialog from "./ProductSelectionDialog";
 import CustomerSelectionDialog from "./CustomerSelectionDialog";
 
@@ -47,18 +50,26 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
 
   const [errors, setErrors] = useState({});
   const [showExpirationWarning, setShowExpirationWarning] = useState(false);
+  const [daysUntilExpiry, setDaysUntilExpiry] = useState(0);
+  const [hoursUntilExpiry, setHoursUntilExpiry] = useState(0);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
   useEffect(() => {
     if (discount) {
-      const [activeFrom, activeTo] = discount.dates.split(" - ");
+  console.log('🔍 Discount data received:', JSON.stringify(discount, null, 2));
+      // Use the database date fields (validFrom/validUntil) instead of the formatted dates string
+      // Parse dates directly without timezone manipulation
+      const activeFrom = discount.validFrom ? dayjs(discount.validFrom) : null;
+      const activeTo = discount.validUntil ? dayjs(discount.validUntil) : null;
+  console.log('📅 Parsed dates:', JSON.stringify({ activeFrom: activeFrom?.format(), activeTo: activeTo?.format() }, null, 2));
+      
       setFormData({
         name: discount.name || "",
         type: discount.type || "percent",
         value: discount.value || "",
-        activeFrom: activeFrom ? dayjs(activeFrom, "MM/DD/YY") : null,
-        activeTo: activeTo ? dayjs(activeTo, "MM/DD/YY") : null,
+        activeFrom: activeFrom,
+        activeTo: activeTo,
         usageLimit: discount.usageLimit || "",
         appliesTo: discount.appliesTo || "All Products",
         specificProducts: discount.specificProducts || [],
@@ -71,9 +82,26 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
       });
 
       if (activeTo) {
-        const expiryDate = dayjs(activeTo, "MM/DD/YY");
-        const daysUntilExpiry = expiryDate.diff(dayjs(), "day");
-        setShowExpirationWarning(daysUntilExpiry >= 0 && daysUntilExpiry <= 7);
+        const now = dayjs();
+        const daysLeft = activeTo.diff(now, "day");
+        const hoursLeft = activeTo.diff(now, "hour");
+        const willShow = daysLeft >= 0 && daysLeft <= 7;
+        console.log('⚠️ Discount expiration check:', JSON.stringify({ 
+          now: now.format(), 
+          activeTo: activeTo.format(), 
+          daysLeft, 
+          hoursLeft, 
+          willShow,
+          calculation: `${activeTo.format()} - ${now.format()} = ${daysLeft} days`
+        }, null, 2));
+        setDaysUntilExpiry(daysLeft);
+        setHoursUntilExpiry(hoursLeft);
+        setShowExpirationWarning(willShow);
+      } else {
+  console.log('❌ No activeTo date found');
+        setShowExpirationWarning(false);
+        setDaysUntilExpiry(0);
+        setHoursUntilExpiry(0);
       }
     } else {
       setFormData({
@@ -93,6 +121,7 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
         used: 0,
       });
       setShowExpirationWarning(false);
+      setHoursUntilExpiry(0);
     }
     setErrors({});
   }, [discount, open]);
@@ -115,8 +144,12 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
     setErrors({ ...errors, [field]: "" });
 
     if (field === "activeTo" && date) {
-      const daysUntilExpiry = date.diff(dayjs(), "day");
-      setShowExpirationWarning(daysUntilExpiry >= 0 && daysUntilExpiry <= 7);
+      const now = dayjs();
+      const daysLeft = date.diff(now, "day");
+      const hoursLeft = date.diff(now, "hour");
+      setDaysUntilExpiry(daysLeft);
+      setHoursUntilExpiry(hoursLeft);
+      setShowExpirationWarning(daysLeft >= 0 && daysLeft <= 7);
     }
   };
 
@@ -223,11 +256,12 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
     }
 
     const discountData = {
-      ...discount,
+      id: discount?.id, // Include the ID for updates
       name: formData.name,
       type: formData.type,
       value: parseFloat(formData.value),
-      dates: `${formData.activeFrom.format("MM/DD/YY")} - ${formData.activeTo.format("MM/DD/YY")}`,
+      validFrom: formData.activeFrom.format('YYYY-MM-DD'), // Use date format for database
+      validUntil: formData.activeTo.format('YYYY-MM-DD'), // Use date format for database
       usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
       appliesTo: formData.appliesTo,
       specificProducts: formData.specificProducts,
@@ -237,6 +271,7 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
       description: formData.description,
       isActive: formData.isActive,
       used: formData.used,
+      maxDiscountAmount: formData.maxDiscountAmount || null
     };
 
     onSave(discountData);
@@ -294,9 +329,22 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
               },
             }}
           >
+            {console.log('💡 Rendering discount dialog,', JSON.stringify({ showExpirationWarning, daysUntilExpiry, hoursUntilExpiry }, null, 2))}
             {showExpirationWarning && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                ⚠️ This discount will expire within 7 days!
+                ⚠️ This discount will expire {
+                  daysUntilExpiry === 0 && hoursUntilExpiry < 24
+                    ? hoursUntilExpiry === 0
+                      ? 'very soon'
+                      : hoursUntilExpiry === 1
+                      ? 'in 1 hour'
+                      : `in ${hoursUntilExpiry} hours`
+                    : daysUntilExpiry === 0
+                    ? 'today'
+                    : daysUntilExpiry === 1
+                    ? 'tomorrow'
+                    : `in ${daysUntilExpiry} days`
+                }!
               </Alert>
             )}
 
@@ -500,20 +548,63 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
                         }}
                       >
                         <Stack spacing={1}>
-                          {formData.specificProducts.map((product) => (
-                            <Chip
-                              key={product.id}
-                              label={`${product.image} ${product.name} - ₱${product.price.toLocaleString()}`}
-                              onDelete={() => handleRemoveProduct(product.id)}
-                              size="small"
-                              sx={{
-                                justifyContent: "space-between",
-                                "& .MuiChip-label": {
-                                  fontWeight: 500,
-                                },
-                              }}
-                            />
-                          ))}
+                          {formData.specificProducts.map((product) => {
+                            // Get product image - handle both array and string formats
+                            const productImage = product.images && Array.isArray(product.images) && product.images.length > 0
+                              ? product.images[0]
+                              : product.image || null;
+                            
+                            return (
+                              <Box 
+                                key={product.id}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                  p: 1,
+                                  bgcolor: 'rgba(39, 239, 60, 0.05)',
+                                  borderRadius: 1,
+                                  border: '1px solid rgba(39, 239, 60, 0.2)',
+                                }}
+                              >
+                                {productImage ? (
+                                  <Avatar
+                                    src={productImage}
+                                    alt={product.name}
+                                    variant="rounded"
+                                    sx={{ width: 40, height: 40 }}
+                                  />
+                                ) : (
+                                  <Avatar
+                                    variant="rounded"
+                                    sx={{ width: 40, height: 40, bgcolor: '#e0e0e0' }}
+                                  >
+                                    <Typography variant="caption" fontSize="0.6rem">
+                                      No Img
+                                    </Typography>
+                                  </Avatar>
+                                )}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography variant="body2" fontWeight={600} noWrap>
+                                    {product.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    ₱{product.price.toLocaleString()}
+                                  </Typography>
+                                </Box>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleRemoveProduct(product.id)}
+                                  sx={{
+                                    color: 'error.main',
+                                    '&:hover': { bgcolor: 'error.light', color: 'white' }
+                                  }}
+                                >
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            );
+                          })}
                         </Stack>
                       </Box>
                     </Box>

@@ -47,8 +47,13 @@ const CategoryManagement = () => {
   const [categoryDialog, setCategoryDialog] = useState({
     open: false,
     mode: 'add', // 'add' or 'edit'
-    category: { name: '', description: '', is_active: true }
+    category: { name: '', description: '', is_active: true, image_url: '' }
   });
+  
+  // Image upload state
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
   
   // Specifications Dialog State
   const [specsDialog, setSpecsDialog] = useState({
@@ -92,8 +97,10 @@ const CategoryManagement = () => {
     setCategoryDialog({
       open: true,
       mode: 'add',
-      category: { name: '', description: '', is_active: true }
+      category: { name: '', description: '', is_active: true, image_url: '' }
     });
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleEditCategory = (category) => {
@@ -101,6 +108,33 @@ const CategoryManagement = () => {
       open: true,
       mode: 'edit',
       category: { ...category }
+    });
+    setImageFile(null);
+    setImagePreview(category.image_url || null);
+  };
+
+  // Handle image file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove selected image
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setCategoryDialog({
+      ...categoryDialog,
+      category: { ...categoryDialog.category, image_url: '' }
     });
   };
 
@@ -122,17 +156,34 @@ const CategoryManagement = () => {
 
   const handleSaveCategory = async () => {
     try {
+      setUploading(true);
       const { category, mode } = categoryDialog;
       
       if (!category.name.trim()) {
         showSnackbar('Category name is required', 'error');
+        setUploading(false);
         return;
+      }
+
+      let imageUrl = category.image_url || '';
+
+      // Upload image if a new file was selected
+      if (imageFile) {
+        const uploadResult = await CategoryService.uploadCategoryImage(imageFile, category.name);
+        if (uploadResult.success) {
+          imageUrl = uploadResult.data;
+        } else {
+          showSnackbar('Failed to upload image: ' + uploadResult.error, 'error');
+          setUploading(false);
+          return;
+        }
       }
 
       const categoryData = {
         ...category,
         slug: category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-        display_order: categories.length + 1
+        display_order: categories.length + 1,
+        image_url: imageUrl
       };
 
       let result;
@@ -145,12 +196,16 @@ const CategoryManagement = () => {
       if (result.success) {
         showSnackbar(`Category ${mode === 'add' ? 'created' : 'updated'} successfully`);
         setCategoryDialog({ ...categoryDialog, open: false });
+        setImageFile(null);
+        setImagePreview(null);
         loadCategories();
       } else {
         showSnackbar(result.error, 'error');
       }
     } catch (error) {
       showSnackbar('Error saving category', 'error');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -201,6 +256,21 @@ const CategoryManagement = () => {
           {categories.map((category) => (
             <Grid item xs={12} md={6} lg={4} key={category.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {/* Category Image */}
+                {category.image_url && (
+                  <Box
+                    component="img"
+                    src={category.image_url}
+                    alt={category.name}
+                    sx={{
+                      width: '100%',
+                      height: '180px',
+                      objectFit: 'cover',
+                      bgcolor: '#f5f5f5'
+                    }}
+                  />
+                )}
+                
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Typography variant="h6" fontWeight="bold">
@@ -287,6 +357,63 @@ const CategoryManagement = () => {
                 category: { ...categoryDialog.category, description: e.target.value }
               })}
             />
+
+            {/* Image Upload Section */}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Category Image
+              </Typography>
+              
+              {imagePreview ? (
+                <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                  <Box
+                    component="img"
+                    src={imagePreview}
+                    alt="Category preview"
+                    sx={{
+                      width: '100%',
+                      maxWidth: '200px',
+                      height: '150px',
+                      objectFit: 'cover',
+                      borderRadius: 1,
+                      border: '1px solid #ddd'
+                    }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={handleRemoveImage}
+                    sx={{
+                      position: 'absolute',
+                      top: 5,
+                      right: 5,
+                      bgcolor: 'white',
+                      '&:hover': { bgcolor: '#f5f5f5' }
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ) : (
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  sx={{ py: 2 }}
+                >
+                  Upload Image
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                </Button>
+              )}
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                Recommended: Square image (500x500px) for best display
+              </Typography>
+            </Box>
+
             <FormControlLabel
               control={
                 <Switch
@@ -302,11 +429,22 @@ const CategoryManagement = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCategoryDialog({ ...categoryDialog, open: false })}>
+          <Button 
+            onClick={() => {
+              setCategoryDialog({ ...categoryDialog, open: false });
+              setImageFile(null);
+              setImagePreview(null);
+            }}
+            disabled={uploading}
+          >
             Cancel
           </Button>
-          <Button variant="contained" onClick={handleSaveCategory}>
-            {categoryDialog.mode === 'add' ? 'Create' : 'Update'}
+          <Button 
+            variant="contained" 
+            onClick={handleSaveCategory}
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading...' : (categoryDialog.mode === 'add' ? 'Create' : 'Update')}
           </Button>
         </DialogActions>
       </Dialog>
