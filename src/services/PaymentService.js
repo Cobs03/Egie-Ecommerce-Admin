@@ -16,13 +16,6 @@ export class PaymentService {
             status,
             delivery_type,
             created_at,
-            profiles!orders_user_id_fkey (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone
-            ),
             shipping_addresses (
               id,
               full_name,
@@ -61,14 +54,6 @@ export class PaymentService {
             delivery_type,
             customer_notes,
             created_at,
-            profiles!orders_user_id_fkey (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone,
-              avatar_url
-            ),
             shipping_addresses (
               *
             ),
@@ -103,12 +88,7 @@ export class PaymentService {
           orders (
             id,
             order_number,
-            total,
-            profiles!orders_user_id_fkey (
-              first_name,
-              last_name,
-              email
-            )
+            total
           )
         `)
         .eq('payment_status', status)
@@ -206,11 +186,7 @@ export class PaymentService {
           *,
           orders (
             order_number,
-            total,
-            profiles!orders_user_id_fkey (
-              first_name,
-              last_name
-            )
+            total
           )
         `)
         .eq('payment_method', method)
@@ -232,12 +208,7 @@ export class PaymentService {
           *,
           orders (
             order_number,
-            total,
-            profiles!orders_user_id_fkey (
-              first_name,
-              last_name,
-              email
-            )
+            total
           )
         `)
         .order('created_at', { ascending: false })

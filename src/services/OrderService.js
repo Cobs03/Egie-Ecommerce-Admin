@@ -44,12 +44,6 @@ export class OrderService {
             province,
             postal_code,
             country
-          ),
-          profiles!orders_user_id_fkey (
-            id,
-            first_name,
-            last_name,
-            email
           )
         `)
         .order('created_at', { ascending: false })
@@ -106,14 +100,6 @@ export class OrderService {
             postal_code,
             country,
             address_type
-          ),
-          profiles!orders_user_id_fkey (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            avatar_url
           )
         `)
         .eq('id', id)
@@ -196,12 +182,6 @@ export class OrderService {
             street_address,
             city,
             province
-          ),
-          profiles!orders_user_id_fkey (
-            id,
-            first_name,
-            last_name,
-            email
           )
         `)
         .eq('status', status)
@@ -294,11 +274,6 @@ export class OrderService {
           payments (
             payment_method,
             payment_status
-          ),
-          profiles!orders_user_id_fkey (
-            first_name,
-            last_name,
-            email
           )
         `)
         .order('created_at', { ascending: false })
@@ -306,18 +281,6 @@ export class OrderService {
 
       if (error) return handleSupabaseError(error)
       return handleSupabaseSuccess(data)
-    } catch (error) {
-      return handleSupabaseError(error)
-    }
-  }
-}
-
-      return handleSupabaseSuccess({
-        total: totalOrders.length,
-        pending: pendingOrders.length,
-        completed: completedOrders.length,
-        cancelled: cancelledOrders.length
-      })
     } catch (error) {
       return handleSupabaseError(error)
     }
