@@ -41,23 +41,36 @@ const SignIn = () => {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("is_admin, first_name, last_name")
+        .select("role, first_name, last_name, is_admin")
         .eq("id", data.user.id)
         .single();
 
       if (profileError) {
+        console.error("Profile error:", profileError);
+        await supabase.auth.signOut();
         setError("Error loading user profile. Please contact administrator.");
         setLoading(false);
         return;
       }
 
-      if (!profile?.is_admin) {
+      console.log("Profile data:", profile); // Debug log
+
+      // Allow admin, manager, and employee to access
+      const allowedRoles = ['admin', 'manager', 'employee'];
+      const userRole = profile?.role?.toLowerCase();
+      const isAdmin = profile?.is_admin === true;
+      
+      // Check if user has admin flag OR has an allowed role
+      if (!isAdmin && (!userRole || !allowedRoles.includes(userRole))) {
+        // Sign out immediately BEFORE any navigation
         await supabase.auth.signOut();
-        setError("Access denied. This portal is for administrators only.");
+        setError("⛔ Access Denied: This account is not authorized to access the admin panel. Only Admin, Manager, and Employee accounts are allowed. If you're a customer, please visit the main website.");
         setLoading(false);
         return;
       }
 
+      // Only navigate if user is authorized
+      setLoading(false);
       navigate("/dashboard");
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");

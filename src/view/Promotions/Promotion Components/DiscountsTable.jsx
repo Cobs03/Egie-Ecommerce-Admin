@@ -23,7 +23,7 @@ import {
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 
-const DiscountTable = ({ discounts, onEdit, onDelete }) => {
+const DiscountTable = ({ discounts, onEdit, onDelete, loading = false }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
   const [page, setPage] = useState(0);
@@ -217,7 +217,57 @@ const DiscountTable = ({ discounts, onEdit, onDelete }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedDiscounts
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ border: 'none', py: 0 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '300px',
+                      gap: 1.5
+                    }}
+                  >
+                    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100px', height: '80px' }}>
+                      <img 
+                        src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png" 
+                        alt="Loading" 
+                        style={{ 
+                          width: '80px', 
+                          height: '60px',
+                          objectFit: 'contain',
+                          animation: 'pulse 2s ease-in-out infinite'
+                        }} 
+                      />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: '100px',
+                          height: '100px',
+                          border: '4px solid rgba(0, 230, 118, 0.1)',
+                          borderTop: '4px solid #00E676',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite',
+                          '@keyframes spin': {
+                            '0%': { transform: 'translate(-50%, -50%) rotate(0deg)' },
+                            '100%': { transform: 'translate(-50%, -50%) rotate(360deg)' }
+                          }
+                        }}
+                      />
+                    </Box>
+                    <Typography variant="body2" sx={{ color: '#00E676', fontWeight: 500, mt: 1 }}>
+                      Loading discounts...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedDiscounts
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((discount) => (
                 <TableRow
@@ -268,8 +318,8 @@ const DiscountTable = ({ discounts, onEdit, onDelete }) => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))}
-            {sortedDiscounts.length === 0 && (
+              )))}
+            {!loading && sortedDiscounts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">

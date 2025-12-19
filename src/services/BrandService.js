@@ -20,20 +20,25 @@ export class BrandService {
   // Create a new brand
   static async createBrand(brandData) {
     try {
-      // First check if user is admin
+      // Check user role - managers and admins can create brands
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return handleSupabaseError(new Error('No authenticated user'))
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('role')
         .eq('id', user.id)
         .single()
 
-      if (!profile?.is_admin) {
-        return handleSupabaseError(new Error('Admin privileges required'))
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Allow admin and manager roles to create brands
+      if (profile.role !== 'admin' && profile.role !== 'manager') {
+        return handleSupabaseError(new Error('Only admins and managers can create brands'))
       }
 
       // Generate slug from name
@@ -55,7 +60,15 @@ export class BrandService {
         .select()
         .single()
 
-      if (error) return handleSupabaseError(error)
+      if (error) {
+        if (error.message.includes('row-level security') || error.message.includes('RLS')) {
+          return handleSupabaseError(new Error(
+            'Permission denied: Only admins and managers can create brands. ' +
+            'RLS Error: ' + error.message
+          ))
+        }
+        return handleSupabaseError(error)
+      }
       return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)

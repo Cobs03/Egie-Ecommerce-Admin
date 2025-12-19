@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -16,119 +16,30 @@ import {
 } from "@mui/material";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz"; // Icon for three horizontal dots
 import { useNavigate } from "react-router-dom"; // Import useNavigate
-
-// Sample data for recent orders - replace with actual data
-let recentOrders = [
-  {
-    orderNumber: "T2123245678",
-    user: "Mikko",
-    time: "2 mins ago",
-    amount: "P 12,500",
-    status: "Completed",
-  },
-  {
-    orderNumber: "T2123245699",
-    user: "Ana",
-    time: "5 mins ago",
-    amount: "P 7,350",
-    status: "New",
-  },
-  {
-    orderNumber: "T2123245712",
-    user: "Jessa",
-    time: "10 mins ago",
-    amount: "P 18,900",
-    status: "On Going",
-  },
-  {
-    orderNumber: "T2123245733",
-    user: "Carlos",
-    time: "15 mins ago",
-    amount: "P 22,100",
-    status: "Completed",
-  },
-  {
-    orderNumber: "T2123245745",
-    user: "Mikko",
-    time: "20 mins ago",
-    amount: "P 5,500",
-    status: "Cancelled",
-  },
-  {
-    orderNumber: "T2123245760",
-    user: "Lara",
-    time: "30 mins ago",
-    amount: "P 9,750",
-    status: "Completed",
-  },
-  {
-    orderNumber: "T2123245775",
-    user: "Ana",
-    time: "45 mins ago",
-    amount: "P 14,200",
-    status: "On Going",
-  },
-  {
-    orderNumber: "T2123245790",
-    user: "Jessa",
-    time: "1 hour ago",
-    amount: "P 8,300",
-    status: "New",
-  },
-  {
-    orderNumber: "T2123245805",
-    user: "Carlos",
-    time: "1 hour 15 mins ago",
-    amount: "P 11,450",
-    status: "Completed",
-  },
-  {
-    orderNumber: "T2123245820",
-    user: "Lara",
-    time: "1 hour 30 mins ago",
-    amount: "P 16,700",
-    status: "On Going",
-  },
-  {
-    orderNumber: "T2123245835",
-    user: "Mikko",
-    time: "2 hours ago",
-    amount: "P 20,300",
-    status: "Completed",
-  },
-];
-
-// Fisher-Yates Shuffle Algorithm
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]]; // Swap elements
-  }
-  return array;
-}
-
-// Randomize the orders on component load
-const shuffledOrders = shuffleArray([...recentOrders]);
-const limitedOrders = shuffledOrders.slice(0, 8); // Limit to the first 8 orders
+import DashboardService from "../../../services/DashboardService";
 
 const getStatusStyles = (status) => {
   switch (status) {
-    case "Completed":
+    case "completed":
+    case "delivered":
       return {
         backgroundColor: "#dcfce7", // Light green
         color: "#22c55e", // Green text
       };
-    case "New":
+    case "pending":
       return {
         backgroundColor: "#bfdbfe", // Light blue
         color: "#3b82f6", // Blue text
       };
-    case "On Going":
+    case "confirmed":
+    case "processing":
+    case "shipped":
+    case "ready_for_pickup":
       return {
         backgroundColor: "#fef9c3", // Light yellow
         color: "#eab308", // Yellow text
       };
-    case "Cancelled":
+    case "cancelled":
       return {
         backgroundColor: "#FF4747",
         color: "#780000",
@@ -139,10 +50,29 @@ const getStatusStyles = (status) => {
 };
 
 const RecentOrders = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null); // To store the order for the open menu
   const open = Boolean(anchorEl);
   const navigate = useNavigate(); // Initialize useNavigate
+
+  useEffect(() => {
+    const fetchRecentOrders = async () => {
+      try {
+        const response = await DashboardService.getRecentOrders(8);
+        if (response.success) {
+          setOrders(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching recent orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentOrders();
+  }, []);
 
   const handleClick = (event, order) => {
     setAnchorEl(event.currentTarget);
@@ -157,7 +87,7 @@ const RecentOrders = () => {
   const handleViewOrder = () => {
     if (selectedOrder) {
       // Navigate to the orders page, potentially passing the order ID as state
-      navigate("/orders", { state: { orderId: selectedOrder.orderNumber } });
+      navigate("/orders", { state: { orderId: selectedOrder.id } });
     }
     handleClose();
   };
@@ -165,6 +95,46 @@ const RecentOrders = () => {
   const handleViewAllOrders = () => {
     navigate("/orders"); // Navigate to the orders page
   };
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          background: "#fff",
+          borderRadius: 3,
+          boxShadow: 3,
+          padding: 2,
+          margin: 1,
+          minHeight: 400,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>Loading...</Typography>
+      </Card>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <Card
+        sx={{
+          background: "#fff",
+          borderRadius: 3,
+          boxShadow: 3,
+          padding: 2,
+          margin: 1,
+          minHeight: 400,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>No recent orders</Typography>
+      </Card>
+    );
+  }
 
   return (
     <Card
@@ -203,11 +173,11 @@ const RecentOrders = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {limitedOrders.map((order, index) => (
-                <TableRow key={index}>
+              {orders.map((order, index) => (
+                <TableRow key={order.id}>
                   <TableCell>{order.orderNumber}</TableCell>
-                  <TableCell>{order.user}</TableCell>
-                  <TableCell>{order.time}</TableCell>
+                  <TableCell>{order.customerName}</TableCell>
+                  <TableCell>{order.timeAgo}</TableCell>
 
                   <TableCell>
                     <Box
@@ -217,16 +187,17 @@ const RecentOrders = () => {
                         display: "inline-block",
                         fontWeight: 600,
                         fontSize: 12,
+                        textTransform: "capitalize",
                         ...getStatusStyles(order.status),
                       }}
                     >
-                      {order.status}
+                      {order.status.replace("_", " ")}
                     </Box>
                   </TableCell>
                   <TableCell>
                     <IconButton
                       aria-label="more options"
-                      id={`order-options-button-${order.orderNumber}`}
+                      id={`order-options-button-${order.id}`}
                       aria-controls={open ? "order-menu" : undefined}
                       aria-haspopup="true"
                       aria-expanded={open ? "true" : undefined}
@@ -238,7 +209,7 @@ const RecentOrders = () => {
                     <Menu
                       id="order-menu"
                       MenuListProps={{
-                        "aria-labelledby": `order-options-button-${order.orderNumber}`,
+                        "aria-labelledby": `order-options-button-${order.id}`,
                       }}
                       anchorEl={anchorEl}
                       open={open}

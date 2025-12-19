@@ -34,7 +34,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { confirmationColors, tatColors } from "./shippingData";
 
-const ShippingTable = ({ shipments, onDeleteShipment }) => {
+const ShippingTable = ({ shipments, onDeleteShipment, loading = false }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuRow, setMenuRow] = useState(null);
   const [page, setPage] = useState(0);
@@ -291,8 +291,59 @@ const ShippingTable = ({ shipments, onDeleteShipment }) => {
               <TableCell sx={{ fontWeight: 700 }}></TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
-            {filteredShipments
+          <TableBody
+            sx={{
+              minHeight: '300px',
+              position: 'relative',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f1f1',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#888',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                backgroundColor: '#555',
+              },
+            }}
+          >
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ border: 'none', py: 0 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    minHeight: '300px',
+                    justifyContent: 'center',
+                    gap: 1.5
+                  }}>
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" color="#00E676" sx={{ fontWeight: 500 }}>
+                      Loading shipments...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              <>
+                {filteredShipments
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row, idx) => (
                 <TableRow
@@ -382,6 +433,8 @@ const ShippingTable = ({ shipments, onDeleteShipment }) => {
                   </Typography>
                 </TableCell>
               </TableRow>
+            )}
+              </>
             )}
           </TableBody>
         </Table>

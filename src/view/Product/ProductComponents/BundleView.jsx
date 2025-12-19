@@ -512,26 +512,25 @@ const BundleView = () => {
         </Box>
       </Stack>
 
-      {/* Publish Button */}
-      {isEditMode && (
-        <Button
-          variant="contained"
-          fullWidth
-          size="large"
-          onClick={handleOpenDialog}
-          sx={{
-            py: 1.5,
-            fontSize: "1rem",
-            fontWeight: 600,
-            bgcolor: "#000",
-            "&:hover": {
-              bgcolor: "#333",
-            },
-          }}
-        >
-          Publish Bundle
-        </Button>
-      )}
+      {/* Publish Button - Show for both create and edit modes */}
+      <Button
+        variant="contained"
+        fullWidth
+        size="large"
+        onClick={handleOpenDialog}
+        sx={{
+          py: 1.5,
+          fontSize: "1rem",
+          fontWeight: 600,
+          bgcolor: "#00E676",
+          color: "#000",
+          "&:hover": {
+            bgcolor: "#00C853",
+          },
+        }}
+      >
+        {isEditMode ? 'Update Bundle' : 'Publish Bundle'}
+      </Button>
 
       {/* Confirmation Dialog */}
       <Dialog
@@ -540,11 +539,15 @@ const BundleView = () => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ color: "black" }}>Confirm Publish</DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>
+          {isEditMode ? 'Confirm Update' : 'Confirm Publish'}
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to publish this bundle? Once published, it
-            will be visible to customers.
+            {isEditMode 
+              ? 'Are you sure you want to update this bundle? Changes will be saved to the database.'
+              : 'Are you sure you want to publish this bundle? Once published, it will be visible to customers.'
+            }
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -556,11 +559,11 @@ const BundleView = () => {
             variant="contained"
             disabled={saving}
             sx={{
-              bgcolor: "black",
-              color: "#fff",
+              bgcolor: "#00E676",
+              color: "#000",
               fontWeight: 700,
               "&:hover": {
-                bgcolor: "#333",
+                bgcolor: "#00C853",
               },
             }}
           >

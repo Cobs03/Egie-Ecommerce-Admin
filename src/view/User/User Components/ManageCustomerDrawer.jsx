@@ -11,19 +11,31 @@ import {
   List,
   ListItem,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import BlockIcon from "@mui/icons-material/Block";
+import { formatLastLogin, getLastLoginChipStyle } from "../../../utils/dateUtils";
+
+// Import permission system
+import { usePermissions } from "../../../hooks/usePermissions";
+import { PERMISSIONS } from "../../../utils/permissions";
 
 const ManageCustomerDrawer = ({ 
   open, 
   onClose, 
   customer,
-  onBan
+  onBan,
+  onUnban
 }) => {
   const navigate = useNavigate();
+  const permissions = usePermissions();
 
   if (!customer) return null;
+
+  // Check if customer is banned
+  const isBanned = customer.status === 'banned';
 
   // Mock activity log data - This should come from your backend
   const activityLog = [
@@ -33,49 +45,39 @@ const ManageCustomerDrawer = ({
     { action: "Updated a Password", time: "Yesterday" },
   ];
 
-  // Determine status chip based on lastLogin
+  // Determine status chip based on ban status and lastLogin
   const getStatusChip = () => {
-    const status = customer.lastLogin || "Never";
-    let chipProps = {
-      label: status,
+    // If banned, show banned status
+    if (isBanned) {
+      return {
+        label: "Banned",
+        size: "small",
+        sx: {
+          fontWeight: 700,
+          fontSize: "0.7rem",
+          borderRadius: "12px",
+          px: 1.5,
+          bgcolor: "#E53935",
+          color: "#fff",
+        }
+      };
+    }
+
+    // Otherwise show activity status using utility functions
+    const lastLoginText = formatLastLogin(customer.lastLoginRaw);
+    const chipStyle = getLastLoginChipStyle(customer.lastLoginRaw);
+    
+    return {
+      label: lastLoginText,
       size: "small",
       sx: {
         fontWeight: 700,
         fontSize: "0.7rem",
         borderRadius: "12px",
         px: 1.5,
+        ...chipStyle,
       }
     };
-
-    if (status === "Active Now") {
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#00E676",
-        color: "#000",
-      };
-    } else if (status.includes("yesterday")) {
-      chipProps.label = "Active yesterday";
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#FFA726",
-        color: "#000",
-      };
-    } else if (status.includes("month")) {
-      chipProps.label = "Active last month";
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#757575",
-        color: "#fff",
-      };
-    } else {
-      chipProps.sx = {
-        ...chipProps.sx,
-        bgcolor: "#424242",
-        color: "#fff",
-      };
-    }
-
-    return chipProps;
   };
 
   const statusChip = getStatusChip();
@@ -158,13 +160,19 @@ const ManageCustomerDrawer = ({
         <Divider sx={{ bgcolor: "#333" }} />
       </Box>
 
-      {/* Date Joined Section */}
+      {/* Date Joined & Last Login Section */}
       <Box px={2} py={2}>
         <Typography variant="caption" color="#666">
           Date Joined:
         </Typography>
-        <Typography variant="body2" color="#fff" fontWeight={600}>
+        <Typography variant="body2" color="#fff" fontWeight={600} mb={1}>
           {customer.dateAdded}
+        </Typography>
+        <Typography variant="caption" color="#666">
+          Last Login:
+        </Typography>
+        <Typography variant="body2" color="#fff" fontWeight={600}>
+          {customer.lastLogin}
         </Typography>
       </Box>
 
@@ -236,26 +244,45 @@ const ManageCustomerDrawer = ({
       {/* Spacer to push ban button to bottom */}
       <Box flex={1} />
 
-      {/* Ban Customer Button */}
+      {/* Ban/Unban Customer Button */}
       <Box p={2}>
-        <Button
-          variant="contained"
-          fullWidth
-          onClick={onBan}
-          sx={{ 
-            bgcolor: "#E53935",
-            color: "#fff",
-            fontWeight: 700,
-            py: 1.5,
-            borderRadius: 1,
-            textTransform: "none",
-            "&:hover": { 
-              bgcolor: "#C62828" 
-            }
-          }}
+        <Tooltip 
+          title={!permissions.can(PERMISSIONS.USER_BAN) ? "You don't have permission to ban/unban customers. Only Managers and Admins can ban customers." : ""}
+          arrow
         >
-          Ban Customer
-        </Button>
+          <span>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={isBanned ? onUnban : onBan}
+              disabled={!permissions.can(PERMISSIONS.USER_BAN)}
+              sx={{ 
+                bgcolor: !permissions.can(PERMISSIONS.USER_BAN) 
+                  ? "#ccc" 
+                  : (isBanned ? "#00E676" : "#E53935"),
+                color: !permissions.can(PERMISSIONS.USER_BAN)
+                  ? "#666"
+                  : (isBanned ? "#000" : "#fff"),
+                fontWeight: 700,
+                py: 1.5,
+                borderRadius: 1,
+                textTransform: "none",
+                "&:hover": { 
+                  bgcolor: !permissions.can(PERMISSIONS.USER_BAN)
+                    ? "#ccc"
+                    : (isBanned ? "#00C853" : "#C62828")
+                },
+                "&.Mui-disabled": {
+                  bgcolor: "#ccc",
+                  color: "#666"
+                }
+              }}
+            >
+              {!permissions.can(PERMISSIONS.USER_BAN) && <BlockIcon fontSize="small" sx={{ mr: 1 }} />}
+              {isBanned ? "Unban Customer" : "Ban Customer"}
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
     </Drawer>
   );

@@ -22,7 +22,6 @@ import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "../../contexts/AuthContext";
@@ -48,6 +47,7 @@ import BundleCreate from "../Product/ProductComponents/BundleCreate";
 import BundleView from "../Product/ProductComponents/BundleView";
 import Order from "../Order/Order";
 import Payment from "../Payment/Payment";
+import AdminProfile from "../AdminProfile/AdminProfile";
 import Promotions from "../Promotions/Promotions";
 import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
@@ -149,13 +149,6 @@ function Navbar() {
     setProfileMenuAnchor(null);
   };
   
-  const handleProfileClick = () => {
-    // Handle profile click
-    console.log("Profile clicked");
-    navigate("/profile");
-    handleProfileMenuClose();
-  };
-  
   const handleSettingsClick = () => {
     // Handle settings click
     console.log("Settings clicked");
@@ -165,8 +158,12 @@ function Navbar() {
   
   const handleLogoutClick = async () => {
     try {
-      await signOut();
       handleProfileMenuClose();
+      const { error } = await signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        return;
+      }
       navigate("/auth", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
@@ -389,12 +386,6 @@ function Navbar() {
         transformOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
       >
-        <MenuItem onClick={handleProfileClick}>
-          <ListItemIcon>
-            <AccountCircleIcon fontSize="small" />
-          </ListItemIcon>
-          Profile
-        </MenuItem>
         <MenuItem onClick={handleSettingsClick}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
@@ -492,9 +483,8 @@ function Navbar() {
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/discount" element={<Promotions />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}
-            {/* Add routes for new profile pages */}
-            <Route path="/profile" element={<div>Profile Page</div>} />
-            <Route path="/settings" element={<div>Settings Page</div>} />
+            {/* Settings page */}
+            <Route path="/settings" element={<AdminProfile />} />
           </Routes>
         </Box>
       </Main>

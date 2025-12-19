@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -23,95 +23,13 @@ import {
   ListItemIcon,
   Divider,
   Avatar,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-
-// Sample product data
-const sampleProducts = [
-  {
-    id: 1,
-    name: "PlayStation 5 Controller",
-    category: "Controllers",
-    price: 3499,
-    stock: 45,
-    image: "🎮",
-  },
-  {
-    id: 2,
-    name: "Xbox Series X Controller",
-    category: "Controllers",
-    price: 2999,
-    stock: 32,
-    image: "🎮",
-  },
-  {
-    id: 3,
-    name: "Gaming Headset Pro",
-    category: "Headsets",
-    price: 4599,
-    stock: 28,
-    image: "🎧",
-  },
-  {
-    id: 4,
-    name: "Mechanical Gaming Keyboard",
-    category: "Keyboards & Mice",
-    price: 5499,
-    stock: 15,
-    image: "⌨️",
-  },
-  {
-    id: 5,
-    name: "RGB Gaming Mouse",
-    category: "Keyboards & Mice",
-    price: 1899,
-    stock: 67,
-    image: "🖱️",
-  },
-  {
-    id: 6,
-    name: "PS5 Console Bundle",
-    category: "Console Bundles",
-    price: 27999,
-    stock: 8,
-    image: "📦",
-  },
-  {
-    id: 7,
-    name: "Gaming Chair Elite",
-    category: "Gaming Chairs",
-    price: 12999,
-    stock: 12,
-    image: "🪑",
-  },
-  {
-    id: 8,
-    name: "27-inch Gaming Monitor",
-    category: "Monitors",
-    price: 15999,
-    stock: 22,
-    image: "🖥️",
-  },
-  {
-    id: 9,
-    name: "Wireless Gaming Headset",
-    category: "Headsets",
-    price: 6299,
-    stock: 18,
-    image: "🎧",
-  },
-  {
-    id: 10,
-    name: "Nintendo Switch Pro Controller",
-    category: "Controllers",
-    price: 2799,
-    stock: 41,
-    image: "🎮",
-  },
-];
+import { DiscountService } from '../../../services/DiscountService';
 
 const ProductSelectionDialog = ({ open, onClose, selectedProducts, onSave }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,26 +38,79 @@ const ProductSelectionDialog = ({ open, onClose, selectedProducts, onSave }) => 
   const [stockFilter, setStockFilter] = useState("All");
   const [localSelectedProducts, setLocalSelectedProducts] = useState(selectedProducts || []);
   const [selectAll, setSelectAll] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(['All']);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Get unique categories
-  const categories = ["All", ...new Set(sampleProducts.map((p) => p.category))];
+  useEffect(() => {
+    if (open) {
+      loadProducts();
+      loadCategories();
+      // Initialize with selected products when dialog opens
+      setLocalSelectedProducts(selectedProducts || []);
+    }
+  }, [open, searchQuery, selectedProducts]);
+
+  // Update local selection when selectedProducts prop changes
+  useEffect(() => {
+    if (open && selectedProducts) {
+      setLocalSelectedProducts(selectedProducts);
+    }
+  }, [selectedProducts, open]);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await DiscountService.searchProducts(searchQuery, 100);
+      if (result.success) {
+        setProducts(result.data);
+      } else {
+        setError('Failed to load products');
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      setError('Error loading products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const result = await DiscountService.getProductCategories();
+      if (result.success) {
+        setCategories(['All', ...result.data]);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
+
+  const getProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0];
+    }
+    return null;
+  };
 
   // Filtered products based on search and filters
   const filteredProducts = useMemo(() => {
-    let result = [...sampleProducts];
-
-    // Search filter
-    if (searchQuery.trim()) {
-      result = result.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+    let result = [...products];
 
     // Category filter
     if (categoryFilter !== "All") {
-      result = result.filter((product) => product.category === categoryFilter);
+      result = result.filter((product) => {
+        if (!product.selected_components || !Array.isArray(product.selected_components)) {
+          return false;
+        }
+        // Handle both object {id, name} and string formats
+        return product.selected_components.some(comp => {
+          const componentName = typeof comp === 'object' && comp !== null ? comp.name : comp;
+          return componentName === categoryFilter;
+        });
+      });
     }
 
     // Price filter
@@ -153,15 +124,17 @@ const ProductSelectionDialog = ({ open, onClose, selectedProducts, onSave }) => 
 
     // Stock filter
     if (stockFilter === "Low") {
-      result = result.filter((product) => product.stock < 20);
+      result = result.filter((product) => product.stock_quantity < 20);
     } else if (stockFilter === "Medium") {
-      result = result.filter((product) => product.stock >= 20 && product.stock < 50);
+      result = result.filter((product) => product.stock_quantity >= 20 && product.stock_quantity < 50);
     } else if (stockFilter === "High") {
-      result = result.filter((product) => product.stock >= 50);
+      result = result.filter((product) => product.stock_quantity >= 50);
+    } else if (stockFilter === "Out") {
+      result = result.filter((product) => product.stock_quantity === 0);
     }
 
     return result;
-  }, [searchQuery, categoryFilter, priceFilter, stockFilter]);
+  }, [products, categoryFilter, priceFilter, stockFilter]);
 
   // Handle individual product selection
   const handleToggleProduct = (product) => {
@@ -350,49 +323,101 @@ const ProductSelectionDialog = ({ open, onClose, selectedProducts, onSave }) => 
               },
             }}
           >
-            <List>
-              {filteredProducts.map((product, index) => (
-                <React.Fragment key={product.id}>
-                  <ListItem
-                    button
-                    onClick={() => handleToggleProduct(product)}
-                    sx={{
-                      borderRadius: 1,
-                      mb: 0.5,
-                      "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" },
-                      bgcolor: isProductSelected(product.id)
-                        ? "rgba(39, 239, 60, 0.08)"
-                        : "transparent",
-                    }}
-                  >
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={isProductSelected(product.id)}
-                        icon={<CheckBoxOutlineBlankIcon />}
-                        checkedIcon={<CheckBoxIcon />}
-                      />
-                    </ListItemIcon>
-                    <Avatar
+            {/* Loading State */}
+            {loading && (
+              <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={4}>
+                <Box sx={{ mb: 2 }}>
+                  <img
+                    src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+                    alt="Loading"
+                    style={{ width: '60px', height: '40px', objectFit: 'contain' }}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    width: '30px',
+                    height: '30px',
+                    border: '3px solid rgba(0, 230, 118, 0.1)',
+                    borderTop: '3px solid #00E676',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    },
+                  }}
+                />
+                <Box sx={{ color: '#00E676', fontSize: '14px', fontWeight: 500, mt: 1 }}>
+                  Loading products...
+                </Box>
+              </Box>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <Alert severity="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
+            {/* Products List */}
+            {!loading && !error && (
+              <List>
+                {filteredProducts.map((product, index) => (
+                  <React.Fragment key={product.id}>
+                    <ListItem
+                      onClick={() => handleToggleProduct(product)}
                       sx={{
-                        mr: 2,
-                        bgcolor: "#f0f0f0",
-                        fontSize: "1.5rem",
+                        borderRadius: 1,
+                        mb: 0.5,
+                        cursor: 'pointer',
+                        "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" },
+                        bgcolor: isProductSelected(product.id)
+                          ? "rgba(39, 239, 60, 0.08)"
+                          : "transparent",
                       }}
                     >
-                      {product.image}
-                    </Avatar>
-                    <ListItemText
-                      primary={
-                        <Typography fontWeight={600}>{product.name}</Typography>
-                      }
-                      secondary={
-                        <Stack direction="row" spacing={1} mt={0.5}>
-                          <Chip
-                            label={product.category}
-                            size="small"
-                            sx={{ fontSize: "0.7rem", height: 20 }}
-                          />
+                      <ListItemIcon>
+                        <Checkbox
+                          edge="start"
+                          checked={isProductSelected(product.id)}
+                          icon={<CheckBoxOutlineBlankIcon />}
+                          checkedIcon={<CheckBoxIcon />}
+                          tabIndex={-1}
+                          disableRipple
+                        />
+                      </ListItemIcon>
+                      {getProductImage(product) ? (
+                        <Avatar
+                          src={getProductImage(product)}
+                          alt={product.name}
+                          variant="rounded"
+                          sx={{ width: 56, height: 56, mr: 2 }}
+                        />
+                      ) : (
+                        <Avatar
+                          variant="rounded"
+                          sx={{ width: 56, height: 56, mr: 2, bgcolor: '#e0e0e0' }}
+                        >
+                          <Typography variant="caption">No Img</Typography>
+                        </Avatar>
+                      )}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography fontWeight={600} variant="body1">
+                          {product.name}
+                        </Typography>
+                        <Stack direction="row" spacing={0.5} mt={0.5} flexWrap="wrap">
+                          {product.selected_components && product.selected_components.length > 0 && (() => {
+                            const firstComp = product.selected_components[0];
+                            const componentName = typeof firstComp === 'object' && firstComp !== null ? firstComp.name : firstComp;
+                            return (
+                              <Chip
+                                label={String(componentName)}
+                                size="small"
+                                sx={{ fontSize: "0.7rem", height: 20 }}
+                              />
+                            );
+                          })()}
                           <Chip
                             label={`₱${product.price.toLocaleString()}`}
                             size="small"
@@ -400,32 +425,32 @@ const ProductSelectionDialog = ({ open, onClose, selectedProducts, onSave }) => 
                             sx={{ fontSize: "0.7rem", height: 20 }}
                           />
                           <Chip
-                            label={`Stock: ${product.stock}`}
+                            label={`Stock: ${product.stock_quantity}`}
                             size="small"
                             color={
-                              product.stock < 20
+                              product.stock_quantity < 20
                                 ? "error"
-                                : product.stock < 50
+                                : product.stock_quantity < 50
                                 ? "warning"
                                 : "success"
                             }
                             sx={{ fontSize: "0.7rem", height: 20 }}
                           />
                         </Stack>
-                      }
-                    />
-                  </ListItem>
-                  {index < filteredProducts.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-              {filteredProducts.length === 0 && (
-                <Box py={4} textAlign="center">
-                  <Typography variant="body1" color="text.secondary">
-                    No products found matching your filters
-                  </Typography>
-                </Box>
-              )}
-            </List>
+                      </Box>
+                    </ListItem>
+                    {index < filteredProducts.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+                {filteredProducts.length === 0 && (
+                  <Box py={4} textAlign="center">
+                    <Typography variant="body1" color="text.secondary">
+                      No products found matching your filters
+                    </Typography>
+                  </Box>
+                )}
+              </List>
+            )}
           </Box>
         </Stack>
       </DialogContent>

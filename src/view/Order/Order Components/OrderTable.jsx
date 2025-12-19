@@ -13,7 +13,6 @@ import {
   Stack,
   Box,
   IconButton,
-  Chip,
   Popover,
   List,
   ListItem,
@@ -21,18 +20,14 @@ import {
   Divider,
 } from "@mui/material";
 import {
-  LocalShipping,
-  CheckCircle,
-  Cancel,
-  AccessTime,
   MoreVert,
   FilterList,
-  LocalShippingOutlined, // Added for "To Ship"
 } from "@mui/icons-material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import StatusBadge from "../../../components/StatusBadge";
 
-const OrderTable = ({ orders, onOrderClick }) => {
+const OrderTable = ({ orders, onOrderClick, loading = false }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [orderFilterAnchor, setOrderFilterAnchor] = useState(null);
@@ -78,40 +73,6 @@ const OrderTable = ({ orders, onOrderClick }) => {
         return [...prev, status];
       }
     });
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "New":
-        return { bgcolor: "#000", color: "#fff" };
-      case "On Going":
-        return { bgcolor: "#FF9800", color: "#fff" };
-      case "To Ship":
-        return { bgcolor: "#2196F3", color: "#fff" }; // Blue for To Ship
-      case "Completed":
-        return { bgcolor: "#4CAF50", color: "#fff" };
-      case "Cancelled":
-        return { bgcolor: "#F44336", color: "#fff" };
-      default:
-        return { bgcolor: "#9E9E9E", color: "#fff" };
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "New":
-        return <AccessTime sx={{ fontSize: 16 }} />;
-      case "On Going":
-        return <LocalShipping sx={{ fontSize: 16 }} />;
-      case "To Ship":
-        return <LocalShippingOutlined sx={{ fontSize: 16 }} />; // Delivery icon for To Ship
-      case "Completed":
-        return <CheckCircle sx={{ fontSize: 16 }} />;
-      case "Cancelled":
-        return <Cancel sx={{ fontSize: 16 }} />;
-      default:
-        return null;
-    }
   };
 
   const filteredAndSortedOrders = orders
@@ -219,7 +180,7 @@ const OrderTable = ({ orders, onOrderClick }) => {
                 anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
               >
                 <List sx={{ width: 200, pt: 0, pb: 0 }}>
-                  {["New", "On Going", "To Ship", "Completed", "Cancelled"].map(
+                  {["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"].map(
                     (status) => (
                       <ListItem
                         key={status}
@@ -227,7 +188,9 @@ const OrderTable = ({ orders, onOrderClick }) => {
                         onClick={() => handleStatusFilterToggle(status)}
                         selected={statusFilter.includes(status)}
                       >
-                        <ListItemText primary={status} />
+                        <ListItemText 
+                          primary={status.charAt(0).toUpperCase() + status.slice(1)} 
+                        />
                       </ListItem>
                     )
                   )}
@@ -311,9 +274,41 @@ const OrderTable = ({ orders, onOrderClick }) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredAndSortedOrders
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((order) => (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={6} sx={{ border: 'none', py: 0 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  minHeight: '300px',
+                  justifyContent: 'center',
+                  gap: 1.5
+                }}>
+                  <Box
+                    sx={{
+                      width: '60px',
+                      height: '60px',
+                      border: '6px solid rgba(0, 230, 118, 0.1)',
+                      borderTop: '6px solid #00E676',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(360deg)' }
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ color: '#00E676', fontWeight: 500 }}>
+                    Loading orders...
+                  </Typography>
+                </Box>
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredAndSortedOrders
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((order) => (
               <TableRow
                 key={order.id}
                 sx={{
@@ -326,7 +321,7 @@ const OrderTable = ({ orders, onOrderClick }) => {
                     #{order.id}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {order.products.length} items
+                    {order.items?.length || 0} items
                   </Typography>
                 </TableCell>
 
@@ -350,26 +345,12 @@ const OrderTable = ({ orders, onOrderClick }) => {
 
                 <TableCell>
                   <Typography variant="body2" fontWeight={600}>
-                    ${order.total.toFixed(2)}
+                    {order.total}
                   </Typography>
                 </TableCell>
 
                 <TableCell>
-                  <Chip
-                    icon={getStatusIcon(order.status)}
-                    label={order.status}
-                    size="small"
-                    sx={{
-                      ...getStatusColor(order.status),
-                      fontWeight: 600,
-                      fontSize: "0.75rem",
-                      borderRadius: "16px",
-                      height: 28,
-                      "& .MuiChip-icon": {
-                        color: "inherit",
-                      },
-                    }}
-                  />
+                  <StatusBadge status={order.status} />
                 </TableCell>
 
                 <TableCell>
@@ -384,8 +365,8 @@ const OrderTable = ({ orders, onOrderClick }) => {
                   </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
-          {filteredAndSortedOrders.length === 0 && (
+            )))}
+          {!loading && filteredAndSortedOrders.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                 <Typography variant="body1" color="text.secondary">

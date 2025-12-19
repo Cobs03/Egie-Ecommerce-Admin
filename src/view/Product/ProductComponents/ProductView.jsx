@@ -23,8 +23,11 @@ import UpdateIcon from "@mui/icons-material/Update";
 import PersonIcon from "@mui/icons-material/Person";
 import { ProductService } from "../../../services/ProductService";
 import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
 
 const ProductView = () => {
+  const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
   const [openDialog, setOpenDialog] = useState(false);
@@ -283,12 +286,302 @@ const ProductView = () => {
         // Preserve existing SKU for updates
         productData.sku = state.sku;
         result = await ProductService.updateProduct(state.id, productData);
+        
+        // Create detailed activity log for update (matches ProductCreate.jsx)
+        if (result.success && user?.id) {
+          const changes = [];
+          const detailedChanges = {};
+          
+          console.log("🔍 Starting detailed change detection for publish...");
+          
+          // Use originalData if available (from Preview workflow), otherwise use state
+          const originalProduct = state.originalData || state;
+          
+          console.log("🔍 Original product data:", originalProduct);
+          console.log("🔍 New product data:", { name, description, warranty, officialPrice, variants });
+          
+          // Compare basic text fields
+          if (name.trim() !== originalProduct.name?.trim()) {
+            console.log("📝 Name changed:", originalProduct.name, "→", name);
+            changes.push('name');
+            detailedChanges.name = { old: originalProduct.name, new: name };
+          }
+          
+          if (description.trim() !== originalProduct.description?.trim()) {
+            console.log("📝 Description changed");
+            changes.push('description');
+            detailedChanges.description = { 
+              old: originalProduct.description?.substring(0, 50), 
+              new: description?.substring(0, 50) 
+            };
+          }
+          
+          if (warranty?.trim() !== originalProduct.warranty?.trim()) {
+            console.log("📝 Warranty changed:", originalProduct.warranty, "→", warranty);
+            changes.push('warranty');
+            detailedChanges.warranty = { old: originalProduct.warranty, new: warranty };
+          }
+          
+          // Compare brand
+          if (originalProduct.brand_id && originalProduct.brand_id !== productData.brand_id) {
+            console.log("📝 Brand changed:", originalProduct.brand_id, "→", productData.brand_id);
+            changes.push('brand');
+            detailedChanges.brand = { old: originalProduct.brand_id, new: productData.brand_id };
+          }
+          
+          // Compare prices
+          const oldMetadata = originalProduct.metadata || {};
+          const oldPrice = parseFloat(originalProduct.officialPrice || oldMetadata.officialPrice) || 0;
+          const newPrice = parseFloat(officialPrice) || 0;
+          if (oldPrice !== newPrice) {
+            console.log("📝 Price changed:", oldPrice, "→", newPrice);
+            changes.push('price');
+            detailedChanges.price = { old: oldPrice, new: newPrice };
+          }
+          
+          const oldInitialPrice = parseFloat(originalProduct.initialPrice || oldMetadata.initialPrice) || 0;
+          const newInitialPrice = parseFloat(initialPrice) || 0;
+          if (oldInitialPrice !== newInitialPrice) {
+            console.log("📝 Initial price changed:", oldInitialPrice, "→", newInitialPrice);
+            changes.push('initialPrice');
+            detailedChanges.initialPrice = { old: oldInitialPrice, new: newInitialPrice };
+          }
+          
+          const oldDiscount = parseFloat(originalProduct.discount || oldMetadata.discount) || 0;
+          const newDiscount = parseFloat(discount) || 0;
+          if (oldDiscount !== newDiscount) {
+            console.log("📝 Discount changed:", oldDiscount, "→", newDiscount);
+            changes.push('discount');
+            detailedChanges.discount = { old: oldDiscount, new: newDiscount };
+          }
+          
+          // Smart image comparison
+          const oldImages = (originalProduct.images || [])
+            .map(img => typeof img === 'string' ? img : img.url)
+            .filter(Boolean)
+            .sort();
+          const newImages = (uploadedImageUrls || [])
+            .filter(Boolean)
+            .sort();
+          
+          const imagesAdded = newImages.filter(img => !oldImages.includes(img));
+          const imagesRemoved = oldImages.filter(img => !newImages.includes(img));
+          
+          if (imagesAdded.length > 0 || imagesRemoved.length > 0) {
+            changes.push('images');
+            const getFilename = (url) => {
+              try {
+                return url.split('/').pop().split('?')[0];
+              } catch {
+                return 'unknown';
+              }
+            };
+            
+            detailedChanges.images = { 
+              oldCount: oldImages.length, 
+              newCount: newImages.length,
+              added: imagesAdded.length,
+              removed: imagesRemoved.length,
+              addedFiles: imagesAdded.map(getFilename),
+              removedFiles: imagesRemoved.map(getFilename)
+            };
+          }
+          
+          // Enhanced variant comparison with detailed tracking
+          const oldVariants = originalProduct.variants || [];
+          const newVariants = variants || [];
+          
+          console.log("🔍 Comparing variants:");
+          console.log("  Old variants:", oldVariants);
+          console.log("  New variants:", newVariants);
+          
+          const variantCountChanged = oldVariants.length !== newVariants.length;
+          
+          // Track added variants (by index or name)
+          const variantsAdded = [];
+          const variantsRemoved = [];
+          const variantsModified = [];
+          const variantModifications = [];
+          
+          // Match variants by position (index) first, then by name as fallback
+          const maxLength = Math.max(oldVariants.length, newVariants.length);
+          const matchedIndices = new Set();
+          
+          // First pass: Match by index position
+          for (let i = 0; i < Math.min(oldVariants.length, newVariants.length); i++) {
+            const oldVar = oldVariants[i];
+            const newVar = newVariants[i];
+            
+            const modifications = [];
+            
+            // Check if name changed
+            if (oldVar.name !== newVar.name) {
+              modifications.push(`name: "${oldVar.name}" → "${newVar.name}"`);
+            }
+            
+            // Check if price changed
+            const oldPrice = parseFloat(oldVar.price) || 0;
+            const newPrice = parseFloat(newVar.price) || 0;
+            if (oldPrice !== newPrice) {
+              modifications.push(`price: ₱${oldPrice} → ₱${newPrice}`);
+            }
+            
+            // Check if stock changed
+            const oldStock = parseInt(oldVar.stock) || 0;
+            const newStock = parseInt(newVar.stock) || 0;
+            if (oldStock !== newStock) {
+              modifications.push(`stock: ${oldStock} → ${newStock}`);
+            }
+            
+            // If any modifications detected, track them
+            if (modifications.length > 0) {
+              variantsModified.push(newVar);
+              variantModifications.push({
+                position: i + 1,
+                oldName: oldVar.name,
+                newName: newVar.name,
+                changes: modifications.join(', ')
+              });
+            }
+            
+            matchedIndices.add(i);
+          }
+          
+          // Track added variants (new variants beyond old count)
+          if (newVariants.length > oldVariants.length) {
+            for (let i = oldVariants.length; i < newVariants.length; i++) {
+              variantsAdded.push({
+                name: newVariants[i].name,
+                price: newVariants[i].price,
+                stock: newVariants[i].stock,
+                position: i + 1
+              });
+            }
+          }
+          
+          // Track removed variants (old variants beyond new count)
+          if (oldVariants.length > newVariants.length) {
+            for (let i = newVariants.length; i < oldVariants.length; i++) {
+              variantsRemoved.push({
+                name: oldVariants[i].name,
+                price: oldVariants[i].price,
+                stock: oldVariants[i].stock,
+                position: i + 1
+              });
+            }
+          }
+          
+          console.log("🔍 Variant analysis:");
+          console.log("  Added:", variantsAdded);
+          console.log("  Removed:", variantsRemoved);
+          console.log("  Modified:", variantModifications);
+          
+          if (variantCountChanged || variantsAdded.length > 0 || 
+              variantsRemoved.length > 0 || variantsModified.length > 0) {
+            changes.push('variants');
+            detailedChanges.variants = {
+              oldCount: oldVariants.length,
+              newCount: newVariants.length,
+              added: variantsAdded.length,
+              removed: variantsRemoved.length,
+              modified: variantsModified.length,
+              addedDetails: variantsAdded.map(v => 
+                `${v.name} (₱${v.price}, stock: ${v.stock})`
+              ),
+              removedDetails: variantsRemoved.map(v => 
+                `${v.name} (₱${v.price}, stock: ${v.stock})`
+              ),
+              modifiedDetails: variantModifications
+            };
+          }
+          
+          // Compare components
+          const oldComponents = (originalProduct.components || originalProduct.selectedComponents || originalProduct.selected_components || []);
+          const newComponents = actualComponents;
+          
+          const oldCompIds = oldComponents.map(c => c.id).sort();
+          const newCompIds = newComponents.map(c => c.id).sort();
+          
+          if (JSON.stringify(oldCompIds) !== JSON.stringify(newCompIds)) {
+            changes.push('components');
+            const addedCompIds = newCompIds.filter(id => !oldCompIds.includes(id));
+            const removedCompIds = oldCompIds.filter(id => !newCompIds.includes(id));
+            
+            detailedChanges.components = {
+              oldCount: oldComponents.length,
+              newCount: newComponents.length,
+              added: addedCompIds.length,
+              removed: removedCompIds.length,
+              addedNames: newComponents
+                .filter(c => addedCompIds.includes(c.id))
+                .map(c => c.name || 'Unknown'),
+              removedNames: oldComponents
+                .filter(c => removedCompIds.includes(c.id))
+                .map(c => c.name || 'Unknown')
+            };
+          }
+          
+          // Compare specifications
+          const oldSpecs = originalProduct.specifications || {};
+          const newSpecs = specifications || {};
+          const oldSpecKeys = Object.keys(oldSpecs).sort();
+          const newSpecKeys = Object.keys(newSpecs).sort();
+          
+          if (JSON.stringify(oldSpecKeys) !== JSON.stringify(newSpecKeys) ||
+              !oldSpecKeys.every(key => 
+                JSON.stringify(oldSpecs[key]) === JSON.stringify(newSpecs[key])
+              )) {
+            changes.push('specifications');
+            detailedChanges.specifications = {
+              fieldsChanged: newSpecKeys.filter(key => 
+                JSON.stringify(oldSpecs[key]) !== JSON.stringify(newSpecs[key])
+              ).length
+            };
+          }
+          
+          // Stock comparison
+          const oldStock = originalProduct.stock || oldVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
+          const newStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+          if (oldStock !== newStock) {
+            console.log("📝 Stock changed:", oldStock, "→", newStock);
+            changes.push('stock');
+            detailedChanges.stock = { old: oldStock, new: newStock };
+          }
+          
+          console.log("🔍 Total changes detected:", changes.length);
+          console.log("🔍 Changes:", changes);
+          
+          // Only create log if there are actual changes
+          if (changes.length > 0) {
+            const changesText = ` (changed: ${changes.join(', ')})`;
+            
+            console.log("✅ Creating detailed log entry for publish workflow");
+            await AdminLogService.createLog({
+              userId: user.id,
+              actionType: 'product_update',
+              actionDescription: `Updated product: ${name}${changesText}`,
+              targetType: 'product',
+              targetId: state.id,
+              metadata: {
+                productName: name,
+                sku: productData.sku,
+                changes: changes,
+                detailedChanges: detailedChanges,
+              },
+            });
+          } else {
+            console.log("ℹ️ No changes detected - skipping log creation");
+          }
+        }
       } else {
         // No ID means new product - CREATE
         console.log("🔄 Creating new product");
         // Generate new SKU for new products
         productData.sku = `${name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`;
         result = await ProductService.createProduct(productData);
+        
+        // Create activity log for new product (ProductService already logs this)
+        // No additional logging needed here to avoid duplication
       }
 
       if (result.success) {
@@ -805,13 +1098,14 @@ const ProductView = () => {
             py: 1.5,
             fontSize: "1rem",
             fontWeight: 600,
-            bgcolor: "#000",
+            bgcolor: "#00E676",
+            color: "#000",
             "&:hover": {
-              bgcolor: "#333",
+              bgcolor: "#00C853",
             },
           }}
         >
-          {isPublishing ? "Publishing..." : "Publish"}
+          {isPublishing ? "Publishing..." : (isEditMode ? "Update Product" : "Publish Product")}
         </Button>
       )}
 
@@ -822,11 +1116,15 @@ const ProductView = () => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Confirm Publish</DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>
+          {isEditMode ? 'Confirm Update' : 'Confirm Publish'}
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to publish this product? Once published, it
-            will be visible to customers.
+            {isEditMode 
+              ? 'Are you sure you want to update this product? Changes will be saved to the database.'
+              : 'Are you sure you want to publish this product? Once published, it will be visible to customers.'
+            }
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -836,10 +1134,17 @@ const ProductView = () => {
           <Button
             onClick={handleConfirmPublish}
             variant="contained"
-            color="primary"
             disabled={isPublishing}
+            sx={{
+              bgcolor: "#00E676",
+              color: "#000",
+              fontWeight: 700,
+              "&:hover": {
+                bgcolor: "#00C853",
+              },
+            }}
           >
-            {isPublishing ? "Publishing..." : "Publish"}
+            {isPublishing ? "Publishing..." : "Confirm"}
           </Button>
         </DialogActions>
       </Dialog>

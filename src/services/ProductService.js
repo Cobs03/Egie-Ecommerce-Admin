@@ -1,4 +1,5 @@
 import { supabase, handleSupabaseError, handleSupabaseSuccess } from '../lib/supabase.js'
+import { hasPermission, PERMISSIONS } from '../utils/permissions.js'
 
 export class ProductService {
   // Check if current user is admin
@@ -28,13 +29,25 @@ export class ProductService {
   // Create a new product
   static async createProduct(productData) {
     try {
-      // First check if user is admin
-      const adminCheck = await this.checkAdminStatus()
-      if (!adminCheck.success) {
-        return handleSupabaseError(new Error(`Admin check failed: ${adminCheck.error}`))
+      // Check user authentication and permissions
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return handleSupabaseError(new Error('No authenticated user'))
       }
-      if (!adminCheck.isAdmin) {
-        return handleSupabaseError(new Error('User does not have admin privileges'))
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Check if user has permission to create products
+      if (!hasPermission(profile.role, PERMISSIONS.PRODUCT_CREATE)) {
+        return handleSupabaseError(new Error('You do not have permission to create products'))
       }
 
       // Clean data structure that matches the fresh schema
@@ -49,7 +62,7 @@ export class ProductService {
           stock_quantity: productData.stock_quantity || 0,
           sku: productData.sku,
           images: productData.images || [],
-          selected_components: productData.selectedComponents || [],
+          selected_components: productData.selected_components || [],  // ✅ FIXED: Use correct field name
           specifications: productData.specifications || {},
           variants: productData.variants || [],
           metadata: productData.metadata || {},
@@ -61,12 +74,31 @@ export class ProductService {
         // Provide more specific error message for RLS issues
         if (error.message.includes('row-level security') || error.message.includes('RLS')) {
           return handleSupabaseError(new Error(
-            'Permission denied: Please ensure you are logged in as an admin user. ' +
+            'Permission denied: You do not have permission to create products. ' +
             'RLS Error: ' + error.message
           ))
         }
         return handleSupabaseError(error)
       }
+
+      // Create admin log for product creation
+      if (data && data[0]) {
+        try {
+          await supabase.from('admin_logs').insert({
+            user_id: user.id,
+            action_type: 'product_create',
+            action_description: `Created product: ${data[0].name}`,
+            metadata: {
+              product_id: data[0].id,
+              product_name: data[0].name,
+              product_sku: data[0].sku
+            }
+          })
+        } catch (logError) {
+          console.error('Failed to create admin log:', logError)
+        }
+      }
+
       return handleSupabaseSuccess(data[0])
     } catch (error) {
       return handleSupabaseError(error)
@@ -79,9 +111,41 @@ export class ProductService {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false})
 
       if (error) return handleSupabaseError(error)
+      
+      // Enrich products with full category data
+      if (data && data.length > 0) {
+        // Get all categories once from the correct table name
+        const { data: allCategories } = await supabase
+          .from('product_categories')  // ✅ FIXED: Use correct table name
+          .select('*')
+        
+        // Map over products and expand their selected_components
+        const enrichedProducts = data.map(product => {
+          if (product.selected_components && product.selected_components.length > 0 && allCategories) {
+            // Extract component IDs
+            const componentIds = product.selected_components.map(comp => comp.id || comp)
+            
+            // Find matching full category objects
+            const fullCategories = allCategories.filter(cat => 
+              componentIds.includes(cat.id)
+            )
+            
+            console.log(`📦 Product "${product.name}" - Enriched categories:`, fullCategories)
+            
+            return {
+              ...product,
+              selected_components: fullCategories // Replace with full category objects
+            }
+          }
+          return product
+        })
+        
+        return handleSupabaseSuccess(enrichedProducts)
+      }
+      
       return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)
@@ -107,6 +171,34 @@ export class ProductService {
   // Update product
   static async updateProduct(id, productData) {
     try {
+      // Check user role - managers and admins can update products
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return handleSupabaseError(new Error('No authenticated user'))
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Check if user has permission to edit products
+      if (!hasPermission(profile.role, PERMISSIONS.PRODUCT_EDIT)) {
+        return handleSupabaseError(new Error('You do not have permission to update products'))
+      }
+
+      // Get original product data to track changes
+      const { data: originalProduct } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single()
+
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -116,7 +208,22 @@ export class ProductService {
         .eq('id', id)
         .select()
 
-      if (error) return handleSupabaseError(error)
+      if (error) {
+        // Provide more specific error message for RLS issues
+        if (error.message.includes('row-level security') || error.message.includes('RLS')) {
+          return handleSupabaseError(new Error(
+            'Permission denied: You do not have permission to update products. ' +
+            'RLS Error: ' + error.message
+          ))
+        }
+        return handleSupabaseError(error)
+      }
+
+      // ⚠️ LOGGING REMOVED: Activity logs are now created at the component level
+      // (ProductCreate.jsx and ProductView.jsx) where we have full context
+      // and can provide detailed before/after change tracking.
+      // This prevents duplicate logs and ensures consistent detailed logging.
+
       return handleSupabaseSuccess(data[0])
     } catch (error) {
       return handleSupabaseError(error)
@@ -126,12 +233,67 @@ export class ProductService {
   // Delete product
   static async deleteProduct(id) {
     try {
+      // Check user role - managers and admins can delete products
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return handleSupabaseError(new Error('No authenticated user'))
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        return handleSupabaseError(new Error(`Failed to check user role: ${profileError.message}`))
+      }
+
+      // Allow admin and manager roles to delete products
+      if (profile.role !== 'admin' && profile.role !== 'manager') {
+        return handleSupabaseError(new Error('Only admins and managers can delete products'))
+      }
+
+      // Get product info before deleting for logging
+      const { data: productInfo } = await supabase
+        .from('products')
+        .select('name, sku')
+        .eq('id', id)
+        .single()
+
       const { data, error } = await supabase
         .from('products')
         .delete()
         .eq('id', id)
 
-      if (error) return handleSupabaseError(error)
+      if (error) {
+        if (error.message.includes('row-level security') || error.message.includes('RLS')) {
+          return handleSupabaseError(new Error(
+            'Permission denied: Only admins and managers can delete products. ' +
+            'RLS Error: ' + error.message
+          ))
+        }
+        return handleSupabaseError(error)
+      }
+
+      // Create admin log for product deletion
+      if (productInfo) {
+        try {
+          await supabase.from('admin_logs').insert({
+            user_id: user.id,
+            action_type: 'product_delete',
+            action_description: `Deleted product: ${productInfo.name}`,
+            metadata: {
+              product_id: id,
+              product_name: productInfo.name,
+              product_sku: productInfo.sku
+            }
+          })
+        } catch (logError) {
+          console.error('Failed to create admin log:', logError)
+        }
+      }
+
       return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)
@@ -141,6 +303,16 @@ export class ProductService {
   // Update product stock
   static async updateStock(id, newQuantity) {
     try {
+      // Get user for logging
+      const { data: { user } } = await supabase.auth.getUser()
+
+      // Get product info before update
+      const { data: productInfo } = await supabase
+        .from('products')
+        .select('name, stock_quantity')
+        .eq('id', id)
+        .single()
+
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -151,6 +323,26 @@ export class ProductService {
         .select()
 
       if (error) return handleSupabaseError(error)
+
+      // Create admin log for stock update
+      if (user && data && data[0] && productInfo) {
+        try {
+          await supabase.from('admin_logs').insert({
+            user_id: user.id,
+            action_type: 'stock_update',
+            action_description: `Updated stock for ${productInfo.name}: ${productInfo.stock_quantity} → ${newQuantity}`,
+            metadata: {
+              product_id: id,
+              product_name: productInfo.name,
+              old_quantity: productInfo.stock_quantity,
+              new_quantity: newQuantity
+            }
+          })
+        } catch (logError) {
+          console.error('Failed to create admin log:', logError)
+        }
+      }
+
       return handleSupabaseSuccess(data[0])
     } catch (error) {
       return handleSupabaseError(error)

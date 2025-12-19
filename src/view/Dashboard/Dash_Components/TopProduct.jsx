@@ -1,19 +1,69 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, Typography, Box, Stack } from "@mui/material";
-
-// Sample data for top products - replace with actual data
-const sampleTopProducts = [
-  { id: 1, rank: 1, value: 400, imageUrl: "https://via.placeholder.com/40" }, // Example value, adjust as needed
-  { id: 2, rank: 2, value: 250, imageUrl: "https://via.placeholder.com/40" },
-  { id: 3, rank: 3, value: 200, imageUrl: "https://via.placeholder.com/40" },
-  { id: 4, rank: 4, value: 150, imageUrl: "https://via.placeholder.com/40" },
-  { id: 5, rank: 5, value: 100, imageUrl: "https://via.placeholder.com/40" },
-];
+import DashboardService from "../../../services/DashboardService";
 
 const TopProduct = () => {
-  // Assuming the data is sorted by value descending
-  const maxValue =
-    sampleTopProducts.length > 0 ? sampleTopProducts[0].value : 1;
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTopProducts = async () => {
+      try {
+        const response = await DashboardService.getTopProducts(5);
+        if (response.success) {
+          setProducts(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching top products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          background: "#fff",
+          borderRadius: 3,
+          boxShadow: 3,
+          padding: 2,
+          minWidth: 200,
+          margin: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>Loading...</Typography>
+      </Card>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <Card
+        sx={{
+          background: "#fff",
+          borderRadius: 3,
+          boxShadow: 3,
+          padding: 2,
+          minWidth: 200,
+          margin: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>No product data available</Typography>
+      </Card>
+    );
+  }
+
+  const maxValue = products.length > 0 ? products[0].totalSold : 1;
 
   return (
     <Card
@@ -39,9 +89,9 @@ const TopProduct = () => {
           alignItems="flex-end"
           sx={{ height: 200 }}
         >
-          {sampleTopProducts.map((product) => (
+          {products.map((product, index) => (
             <Box
-              key={product.id}
+              key={product.product_id}
               display="flex"
               flexDirection="column"
               alignItems="center"
@@ -49,14 +99,14 @@ const TopProduct = () => {
             >
               <Box
                 component="img"
-                src={product.imageUrl}
-                alt={`Product ${product.rank}`}
-                sx={{ width: 20, height: 40, borderRadius: 1, mb: 1 }}
+                src={product.product_image || "https://via.placeholder.com/40"}
+                alt={product.product_name}
+                sx={{ width: 20, height: 40, borderRadius: 1, mb: 1, objectFit: "cover" }}
               />
               <Box
                 sx={{
                   width: 40,
-                  height: `${(product.value / maxValue) * 100}%`,
+                  height: `${(product.totalSold / maxValue) * 100}%`,
                   bgcolor: "#ffe14d",
                   borderRadius: 2,
                   display: "flex",
@@ -70,7 +120,7 @@ const TopProduct = () => {
                   fontWeight={700}
                   sx={{ color: "#000", zIndex: 1 }}
                 >
-                  {product.rank}
+                  {index + 1}
                 </Typography>
               </Box>
             </Box>

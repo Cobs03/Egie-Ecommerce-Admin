@@ -9,7 +9,6 @@ import {
   Button,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { payerInfo } from "./paymentData";
 
 const PaymentDetailsDrawer = ({
   open,
@@ -18,6 +17,15 @@ const PaymentDetailsDrawer = ({
   onMarkAsPaid,
 }) => {
   if (!payment) return null;
+  
+  // Use real customer info if available, otherwise use defaults
+  const customerInfo = payment.customerInfo || {
+    name: 'Unknown',
+    email: 'N/A',
+    phone: 'N/A',
+    avatar: null,
+    address: 'N/A'
+  };
 
   return (
     <Drawer
@@ -62,21 +70,26 @@ const PaymentDetailsDrawer = ({
         Payer Information
       </Typography>
       <Box display="flex" alignItems="center" mb={1}>
-        <Avatar sx={{ width: 40, height: 40, mr: 2 }} />
+        <Avatar 
+          src={customerInfo.avatar} 
+          sx={{ width: 40, height: 40, mr: 2 }}
+        >
+          {!customerInfo.avatar && customerInfo.name.charAt(0)}
+        </Avatar>
         <Box>
           <Typography fontSize={15} fontWeight={700} color="black">
-            {payerInfo.name}
+            {customerInfo.name}
           </Typography>
           <Typography fontSize={14} color="black">
-            {payerInfo.email}
+            {customerInfo.email}
           </Typography>
           <Typography fontSize={14} color="black">
-            <b>Phone:</b> {payerInfo.phone}
+            <b>Phone:</b> {customerInfo.phone}
           </Typography>
         </Box>
       </Box>
       <Typography fontSize={14} mb={2} color="black">
-        <b>Address:</b> {payerInfo.address}
+        <b>Address:</b> {customerInfo.address}
       </Typography>
       <Divider sx={{ mb: 2 }} />
 
@@ -106,11 +119,30 @@ const PaymentDetailsDrawer = ({
       <Typography fontSize={14} color="black">
         <b>Payment Method:</b> {payment.method}
       </Typography>
-      <Typography fontSize={14} mb={2} color="black">
+      <Typography fontSize={14} color="black">
         <b>Payment Status:</b> {payment.status}
       </Typography>
+      <Typography fontSize={14} mb={2} color="black">
+        <b>Order Status:</b> {payment.orderStatus || 'Unknown'}
+      </Typography>
 
-      {payment.status === "Pending" && (
+      {payment.orderStatus === 'cancelled' && (
+        <Box
+          sx={{
+            bgcolor: '#FFEBEE',
+            border: '1px solid #F44336',
+            borderRadius: 1,
+            p: 2,
+            mb: 2
+          }}
+        >
+          <Typography fontSize={14} color="#C62828" fontWeight={600}>
+            ⚠️ This order has been cancelled. Payment cannot be processed.
+          </Typography>
+        </Box>
+      )}
+
+      {(payment.status === "Pending" || payment.status === "pending") && payment.orderStatus !== 'cancelled' && (
         <Button
           variant="contained"
           fullWidth
@@ -127,8 +159,25 @@ const PaymentDetailsDrawer = ({
             },
           }}
         >
-          Mark as Paid
+          Mark as Paid / Verified
         </Button>
+      )}
+
+      {(payment.status === "paid" || payment.status === "Paid") && (
+        <Box
+          sx={{
+            bgcolor: '#E8F5E9',
+            border: '1px solid #4CAF50',
+            borderRadius: 1,
+            p: 2,
+            mt: 2,
+            mb: 2
+          }}
+        >
+          <Typography fontSize={14} color="#2E7D32" fontWeight={600}>
+            ✓ Payment has been verified and marked as paid.
+          </Typography>
+        </Box>
       )}
     </Drawer>
   );

@@ -31,15 +31,25 @@ import {
   DialogActions,
   Button,
   DialogContentText,
+  Tooltip,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import BlockIcon from "@mui/icons-material/Block";
 import { useNavigate } from "react-router-dom";
 import { BundleService } from "../../../services/BundleService";
+import { useAuth } from "../../../contexts/AuthContext";
+import AdminLogService from "../../../services/AdminLogService";
+
+// Import permission system
+import { usePermissions } from "../../../hooks/usePermissions";
+import { PERMISSIONS } from "../../../utils/permissions";
 
 const Bundles = () => {
+  const { user } = useAuth();
+  const permissions = usePermissions(); // Add permission hook
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedBundle, setSelectedBundle] = useState(null);
   const navigate = useNavigate();
@@ -214,6 +224,14 @@ const Bundles = () => {
   };
 
   const handleDeleteClick = () => {
+    // Check if user has permission to delete bundles
+    if (!permissions.canDeleteBundle) {
+      setErrorMessage('Access Denied: You do not have permission to delete bundles. Contact a Manager or Admin if you need to delete this item.');
+      setShowError(true);
+      handleMenuClose();
+      return;
+    }
+    
     console.log('Delete clicked for bundle:', selectedBundle);
     setDeleteDialogOpen(true);
   };
@@ -232,6 +250,21 @@ const Bundles = () => {
       console.log('Delete result:', result);
       
       if (result.success) {
+        // Create activity log
+        if (user?.id) {
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'bundle_delete',
+            actionDescription: `Deleted bundle: ${selectedBundle.bundle_name || selectedBundle.name}`,
+            targetType: 'bundle',
+            targetId: selectedBundle.id,
+            metadata: {
+              bundleName: selectedBundle.bundle_name || selectedBundle.name,
+              price: selectedBundle.official_price,
+            },
+          });
+        }
+
         // Remove from local state
         setBundles(prev => prev.filter(b => b.id !== selectedBundle.id));
         setSuccessMessage("Bundle deleted successfully!");
@@ -472,11 +505,33 @@ const Bundles = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                  <CircularProgress />
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                    Loading bundles...
-                  </Typography>
+                <TableCell colSpan={7} align="center" sx={{ py: 5, border: 'none' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    minHeight: '300px',
+                    justifyContent: 'center',
+                    gap: 1.5
+                  }}>
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" color="#00E676" sx={{ mt: 1, fontWeight: 500 }}>
+                      Loading bundles...
+                    </Typography>
+                  </Box>
                 </TableCell>
               </TableRow>
             ) : error ? (
@@ -643,9 +698,30 @@ const Bundles = () => {
       >
         <MenuItem onClick={handleView}>View Bundle</MenuItem>
         <MenuItem onClick={handleUpdate}>Update Bundle</MenuItem>
-        <MenuItem onClick={handleDeleteClick} sx={{ color: "error.main" }}>
-          Delete Bundle
-        </MenuItem>
+        <Tooltip 
+          title={!permissions.canDeleteBundle ? "You don't have permission to delete bundles" : ""}
+          arrow
+        >
+          <span>
+            <MenuItem 
+              onClick={handleDeleteClick} 
+              disabled={!permissions.canDeleteBundle}
+              sx={{ 
+                color: permissions.canDeleteBundle ? 'error.main' : 'text.disabled',
+                '&:hover': {
+                  backgroundColor: permissions.canDeleteBundle ? 'error.light' : 'transparent',
+                  color: permissions.canDeleteBundle ? 'white' : 'text.disabled'
+                },
+                '&.Mui-disabled': {
+                  opacity: 0.5
+                }
+              }}
+            >
+              {!permissions.canDeleteBundle && <BlockIcon fontSize="small" sx={{ mr: 1 }} />}
+              Delete Bundle
+            </MenuItem>
+          </span>
+        </Tooltip>
       </Menu>
 
       {/* Delete Confirmation Dialog */}

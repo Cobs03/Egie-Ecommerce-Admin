@@ -296,4 +296,70 @@ export class CategoryService {
       };
     }
   }
+
+  // Upload category image to Supabase Storage
+  static async uploadCategoryImage(file, categoryName) {
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}_${Date.now()}.${fileExt}`;
+      const filePath = `categories/${fileName}`;
+
+      // Upload to Supabase Storage (you can change 'products' to 'categories' bucket if you have one)
+      const { data, error } = await supabase.storage
+        .from('products') // or 'categories' if you create a separate bucket
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      return {
+        success: true,
+        data: urlData.publicUrl
+      };
+    } catch (error) {
+      console.error('Error uploading category image:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Delete category image from storage
+  static async deleteCategoryImage(imageUrl) {
+    try {
+      if (!imageUrl) return { success: true };
+
+      // Extract file path from URL
+      const urlParts = imageUrl.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'products');
+      if (bucketIndex === -1) return { success: true };
+
+      const filePath = urlParts.slice(bucketIndex + 1).join('/');
+
+      const { error } = await supabase.storage
+        .from('products')
+        .remove([filePath]);
+
+      if (error) throw error;
+
+      return {
+        success: true
+      };
+    } catch (error) {
+      console.error('Error deleting category image:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 }

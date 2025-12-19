@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -19,15 +19,26 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  Rating,
 } from "@mui/material";
 import {
   KeyboardArrowDown,
   KeyboardArrowUp,
   FilterList,
   Check,
+  Send as SendIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
+import { StarBorder as StarBorderIcon, Star as StarIcon } from "@mui/icons-material";
+import InquiryService from "../../../services/InquiryService";
+import { toast } from "sonner";
 import FeedbackModal from "./FeedbackModal";
-import { customerInquiries } from "./feedbackData";
 
 const INQUIRIES_PER_PAGE = 10;
 
@@ -91,8 +102,46 @@ const FilterHeader = ({ label, options, selected, onSelect }) => {
   );
 };
 
-const InquiryRow = ({ inquiry, onReply }) => {
+const InquiryRow = ({ inquiry, onReply, onClose }) => {
   const [open, setOpen] = useState(false);
+
+  // Handle expand/collapse
+  const handleToggleOpen = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(!open);
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  const customerName = inquiry.customer 
+    ? `${inquiry.customer.first_name} ${inquiry.customer.last_name}`.trim()
+    : 'Unknown Customer';
+  const customerEmail = inquiry.customer?.email || 'No email';
+  const productName = inquiry.product?.name || 'Unknown Product';
+  const productImage = inquiry.product?.images?.[0] || null;
+  const customerAvatar = inquiry.customer?.avatar_url || null;
+  const userInitials = customerName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+
+  // Status chip color
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'warning',
+      answered: 'success',
+      closed: 'default',
+      flagged: 'error'
+    };
+    return colors[status] || 'default';
+  };
 
   return (
     <>
@@ -105,7 +154,7 @@ const InquiryRow = ({ inquiry, onReply }) => {
         <TableCell>
           <IconButton
             size="small"
-            onClick={() => setOpen(!open)}
+            onClick={handleToggleOpen}
             sx={{ mr: 1 }}
           >
             {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
@@ -113,23 +162,39 @@ const InquiryRow = ({ inquiry, onReply }) => {
         </TableCell>
         <TableCell>
           <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar variant="square" sx={{ width: 32, height: 32 }}>
-              {inquiry.customerName.charAt(0)}
+            <Avatar 
+              src={customerAvatar} 
+              variant="square" 
+              sx={{ width: 32, height: 32 }}
+            >
+              {!customerAvatar && userInitials}
             </Avatar>
             <Box>
-              <Typography fontWeight={600}>{inquiry.customerName}</Typography>
+              <Typography fontWeight={600}>{customerName}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {inquiry.email}
+                {customerEmail}
               </Typography>
             </Box>
           </Stack>
         </TableCell>
         <TableCell>
-          <Typography variant="body2" fontWeight={500}>
-            {inquiry.productName}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            {productImage && (
+              <Avatar 
+                src={productImage} 
+                variant="square" 
+                sx={{ width: 24, height: 24 }}
+              />
+            )}
+            <Typography variant="body2" fontWeight={500}>
+              {productName}
+            </Typography>
+          </Stack>
         </TableCell>
         <TableCell>
+          <Typography variant="subtitle2" fontWeight={600} mb={0.5}>
+            {inquiry.subject}
+          </Typography>
           <Typography
             variant="body2"
             color="text.secondary"
@@ -140,79 +205,168 @@ const InquiryRow = ({ inquiry, onReply }) => {
               whiteSpace: "nowrap",
             }}
           >
-            {inquiry.question.length > 15
-              ? `${inquiry.question.substring(0, 15)}...`
-              : inquiry.question}
+            {inquiry.question}
           </Typography>
         </TableCell>
         <TableCell>
           <Typography variant="body2" color="text.secondary">
-            {inquiry.date} / {inquiry.time}
+            {formatDate(inquiry.created_at)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formatTime(inquiry.created_at)}
           </Typography>
         </TableCell>
         <TableCell>
-          {inquiry.status === "Question" && (
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onReply(inquiry);
-              }}
-              sx={{
-                borderColor: "#00E676",
-                color: "#00E676",
-                fontWeight: 600,
-                "&:hover": {
-                  borderColor: "#00C853",
-                  bgcolor: "rgba(0, 230, 118, 0.04)",
-                },
-              }}
-            >
-              Reply
-            </Button>
-          )}
+          <Stack spacing={1} alignItems="flex-start">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip 
+                label={inquiry.status.charAt(0).toUpperCase() + inquiry.status.slice(1)} 
+                size="small" 
+                color={getStatusColor(inquiry.status)}
+              />
+              {inquiry.unread_by_staff > 0 && (
+                <Chip 
+                  label={`${inquiry.unread_by_staff} NEW`} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: '#ff1744', 
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.7rem'
+                  }}
+                />
+              )}
+            </Stack>
+            {inquiry.reply_count > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                {inquiry.reply_count} {inquiry.reply_count === 1 ? 'reply' : 'replies'}
+              </Typography>
+            )}
+          </Stack>
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 2, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-              <Stack direction="row" spacing={2} mb={2}>
-                <Avatar variant="square" sx={{ width: 40, height: 40 }}>
-                  {inquiry.customerName.charAt(0)}
+            <Box sx={{ margin: 2, p: 3, bgcolor: "#f5f5f5", borderRadius: 2 }}>
+              {/* Customer Question */}
+              <Stack direction="row" spacing={2} mb={3}>
+                <Avatar 
+                  src={customerAvatar} 
+                  variant="square" 
+                  sx={{ width: 48, height: 48 }}
+                >
+                  {!customerAvatar && userInitials}
                 </Avatar>
                 <Box flex={1}>
-                  <Typography variant="body2" fontWeight={600} mb={0.5}>
-                    {inquiry.customerName}
+                  <Typography variant="body1" fontWeight={600} mb={0.5}>
+                    {customerName}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {inquiry.email} • {inquiry.date} / {inquiry.time}
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                    {customerEmail} • {formatDate(inquiry.created_at)} at {formatTime(inquiry.created_at)}
+                  </Typography>
+                  <Typography variant="subtitle2" fontWeight={600} mb={0.5} color="primary.main">
+                    {inquiry.subject}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {inquiry.question}
                   </Typography>
                 </Box>
               </Stack>
-              <Typography variant="subtitle2" fontWeight={600} mb={1}>
-                Product: {inquiry.productName}
-              </Typography>
-              <Typography variant="subtitle2" fontWeight={600} mb={1}>
-                Customer Inquiry:
-              </Typography>
-              <Typography variant="body2" mb={2}>
-                {inquiry.question}
-              </Typography>
 
-              {inquiry.status === "Replied" && inquiry.reply && (
-                <>
-                  <Typography variant="subtitle2" fontWeight={600} mb={1}>
-                    Admin Reply:
-                  </Typography>
-                  <Typography variant="body2" mb={1}>
-                    {inquiry.reply}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Replied on: {inquiry.repliedDate} / {inquiry.repliedTime}
-                  </Typography>
-                </>
+              {/* Product Info */}
+              <Stack direction="row" spacing={1} alignItems="center" mb={2} py={2} borderTop="1px solid #e0e0e0">
+                {productImage && (
+                  <Avatar src={productImage} variant="square" sx={{ width: 32, height: 32 }} />
+                )}
+                <Typography variant="body2" fontWeight={600}>
+                  Product: {productName}
+                </Typography>
+              </Stack>
+
+              {/* Action Buttons */}
+              <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                {/* Send Reply Button - Hide if closed */}
+                {inquiry.status !== "closed" && (
+                  <Button
+                    variant="contained"
+                    size="medium"
+                    startIcon={<SendIcon />}
+                    onClick={() => onReply(inquiry)}
+                    sx={{ 
+                      bgcolor: "#00E676",
+                      color: "#000",
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      "&:hover": {
+                        bgcolor: "#00C853",
+                      },
+                    }}
+                  >
+                    Send Reply
+                  </Button>
+                )}
+
+                {/* View Conversation Button - Show if closed */}
+                {inquiry.status === "closed" && (
+                  <Button
+                    variant="outlined"
+                    size="medium"
+                    startIcon={<SendIcon />}
+                    onClick={() => onReply(inquiry)}
+                    sx={{ 
+                      borderColor: "#00E676",
+                      color: "#00E676",
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      "&:hover": {
+                        borderColor: "#00C853",
+                        bgcolor: "rgba(0, 230, 118, 0.08)",
+                      },
+                    }}
+                  >
+                    View Conversation
+                  </Button>
+                )}
+
+                {/* Close Button - Only show if not already closed */}
+                {inquiry.status !== "closed" && (
+                  <Button
+                    variant="outlined"
+                    size="medium"
+                    startIcon={<CloseIcon />}
+                    onClick={() => onClose(inquiry.id)}
+                    sx={{ 
+                      borderColor: "#FF6B6B",
+                      color: "#FF6B6B",
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      "&:hover": {
+                        borderColor: "#FF5252",
+                        bgcolor: "rgba(255, 107, 107, 0.08)",
+                      },
+                    }}
+                  >
+                    Close Inquiry
+                  </Button>
+                )}
+              </Stack>
+
+              {/* Show note if answered */}
+              {inquiry.status === "answered" && (
+                <Typography variant="caption" sx={{ display: 'block', mt: 2, color: "#00E676" }} fontWeight={600}>
+                  ✓ This inquiry has been answered ({inquiry.reply_count} {inquiry.reply_count === 1 ? 'reply' : 'replies'})
+                </Typography>
+              )}
+
+              {/* Show note if closed */}
+              {inquiry.status === "closed" && (
+                <Typography variant="caption" sx={{ display: 'block', mt: 2, color: "#FF6B6B" }} fontWeight={600}>
+                  🔒 This inquiry has been closed ({inquiry.reply_count} {inquiry.reply_count === 1 ? 'reply' : 'replies'})
+                </Typography>
               )}
             </Box>
           </Collapse>
@@ -222,78 +376,115 @@ const InquiryRow = ({ inquiry, onReply }) => {
   );
 };
 
-const Inqueries = ({ filter = "Question", searchQuery = "" }) => {
+const Inqueries = ({ filter = "all", searchQuery = "" }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(INQUIRIES_PER_PAGE);
   const [modalOpen, setModalOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [activeInquiry, setActiveInquiry] = useState(null);
-  const [inquiriesList, setInquiriesList] = useState(customerInquiries);
+  const [inquiriesList, setInquiriesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Filter states
-  const [customerSort, setCustomerSort] = useState("recent");
-  const [dateFilter, setDateFilter] = useState("all");
+  // Load inquiries from database
+  useEffect(() => {
+    loadInquiries();
+  }, [filter, searchQuery, page, rowsPerPage]);
 
-  const customerOptions = [
-    { label: "Recent", value: "recent" },
-    { label: "A-Z", value: "asc" },
-    { label: "Z-A", value: "desc" },
-  ];
+  const loadInquiries = async () => {
+    setLoading(true);
+    try {
+      const statusMap = {
+        'pending': 'pending',
+        'answered': 'answered',
+        'closed': 'closed',
+        'all': null
+      };
 
-  const dateOptions = [
-    { label: "All Time", value: "all" },
-    { label: "Last 24 Hours", value: "24hrs" },
-    { label: "Last Week", value: "week" },
-    { label: "Last Month", value: "month" },
-    { label: "Last Year", value: "year" },
-  ];
+      const { data, count } = await InquiryService.getAllInquiries({
+        status: statusMap[filter] !== undefined ? statusMap[filter] : null,
+        search: searchQuery,
+        limit: rowsPerPage,
+        offset: page * rowsPerPage
+      });
 
-  const handleReply = (inquiry) => {
-    setActiveInquiry(inquiry);
-    setModalOpen(true);
+      setInquiriesList(data || []);
+      setTotalCount(count || 0);
+    } catch (error) {
+      console.error('Error loading inquiries:', error);
+      toast.error('Failed to load inquiries');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmitReply = () => {
+  const handleReply = async (inquiry) => {
+    // Load full inquiry with all replies
+    const { data } = await InquiryService.getInquiryWithReplies(inquiry.id);
+    setActiveInquiry(data);
+    setModalOpen(true);
+    
+    // Mark replies as read when opening reply modal (staff is reading to reply)
+    if (inquiry.unread_by_staff > 0) {
+      await handleMarkAsRead(inquiry.id);
+    }
+  };
+
+  const handleSubmitReply = async () => {
     if (!replyText.trim()) {
-      alert("Please enter a reply message");
+      toast.error("Please enter a reply message");
       return;
     }
 
-    // Get current date and time
-    const now = new Date();
-    const replyDate = now.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-    const replyTime = now.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    try {
+      const { error } = await InquiryService.createReply(activeInquiry.id, replyText);
 
-    // Update the inquiry with reply
-    setInquiriesList((prevList) =>
-      prevList.map((inquiry) =>
-        inquiry.id === activeInquiry.id
-          ? {
-              ...inquiry,
-              status: "Replied",
-              reply: replyText,
-              repliedDate: replyDate,
-              repliedTime: replyTime,
-            }
-          : inquiry
-      )
-    );
+      if (!error) {
+        toast.success('Reply sent successfully!');
+        setReplyText("");
+        setModalOpen(false);
+        setActiveInquiry(null);
+        loadInquiries(); // Refresh list
+      } else {
+        toast.error('Failed to send reply');
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast.error('Something went wrong');
+    }
+  };
 
-    // Close modal and reset
-    setReplyText("");
-    setModalOpen(false);
-    setActiveInquiry(null);
+  const handleCloseInquiry = async (inquiryId) => {
+    try {
+      const { error } = await InquiryService.updateInquiryStatus(inquiryId, 'closed');
+      
+      if (!error) {
+        toast.success('Inquiry closed successfully!');
+        loadInquiries(); // Refresh list
+      } else {
+        toast.error('Failed to close inquiry');
+      }
+    } catch (error) {
+      console.error('Error closing inquiry:', error);
+      toast.error('Something went wrong');
+    }
+  };
 
-    // Show success message
-    alert(`Reply sent successfully to ${activeInquiry.email}`);
+  const handleMarkAsRead = async (inquiryId) => {
+    try {
+      console.log('Marking replies as read for inquiry:', inquiryId);
+      const { error } = await InquiryService.markRepliesAsReadByAdmin(inquiryId);
+      
+      if (!error) {
+        console.log('Successfully marked as read, reloading data...');
+        // Force reload to get fresh data from database
+        await loadInquiries();
+      } else {
+        console.error('Error marking as read:', error);
+      }
+    } catch (error) {
+      console.error('Error in handleMarkAsRead:', error);
+    }
   };
 
   const handleChangePage = (event, newPage) => {
@@ -305,56 +496,8 @@ const Inqueries = ({ filter = "Question", searchQuery = "" }) => {
     setPage(0);
   };
 
-  // Filter and sort inquiries
-  const filteredInquiries = useMemo(() => {
-    let result = inquiriesList.filter((inquiry) => {
-      const matchesStatus = inquiry.status === filter;
-      const matchesSearch =
-        inquiry.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        inquiry.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        inquiry.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        inquiry.question.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Date filtering
-      let matchesDate = true;
-      if (dateFilter !== "all") {
-        const inquiryDate = new Date(inquiry.date);
-        const now = new Date();
-        const diffTime = now - inquiryDate;
-        const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-        switch (dateFilter) {
-          case "24hrs":
-            matchesDate = diffDays <= 1;
-            break;
-          case "week":
-            matchesDate = diffDays <= 7;
-            break;
-          case "month":
-            matchesDate = diffDays <= 30;
-            break;
-          case "year":
-            matchesDate = diffDays <= 365;
-            break;
-          default:
-            matchesDate = true;
-        }
-      }
-
-      return matchesStatus && matchesSearch && matchesDate;
-    });
-
-    // Sort by customer
-    if (customerSort === "asc") {
-      result.sort((a, b) => a.customerName.localeCompare(b.customerName));
-    } else if (customerSort === "desc") {
-      result.sort((a, b) => b.customerName.localeCompare(a.customerName));
-    } else if (customerSort === "recent") {
-      result.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-
-    return result;
-  }, [inquiriesList, filter, searchQuery, customerSort, dateFilter]);
+  // Filtering and sorting are now handled by the backend
+  // The loadInquiries function already applies status filter and search query
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -363,52 +506,69 @@ const Inqueries = ({ filter = "Question", searchQuery = "" }) => {
           <TableHead>
             <TableRow sx={{ bgcolor: "#F5F5F5" }}>
               <TableCell sx={{ width: 50 }} />
-              <TableCell>
-                <FilterHeader
-                  label="Customer"
-                  options={customerOptions}
-                  selected={customerSort}
-                  onSelect={setCustomerSort}
-                />
-              </TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Inquiry</TableCell>
-              <TableCell>
-                <FilterHeader
-                  label="Date"
-                  options={dateOptions}
-                  selected={dateFilter}
-                  onSelect={setDateFilter}
-                />
-              </TableCell>
-              <TableCell sx={{ fontWeight: 700 }}></TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Subject / Question</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredInquiries
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((inquiry) => (
-                <InquiryRow
-                  key={inquiry.id}
-                  inquiry={inquiry}
-                  onReply={handleReply}
-                />
-              ))}
-            {filteredInquiries.length === 0 && (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={7} sx={{ border: 'none', py: 0 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    minHeight: '300px',
+                    justifyContent: 'center',
+                    gap: 1.5
+                  }}>
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" color="#00E676" sx={{ fontWeight: 500 }}>
+                      Loading inquiries...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : inquiriesList.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <Typography variant="body1" color="text.secondary">
                     No inquiries found
                   </Typography>
                 </TableCell>
               </TableRow>
+            ) : (
+              inquiriesList.map((inquiry) => (
+                <InquiryRow
+                  key={inquiry.id}
+                  inquiry={inquiry}
+                  onReply={handleReply}
+                  onClose={handleCloseInquiry}
+                />
+              ))
             )}
           </TableBody>
         </Table>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={filteredInquiries.length}
+          count={totalCount}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

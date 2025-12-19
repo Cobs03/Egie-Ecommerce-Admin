@@ -101,29 +101,38 @@ const PaymentOrderDetailsDrawer = ({ open, onClose, order }) => {
           <Typography variant="subtitle2" gutterBottom color="black">
             Products
           </Typography>
-          {order.products.map((product, index) => (
+          {(order.items || []).map((product, index) => (
             <Box key={index} sx={{ mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar src={product.image} variant="rounded" />
+                <Avatar 
+                  src={product.product_image || undefined} 
+                  variant="rounded"
+                  sx={{ 
+                    width: 56, 
+                    height: 56,
+                    bgcolor: product.product_image ? 'transparent' : 'grey.300'
+                  }}
+                >
+                  {!product.product_image && '?'}
+                </Avatar>
                 <Box flex={1}>
-                  <Typography color="black">{product.name}</Typography>
+                  <Typography color="black">{product.product_name}</Typography>
+                  {product.variant_name && (
+                    <Typography variant="caption" color="text.secondary">
+                      {product.variant_name}
+                    </Typography>
+                  )}
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Typography variant="body2" color="black">
                       Quantity: {product.quantity}
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: getInventoryColor(product.inventory),
-                        fontWeight: "medium",
-                      }}
-                    >
-                      {getInventoryText(product.inventory)} ({product.inventory})
+                    <Typography variant="body2" color="text.secondary">
+                      ₱{(product.unit_price || 0).toFixed(2)} each
                     </Typography>
                   </Stack>
                 </Box>
                 <Typography color="black">
-                  ₱{product.price.toFixed(2)}
+                  ₱{(product.total || 0).toFixed(2)}
                 </Typography>
               </Stack>
             </Box>
@@ -134,7 +143,7 @@ const PaymentOrderDetailsDrawer = ({ open, onClose, order }) => {
               Total
             </Typography>
             <Typography variant="subtitle1" color="black">
-              ₱{order.total.toFixed(2)}
+              ₱{(order.total || 0).toFixed(2)}
             </Typography>
           </Box>
         </Box>
