@@ -15,20 +15,39 @@ export class PaymentService {
             total,
             status,
             delivery_type,
-            created_at,
-            shipping_addresses (
-              id,
-              full_name,
-              phone,
-              street_address,
-              city,
-              province
-            )
+            shipping_address_id,
+            created_at
           )
         `)
         .order('created_at', { ascending: false })
 
       if (error) return handleSupabaseError(error)
+      
+      // Fetch shipping addresses directly
+      if (data && data.length > 0) {
+        const addressIds = data
+          .map(payment => payment.orders?.shipping_address_id)
+          .filter(Boolean)
+        
+        if (addressIds.length > 0) {
+          const { data: addresses } = await supabase
+            .from('shipping_addresses')
+            .select('*')
+            .in('id', addressIds)
+          
+          const addressMap = {}
+          addresses?.forEach(addr => {
+            addressMap[addr.id] = addr
+          })
+          
+          data.forEach(payment => {
+            if (payment.orders?.shipping_address_id && addressMap[payment.orders.shipping_address_id]) {
+              payment.orders.shipping_addresses = addressMap[payment.orders.shipping_address_id]
+            }
+          })
+        }
+      }
+      
       return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)
@@ -53,10 +72,8 @@ export class PaymentService {
             status,
             delivery_type,
             customer_notes,
+            shipping_address_id,
             created_at,
-            shipping_addresses (
-              *
-            ),
             order_items (
               id,
               product_name,
@@ -72,6 +89,20 @@ export class PaymentService {
         .single()
 
       if (error) return handleSupabaseError(error)
+      
+      // Fetch shipping address directly
+      if (data?.orders?.shipping_address_id) {
+        const { data: address } = await supabase
+          .from('shipping_addresses')
+          .select('*')
+          .eq('id', data.orders.shipping_address_id)
+          .maybeSingle()
+        
+        if (address) {
+          data.orders.shipping_addresses = address
+        }
+      }
+      
       return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)
@@ -224,6 +255,7 @@ export class PaymentService {
   // Mark payment as paid (admin action)
   static async markAsPaid(paymentId) {
     try {
+      // Direct update approach - triggers will handle stock deduction
       const { data, error } = await supabase
         .from('payments')
         .update({
@@ -233,9 +265,10 @@ export class PaymentService {
         })
         .eq('id', paymentId)
         .select()
+        .single()
 
       if (error) return handleSupabaseError(error)
-      return handleSupabaseSuccess(data[0])
+      return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)
     }

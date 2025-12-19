@@ -15,7 +15,6 @@ import {
   Stack,
   IconButton,
   Pagination,
-  CircularProgress,
   Menu,
   MenuItem,
   Chip,
@@ -35,8 +34,14 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import AdminLogService from "../../services/AdminLogService";
 import { supabase } from "../../lib/supabase";
 import LogDetailDrawer from "./LogDetailDrawer";
+import { usePermissions } from "../../hooks/usePermissions";
+import { PERMISSIONS } from "../../utils/permissions";
+import { useAuth } from "../../contexts/AuthContext";
 
 const AdminLogs = () => {
+  // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
+  const permissions = usePermissions();
+  const { profile, loading: authLoading } = useAuth();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [activityLogs, setActivityLogs] = useState([]);
@@ -59,12 +64,13 @@ const AdminLogs = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
 
-  // Fetch all activity logs from database
+  // Fetch all activity logs on component mount
   useEffect(() => {
     fetchAllLogs();
   }, []);
 
-  const fetchAllLogs = async () => {
+  // Define fetchAllLogs function (hoisted)
+  async function fetchAllLogs() {
     try {
       setLoading(true);
       
@@ -118,7 +124,7 @@ const AdminLogs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // Format action type for display
   const formatActionType = (actionType) => {
@@ -209,6 +215,41 @@ const AdminLogs = () => {
     setDrawerOpen(false);
     setSelectedLog(null);
   };
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid #E0E0E0',
+          borderTop: '4px solid #4CAF50',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+      </Box>
+    );
+  }
+
+  // Check if user has permission to view logs
+  if (!permissions.can(PERMISSIONS.USER_VIEW_LOGS)) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h5" gutterBottom color="error">
+            Access Denied
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            You don't have permission to view activity logs.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Only Admins and Managers can access this page.
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
 
   // Apply all filters
   const filteredLogs = activityLogs.filter((log) => {
@@ -318,14 +359,6 @@ const AdminLogs = () => {
     console.log("Downloading logs...");
     // TODO: Implement download functionality
   };
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress sx={{ color: "#00E676" }} />
-      </Box>
-    );
-  }
 
   return (
     <Box p={4}>
@@ -789,7 +822,39 @@ const AdminLogs = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {paginatedLogs.map((log) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} sx={{ border: 'none', py: 0 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    minHeight: '300px',
+                    justifyContent: 'center',
+                    gap: 1.5
+                  }}>
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" color="#00E676" sx={{ fontWeight: 500 }}>
+                      Loading logs...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedLogs.map((log) => (
               <TableRow
                 key={log.id}
                 onClick={() => handleLogClick(log)}
@@ -851,8 +916,8 @@ const AdminLogs = () => {
                   </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
-            {paginatedLogs.length === 0 && (
+            )))}
+            {!loading && paginatedLogs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">

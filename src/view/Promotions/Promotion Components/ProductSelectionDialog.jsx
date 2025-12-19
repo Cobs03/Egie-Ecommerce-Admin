@@ -325,8 +325,31 @@ const ProductSelectionDialog = ({ open, onClose, selectedProducts, onSave }) => 
           >
             {/* Loading State */}
             {loading && (
-              <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-                <CircularProgress />
+              <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={4}>
+                <Box sx={{ mb: 2 }}>
+                  <img
+                    src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+                    alt="Loading"
+                    style={{ width: '60px', height: '40px', objectFit: 'contain' }}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    width: '30px',
+                    height: '30px',
+                    border: '3px solid rgba(0, 230, 118, 0.1)',
+                    borderTop: '3px solid #00E676',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    },
+                  }}
+                />
+                <Box sx={{ color: '#00E676', fontSize: '14px', fontWeight: 500, mt: 1 }}>
+                  Loading products...
+                </Box>
               </Box>
             )}
 

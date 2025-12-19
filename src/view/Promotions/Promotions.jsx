@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Snackbar, Alert, CircularProgress } from "@mui/material";
+import { Box, Snackbar, Alert } from "@mui/material";
 import PromotionsHeader from "./Promotion Components/PromotionsHeader";
 import VoucherTable from "./Promotion Components/VoucherTable";
 import DiscountTable from "./Promotion Components/DiscountsTable";
@@ -9,6 +9,7 @@ import DiscountEditDialog from "./Promotion Components/DiscountEditDialog";
 import DiscountDeleteDialog from "./Promotion Components/DiscountDeleteDialog";
 import { VoucherService } from "../../services/VoucherService";
 import { DiscountService } from "../../services/DiscountService";
+import { supabase } from "../../lib/supabase";
 
 const Promotions = () => {
   const [vouchers, setVouchers] = useState([]);
@@ -213,7 +214,50 @@ const Promotions = () => {
 
         if (result.success) {
           await loadVouchers();
-          showSnackbar("Voucher created successfully!", "success");
+          
+          // Send notification to customers
+          try {
+            const discountValue = voucherData.discountType === 'percent' 
+              ? `${voucherData.price}%` 
+              : `₱${voucherData.price}`;
+            
+            const message = voucherData.description 
+              ? voucherData.description 
+              : `Use the code ${voucherData.code} for ${discountValue} discount`;
+            
+            console.log('Sending voucher notification with params:', {
+              p_title: voucherData.name || 'New Voucher Available',
+              p_message: message,
+              p_voucher_id: result.data.id,
+              p_discount_id: null,
+              p_action_type: 'copy_code',
+              p_action_data: { code: voucherData.code, discount: discountValue },
+              p_target_users: 'all'
+            });
+            
+            const { data: notifResult, error: notifError } = await supabase.rpc('create_promotion_notification', {
+              p_title: voucherData.name || 'New Voucher Available',
+              p_message: message,
+              p_voucher_id: result.data.id,
+              p_discount_id: null,
+              p_action_type: 'copy_code',
+              p_action_data: { code: voucherData.code, discount: discountValue },
+              p_target_users: 'all'
+            });
+            
+            console.log('Notification RPC result:', { notifResult, notifError });
+            
+            if (notifError) {
+              console.error('Notification error:', notifError);
+              showSnackbar("Voucher created but notification failed: " + notifError.message, "warning");
+            } else {
+              console.log(`Notification sent to ${notifResult} customers`);
+              showSnackbar(`Voucher created and ${notifResult} customers notified!`, "success");
+            }
+          } catch (notifError) {
+            console.error('Error sending notification:', notifError);
+            showSnackbar("Voucher created but notification failed", "warning");
+          }
         } else {
           showSnackbar(result.error || "Failed to create voucher", "error");
         }
@@ -321,7 +365,60 @@ const Promotions = () => {
 
         if (result.success) {
           await loadDiscounts();
-          showSnackbar("Discount created successfully!", "success");
+          
+          // Send notification to customers
+          try {
+            const discountValue = discountData.type === 'percentage' 
+              ? `${discountData.value}%` 
+              : `₱${discountData.value}`;
+            
+            const productScope = applicableProducts.length > 0 
+              ? 'on selected products' 
+              : 'store-wide';
+            
+            const message = discountData.description 
+              ? discountData.description 
+              : `Enjoy ${discountValue} off ${productScope}!`;
+            
+            console.log('Sending discount notification with params:', {
+              p_title: discountData.name || 'New Discount Available',
+              p_message: message,
+              p_voucher_id: null,
+              p_discount_id: result.data.id,
+              p_action_type: 'view_products',
+              p_action_data: { 
+                discount: discountValue, 
+                productIds: applicableProducts 
+              },
+              p_target_users: 'all'
+            });
+            
+            const { data: notifResult, error: notifError } = await supabase.rpc('create_promotion_notification', {
+              p_title: discountData.name || 'New Discount Available',
+              p_message: message,
+              p_voucher_id: null,
+              p_discount_id: result.data.id,
+              p_action_type: 'view_products',
+              p_action_data: { 
+                discount: discountValue, 
+                productIds: applicableProducts 
+              },
+              p_target_users: 'all'
+            });
+            
+            console.log('Notification RPC result:', { notifResult, notifError });
+            
+            if (notifError) {
+              console.error('Notification error:', notifError);
+              showSnackbar("Discount created but notification failed: " + notifError.message, "warning");
+            } else {
+              console.log(`Notification sent to ${notifResult} customers`);
+              showSnackbar(`Discount created and ${notifResult} customers notified!`, "success");
+            }
+          } catch (notifError) {
+            console.error('Error sending notification:', notifError);
+            showSnackbar("Discount created but notification failed", "warning");
+          }
         } else {
           showSnackbar(result.error || "Failed to create discount", "error");
         }
@@ -432,37 +529,31 @@ const Promotions = () => {
 
   return (
     <Box p={4}>
-      {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      ) : (
-        <>
-          <PromotionsHeader
-            onAddVoucher={handleAddClick}
-            onDownload={handleDownload}
-            onSearch={handleSearch}
-            onTabChange={handleTabChange}
-            activeTab={activeTab}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearch}
-          />
+      <PromotionsHeader
+        onAddVoucher={handleAddClick}
+        onDownload={handleDownload}
+        onSearch={handleSearch}
+        onTabChange={handleTabChange}
+        activeTab={activeTab}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearch}
+      />
 
-          {/* Conditional Table Rendering */}
-          {activeTab === "vouchers" ? (
-            <VoucherTable
-              vouchers={filteredVouchers}
-              onEdit={handleEditVoucher}
-              onDelete={handleDeleteVoucher}
-            />
-          ) : (
-            <DiscountTable
-              discounts={filteredDiscounts}
-              onEdit={handleEditDiscount}
-              onDelete={handleDeleteDiscount}
-            />
-          )}
-        </>
+      {/* Conditional Table Rendering */}
+      {activeTab === "vouchers" ? (
+        <VoucherTable
+          vouchers={filteredVouchers}
+          onEdit={handleEditVoucher}
+          onDelete={handleDeleteVoucher}
+          loading={loading}
+        />
+      ) : (
+        <DiscountTable
+          discounts={filteredDiscounts}
+          onEdit={handleEditDiscount}
+          onDelete={handleDeleteDiscount}
+          loading={loading}
+        />
       )}
 
       {/* Voucher Dialogs */}

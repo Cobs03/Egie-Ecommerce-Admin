@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, Typography, Box, Stack } from "@mui/material";
+import DashboardService from "../../../services/DashboardService";
 
 // Helper component for the stacked progress bar
 const OrderProgressBar = ({ completed, ongoing, total }) => {
@@ -37,11 +38,50 @@ const OrderProgressBar = ({ completed, ongoing, total }) => {
 };
 
 const OrdersOverview = () => {
-  // Sample data - replace with actual data source
-  const totalOrders = 323 + 100 + 156; // Example calculation, adjust as needed
-  const completedOrders = 323;
-  const ongoingOrders = 100;
-  const newOrders = 156;
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [completedOrders, setCompletedOrders] = useState(0);
+  const [ongoingOrders, setOngoingOrders] = useState(0);
+  const [newOrders, setNewOrders] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrdersData = async () => {
+      try {
+        const stats = await DashboardService.getOrdersOverview();
+        setTotalOrders(stats.total);
+        setCompletedOrders(stats.completed);
+        setOngoingOrders(stats.ongoing);
+        setNewOrders(stats.new);
+      } catch (error) {
+        console.error("Error fetching orders overview:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrdersData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          background: "#fff",
+          borderRadius: 3,
+          boxShadow: 3,
+          padding: 1,
+          minWidth: 300,
+          minHeight: 150,
+          margin: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>Loading...</Typography>
+      </Card>
+    );
+  }
 
   return (
     <Card

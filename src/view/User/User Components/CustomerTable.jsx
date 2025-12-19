@@ -30,6 +30,7 @@ const CustomerTable = ({
   onPageChange,
   onRowsPerPageChange,
   onCustomerClick,
+  loading = false,
 }) => {
   const [customerFilterAnchor, setCustomerFilterAnchor] = useState(null);
   const [dateFilterAnchor, setDateFilterAnchor] = useState(null);
@@ -186,9 +187,41 @@ const CustomerTable = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredAndSortedCustomers
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((customer, idx) => (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={4} sx={{ border: 'none', py: 0 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  minHeight: '300px',
+                  justifyContent: 'center',
+                  gap: 1.5
+                }}>
+                  <Box
+                    sx={{
+                      width: '60px',
+                      height: '60px',
+                      border: '6px solid rgba(0, 230, 118, 0.1)',
+                      borderTop: '6px solid #00E676',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(360deg)' }
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" color="#00E676" sx={{ mt: 1, fontWeight: 500 }}>
+                    Loading customers...
+                  </Typography>
+                </Box>
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredAndSortedCustomers
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((customer, idx) => (
               <TableRow
                 key={idx}
                 sx={{
@@ -235,8 +268,8 @@ const CustomerTable = ({
                   </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
-          {filteredAndSortedCustomers.length === 0 && (
+            )))}
+          {!loading && filteredAndSortedCustomers.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
                 <Typography variant="body1" color="text.secondary">

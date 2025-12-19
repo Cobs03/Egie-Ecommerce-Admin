@@ -154,7 +154,7 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.code.trim()) newErrors.code = "Code is required";
-    if (formData.code.length !== 6) newErrors.code = "Code must be exactly 6 characters";
+    if (formData.code.length > 20) newErrors.code = "Code must not exceed 20 characters";
     if (!formData.amount) newErrors.amount = "Amount is required";
     if (parseFloat(formData.amount) <= 0) newErrors.amount = "Amount must be greater than 0";
     if (formData.type === "percent" && parseFloat(formData.amount) > 100) {
@@ -295,11 +295,11 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
                   <TextField
                     label="Voucher Code *"
                     fullWidth
-                    inputProps={{ maxLength: 6 }}
+                    inputProps={{ maxLength: 20 }}
                     value={formData.code}
                     onChange={handleChange("code")}
                     error={!!errors.code}
-                    helperText={errors.code || "6 characters, auto-uppercase"}
+                    helperText={errors.code || "Up to 20 characters, auto-uppercase"}
                     placeholder="ABC123"
                   />
 
@@ -521,7 +521,7 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
                 </Typography>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
                   <li>All required fields (*) must be filled</li>
-                  <li>Code must be exactly 6 characters</li>
+                  <li>Code can be up to 20 characters</li>
                   <li>Amount must be a positive number</li>
                   <li>End date must be after start date</li>
                   <li>Double-check all details before saving</li>

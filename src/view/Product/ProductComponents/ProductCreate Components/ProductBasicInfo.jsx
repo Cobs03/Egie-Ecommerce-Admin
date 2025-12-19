@@ -10,6 +10,8 @@ import {
   DialogContent,
   DialogActions,
   Box,
+  Chip,
+  Autocomplete,
 } from "@mui/material";
 import { BrandService } from "../../../../services/BrandService";
 
@@ -18,10 +20,12 @@ const ProductBasicInfo = ({
   description,
   warranty,
   brandId,
+  compatibilityTags = [],
   onNameChange,
   onDescriptionChange,
   onWarrantyChange,
   onBrandChange,
+  onCompatibilityTagsChange,
 }) => {
   const [brands, setBrands] = useState([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
@@ -31,6 +35,26 @@ const ProductBasicInfo = ({
     description: '',
     website_url: ''
   });
+
+  // Predefined compatibility tags suggestions based on PC components
+  const suggestedTags = [
+    // Motherboard compatibility
+    'Intel LGA1700', 'Intel LGA1200', 'AMD AM5', 'AMD AM4',
+    // RAM types
+    'DDR5', 'DDR4', 'DDR3',
+    // Storage interfaces
+    'M.2 NVMe', 'SATA', 'PCIe 4.0', 'PCIe 3.0',
+    // Power connectors
+    '24-pin ATX', '8-pin EPS', '6-pin PCIe', '8-pin PCIe',
+    // Form factors
+    'ATX', 'Micro-ATX', 'Mini-ITX',
+    // GPU compatibility
+    'Dual Slot', 'Triple Slot',
+    // Cooling compatibility
+    '120mm Fan', '140mm Fan', 'AIO Compatible',
+    // Case compatibility
+    'Standard ATX Case', 'Compact Case',
+  ];
 
   // Load brands on component mount
   useEffect(() => {
@@ -154,6 +178,40 @@ const ProductBasicInfo = ({
           <MenuItem value="3 Year Warranty">3 Year Warranty</MenuItem>
         </TextField>
       </Stack>
+
+      {/* Compatibility Tags */}
+      <Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Compatibility Tags (for product recommendations)
+        </Typography>
+        <Autocomplete
+          multiple
+          freeSolo
+          options={suggestedTags}
+          value={compatibilityTags || []}
+          onChange={(event, newValue) => {
+            onCompatibilityTagsChange(newValue);
+          }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                variant="outlined"
+                label={option}
+                size="small"
+                {...getTagProps({ index })}
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size="small"
+              placeholder="Select or type tags (e.g., DDR5, AMD AM5, M.2 NVMe)"
+              helperText="Add tags to show compatible products. Press Enter to add custom tags."
+            />
+          )}
+        />
+      </Box>
 
       {/* Create Brand Dialog */}
       <Dialog open={openBrandDialog} onClose={() => setOpenBrandDialog(false)} maxWidth="sm" fullWidth>

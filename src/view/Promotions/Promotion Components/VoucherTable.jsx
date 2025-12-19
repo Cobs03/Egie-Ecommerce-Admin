@@ -22,7 +22,7 @@ import {
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 
-const VoucherTable = ({ vouchers, onEdit, onDelete }) => {
+const VoucherTable = ({ vouchers, onEdit, onDelete, loading = false }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [page, setPage] = useState(0);
@@ -173,7 +173,41 @@ const VoucherTable = ({ vouchers, onEdit, onDelete }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedVouchers
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} sx={{ border: 'none', py: 0 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '300px',
+                      gap: 1.5
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" sx={{ color: '#00E676', fontWeight: 500, mt: 1 }}>
+                      Loading vouchers...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedVouchers
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((voucher) => (
                 <TableRow
@@ -212,8 +246,8 @@ const VoucherTable = ({ vouchers, onEdit, onDelete }) => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))}
-            {sortedVouchers.length === 0 && (
+              )))}
+            {!loading && sortedVouchers.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">

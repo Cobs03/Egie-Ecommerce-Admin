@@ -43,6 +43,7 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminLogService from "../../../services/AdminLogService";
+import { supabase } from "../../../lib/supabase";
 
 const Stocks = () => {
   const { user } = useAuth();
@@ -108,11 +109,55 @@ const Stocks = () => {
     };
 
     loadProducts();
+
+    // 🔥 Real-time subscription for stock updates
+    const subscription = supabase
+      .channel('products_stock_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products'
+        },
+        (payload) => {
+          console.log('Product updated in real-time:', payload.new);
+          
+          // Update the specific product in state
+          setProducts((prevProducts) => {
+            return prevProducts.map((product) => {
+              if (product.id === payload.new.id) {
+                return {
+                  ...product,
+                  stock: payload.new.stock_quantity,
+                  variants: payload.new.variants || product.variants,
+                  lastEdit: new Date(payload.new.updated_at).toLocaleString(),
+                };
+              }
+              return product;
+            });
+          });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const allProducts = useMemo(() => {
     return products;
   }, [products]);
+
+  // Helper function to calculate actual stock from variants or main stock
+  const calculateActualStock = (product) => {
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    }
+    return product.stock || 0;
+  };
 
   // Apply filters and sorting
   useEffect(() => {
@@ -120,7 +165,8 @@ const Stocks = () => {
 
     if (statusFilter.length > 0) {
       result = result.filter(product => {
-        const status = getStockStatus(product.stock);
+        const actualStock = calculateActualStock(product);
+        const status = getStockStatus(actualStock);
         return statusFilter.includes(status);
       });
     }
@@ -358,9 +404,41 @@ const Stocks = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredProducts
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((product) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} sx={{ border: 'none', py: 0 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    minHeight: '300px',
+                    justifyContent: 'center',
+                    gap: 1.5
+                  }}>
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" color="#00E676" sx={{ mt: 1, fontWeight: 500 }}>
+                      Loading stocks...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredProducts
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((product) => (
                 <TableRow
                   key={product.id}
                   sx={{
@@ -381,15 +459,17 @@ const Stocks = () => {
                   <TableCell>{product.code}</TableCell>
                   <TableCell>
                     <Chip
-                      label={getStockStatus(product.stock)}
-                      color={getStockColor(product.stock)}
+                      label={getStockStatus(calculateActualStock(product))}
+                      color={getStockColor(calculateActualStock(product))}
                       size="small"
                       variant="outlined"
                       sx={{ fontWeight: 600, borderWidth: "1.5px" }}
                     />
                   </TableCell>
                   <TableCell align="center">
-                    <Typography fontWeight={600}>{product.stock}</Typography>
+                    <Typography fontWeight={600}>
+                      {calculateActualStock(product)}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Button
@@ -409,8 +489,8 @@ const Stocks = () => {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
-            {filteredProducts.length === 0 && (
+              )))}
+            {!loading && filteredProducts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">
@@ -497,7 +577,11 @@ const Stocks = () => {
               </Box>
 
               <Typography variant="body1" mb={3}>
-                Total Current Stock: <b>{currentSelectedProduct.stock}</b>
+                Total Current Stock: <b>
+                  {currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0
+                    ? currentSelectedProduct.variants.reduce((sum, v) => sum + (v.stock || 0), 0)
+                    : currentSelectedProduct.stock}
+                </b>
               </Typography>
 
               {currentSelectedProduct.variants && currentSelectedProduct.variants.length > 0 ? (

@@ -24,9 +24,9 @@ import {
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import { statusColors } from "./paymentData";
+import StatusBadge from "../../../components/StatusBadge";
 
-const PaymentTable = ({ payments, onViewPaymentDetails, onViewOrderDetails }) => {
+const PaymentTable = ({ payments, onViewPaymentDetails, onViewOrderDetails, loading = false }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuRow, setMenuRow] = useState(null);
   const [page, setPage] = useState(0);
@@ -239,9 +239,41 @@ const PaymentTable = ({ payments, onViewPaymentDetails, onViewOrderDetails }) =>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredPayments
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row, idx) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ border: 'none', py: 0 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    minHeight: '300px',
+                    justifyContent: 'center',
+                    gap: 1.5
+                  }}>
+                    <Box
+                      sx={{
+                        width: '60px',
+                        height: '60px',
+                        border: '6px solid rgba(0, 230, 118, 0.1)',
+                        borderTop: '6px solid #00E676',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }}
+                    />
+                    <Typography variant="body2" color="#00E676" sx={{ fontWeight: 500 }}>
+                      Loading payments...
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredPayments
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row, idx) => (
                 <TableRow
                   key={idx}
                   sx={{
@@ -254,12 +286,13 @@ const PaymentTable = ({ payments, onViewPaymentDetails, onViewOrderDetails }) =>
                   <TableCell>{row.amount}</TableCell>
                   <TableCell>{row.method}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={row.status}
-                      color={statusColors[row.status]}
-                      size="small"
-                      sx={{ fontWeight: 700 }}
-                    />
+                    <StatusBadge status={
+                      row.status?.toLowerCase() === 'paid' ? 'paid' : 
+                      row.status?.toLowerCase() === 'cancelled' ? 'cancelled' :
+                      row.status?.toLowerCase() === 'failed' ? 'cancelled' : 
+                      row.status?.toLowerCase() === 'processing' ? 'processing' :
+                      'pending'
+                    } />
                   </TableCell>
                   <TableCell align="right">
                     <IconButton onClick={(e) => handleMenuOpen(e, row)}>
@@ -267,8 +300,8 @@ const PaymentTable = ({ payments, onViewPaymentDetails, onViewOrderDetails }) =>
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))}
-            {filteredPayments.length === 0 && (
+              )))}
+            {!loading && filteredPayments.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">
@@ -501,7 +534,7 @@ const PaymentTable = ({ payments, onViewPaymentDetails, onViewOrderDetails }) =>
                     size="small"
                   />
                 }
-                label={status}
+                label={status?.toLowerCase() === 'paid' ? 'Paid' : status?.toLowerCase() === 'pending' ? 'Pending' : status?.toLowerCase() === 'failed' ? 'Failed' : status?.toLowerCase() === 'cancelled' ? 'Cancelled' : status?.toLowerCase() === 'processing' ? 'Processing' : status}
               />
             </ListItem>
           ))}

@@ -12,88 +12,121 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
+  Tooltip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import {
-  LocalShipping,
-  CheckCircle,
-  Cancel,
-  AccessTime,
-  LocalShippingOutlined,
-} from "@mui/icons-material";
-import OrderShip from "./OrderShip";
 import { toast } from "sonner";
+import StatusBadge from "../../../components/StatusBadge";
+import ShippingDialog from "../../../components/ShippingDialog";
+import { OrderService } from "../../../services/OrderService";
+import { usePermissions } from "../../../hooks/usePermissions";
+import { PERMISSIONS } from "../../../utils/permissions";
 
 const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
-  const [showShipModal, setShowShipModal] = useState(false);
+  const permissions = usePermissions();
+  const [shippingDialogOpen, setShippingDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState('');
 
-  // Accept Order - Changes status from "New" to "On Going"
-  const handleAcceptOrder = async () => {
+  const handleStatusChange = async (newStatus, shippingInfo = null) => {
+    if (!order?.orderId) {
+      toast.error('Invalid order data');
+      return;
+    }
+
     setIsUpdating(true);
-    const updatedOrder = { ...order, status: "On Going" };
-    onOrderUpdate(updatedOrder);
-    setIsUpdating(false);
-    onClose(); // Close drawer
+    try {
+      const { data, error } = await OrderService.updateOrderStatus(
+        order.orderId,
+        newStatus,
+        shippingInfo
+      );
 
-    // Show success toast
-    toast.success("Order Accepted", {
-      description: `Order #${order.id} has been accepted and is now being prepared.`,
-      duration: 4000,
-    });
-  };
+      if (error) {
+        toast.error(`Failed to update order: ${error}`);
+        return;
+      }
 
-  // Ship Package - Opens modal to add courier/tracking, changes "On Going" to "To Ship"
-  const handleShipPackage = () => {
-    if (order.deliveryType === "delivery") {
-      setShowShipModal(true);
-    } else {
-      // For store pickup, mark as "Ready for Pickup"
-      const updatedOrder = { ...order, status: "Ready for Pickup" };
+      // Update local order state
+      const updatedOrder = { ...order, status: newStatus };
+      if (shippingInfo && newStatus === 'shipped') {
+        updatedOrder.courierName = shippingInfo.courierName;
+        updatedOrder.trackingNumber = shippingInfo.trackingNumber;
+      }
+      
       onOrderUpdate(updatedOrder);
-      onClose();
-
-      toast.success("Ready for Pickup", {
-        description: `Order #${order.id} is ready for customer pickup.`,
+      
+      // Show success message
+      const messages = {
+        confirmed: 'Order confirmed successfully',
+        processing: 'Order is now being processed',
+        shipped: 'Order marked as shipped',
+        ready_for_pickup: 'Order is ready for pickup',
+        delivered: 'Order marked as delivered',
+        completed: 'Order marked as completed',
+        cancelled: 'Order has been cancelled'
+      };
+      
+      toast.success(messages[newStatus] || 'Order updated', {
+        description: `Order #${order.id}`,
         duration: 4000,
       });
+
+      onClose();
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error('Failed to update order');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleCancelOrder = () => {
+  const handleConfirmOrder = () => {
+    handleStatusChange('confirmed');
+  };
+
+  const handleStartProcessing = () => {
+    handleStatusChange('processing');
+  };
+
+  const handleMarkAsShipped = () => {
+    setShippingDialogOpen(true);
+  };
+
+  const handleShippingSubmit = (shippingInfo) => {
+    setShippingDialogOpen(false);
+    handleStatusChange('shipped', shippingInfo);
+  };
+
+  const handleMarkAsReadyForPickup = () => {
+    handleStatusChange('ready_for_pickup');
+  };
+
+  const handleMarkAsDelivered = () => {
+    setActionType('delivered');
     setConfirmDialogOpen(true);
   };
 
-  const handleConfirmCancel = () => {
-    const updatedOrder = { ...order, status: "Cancelled" };
-    onOrderUpdate(updatedOrder);
-    onClose();
-
-    toast.error("Order Cancelled", {
-      description: `Order #${order.id} has been cancelled.`,
-      duration: 4000,
-    });
-    setConfirmDialogOpen(false);
+  const handleMarkAsCompleted = () => {
+    setActionType('completed');
+    setConfirmDialogOpen(true);
   };
 
-  // Called when shipping info is submitted - Changes "On Going" to "To Ship"
-  const handleShipped = (shippingData) => {
-    const updatedOrder = {
-      ...order,
-      status: "To Ship",
-      courier: shippingData.courier,
-      trackingNumber: shippingData.tracking,
-    };
-    onOrderUpdate(updatedOrder);
-    setShowShipModal(false);
-    onClose();
+  const handleCancelOrder = () => {
+    setActionType('cancel');
+    setConfirmDialogOpen(true);
+  };
 
-    toast.success("Package Ready to Ship", {
-      description: `Order #${order.id} is ready to ship via ${shippingData.courier}. Tracking: ${shippingData.tracking}`,
-      duration: 5000,
-    });
+  const handleConfirmAction = () => {
+    setConfirmDialogOpen(false);
+    if (actionType === 'cancel') {
+      handleStatusChange('cancelled');
+    } else if (actionType === 'delivered') {
+      handleStatusChange('delivered');
+    } else if (actionType === 'completed') {
+      handleStatusChange('completed');
+    }
   };
 
   if (!order) return null;
@@ -110,38 +143,179 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
     return "In Stock";
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "New":
-        return { bgcolor: "#000", color: "#fff" };
-      case "On Going":
-        return { bgcolor: "#FF9800", color: "#fff" };
-      case "To Ship":
-        return { bgcolor: "#2196F3", color: "#fff" };
-      case "Completed":
-        return { bgcolor: "#4CAF50", color: "#fff" };
-      case "Cancelled":
-        return { bgcolor: "#F44336", color: "#fff" };
-      default:
-        return { bgcolor: "#9E9E9E", color: "#fff" };
-    }
-  };
+  // Determine which action buttons to show based on status
+  const getActionButtons = () => {
+    const status = order.status?.toLowerCase();
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "New":
-        return <AccessTime sx={{ fontSize: 16 }} />;
-      case "On Going":
-        return <LocalShipping sx={{ fontSize: 16 }} />;
-      case "To Ship":
-        return <LocalShippingOutlined sx={{ fontSize: 16 }} />;
-      case "Completed":
-        return <CheckCircle sx={{ fontSize: 16 }} />;
-      case "Cancelled":
-        return <Cancel sx={{ fontSize: 16 }} />;
-      default:
-        return null;
+    if (status === 'pending') {
+      const canAccept = permissions.can(PERMISSIONS.ORDER_ACCEPT);
+      return (
+        <Stack direction="row" spacing={2}>
+          <Tooltip title={!canAccept ? "You don't have permission to confirm orders" : ""}>
+            <span style={{ width: '100%' }}>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{
+                  bgcolor: '#00E676',
+                  '&:hover': { bgcolor: '#00C767' },
+                  '&.Mui-disabled': { bgcolor: '#E0E0E0' }
+                }}
+                onClick={handleConfirmOrder}
+                disabled={isUpdating || !canAccept}
+              >
+                Confirm Order
+              </Button>
+            </span>
+          </Tooltip>
+          <Button
+            variant="outlined"
+            fullWidth
+            color="error"
+            onClick={handleCancelOrder}
+          >
+            Cancel
+          </Button>
+        </Stack>
+      );
     }
+
+    if (status === 'confirmed') {
+      return (
+        <Button
+          variant="contained"
+          fullWidth
+          sx={{
+            bgcolor: '#42A5F5',
+            '&:hover': { bgcolor: '#1E88E5' }
+          }}
+          onClick={handleStartProcessing}
+          disabled={isUpdating}
+        >
+          Start Processing
+        </Button>
+      );
+    }
+
+    if (status === 'processing') {
+      // Check if this is a pickup order - check for various formats
+      const deliveryType = (order.deliveryType || order.delivery_type || order.rawData?.delivery_type || '').toLowerCase();
+      const isPickup = deliveryType === 'pickup' || 
+                       deliveryType === 'store_pickup' ||
+                       deliveryType.includes('pickup');
+      
+      console.log('🔍 OrderDetailsDrawer - Delivery type check:', {
+        deliveryType: order.deliveryType,
+        delivery_type: order.delivery_type,
+        rawData_delivery_type: order.rawData?.delivery_type,
+        isPickup
+      });
+      
+      if (isPickup) {
+        return (
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{
+              bgcolor: '#00BCD4',
+              '&:hover': { bgcolor: '#0097A7' }
+            }}
+            onClick={handleMarkAsReadyForPickup}
+            disabled={isUpdating}
+          >
+            Mark as Ready for Pickup
+          </Button>
+        );
+      }
+      
+      return (
+        <Button
+          variant="contained"
+          fullWidth
+          sx={{
+            bgcolor: '#AB47BC',
+            '&:hover': { bgcolor: '#8E24AA' }
+          }}
+          onClick={handleMarkAsShipped}
+          disabled={isUpdating}
+        >
+          Mark as Shipped
+        </Button>
+      );
+    }
+
+    if (status === 'ready_for_pickup') {
+      return (
+        <Button
+          variant="contained"
+          fullWidth
+          sx={{
+            bgcolor: '#00E676',
+            '&:hover': { bgcolor: '#00C767' }
+          }}
+          onClick={handleMarkAsCompleted}
+          disabled={isUpdating}
+        >
+          Mark as Completed (Picked Up)
+        </Button>
+      );
+    }
+
+    if (status === 'shipped') {
+      return (
+        <Button
+          variant="contained"
+          fullWidth
+          sx={{
+            bgcolor: '#00E676',
+            '&:hover': { bgcolor: '#00C767' }
+          }}
+          onClick={handleMarkAsDelivered}
+          disabled={isUpdating}
+        >
+          Mark as Delivered
+        </Button>
+      );
+    }
+
+    // For delivered, completed, or cancelled - show info only
+    if (status === 'cancelled') {
+      console.log('🔍 Cancelled order data:', order);
+      console.log('🔍 Order notes (orderNotes):', order.orderNotes);
+      console.log('🔍 Order notes (order_notes):', order.order_notes);
+      console.log('🔍 Raw data:', order.rawData);
+      
+      // Check both camelCase and snake_case versions
+      const cancellationReason = order.orderNotes || order.order_notes || order.rawData?.order_notes;
+      const customerNotes = order.rawData?.customer_notes;
+      
+      return (
+        <Box 
+          sx={{ 
+            bgcolor: '#FFEBEE', 
+            p: 2, 
+            borderRadius: 1,
+            border: '1px solid #EF5350'
+          }}
+        >
+          <Typography variant="body2" color="error" sx={{ fontWeight: 600, textAlign: 'center' }}>
+            ⚠️ This order has been cancelled by the customer
+          </Typography>
+          {cancellationReason && (
+            <Typography variant="body2" color="text.secondary" sx={{ display: 'block', mt: 1.5, textAlign: 'center' }}>
+              <strong>Cancellation Reason:</strong> {cancellationReason}
+            </Typography>
+          )}
+          {customerNotes && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center', fontStyle: 'italic' }}>
+              Customer Note: "{customerNotes}"
+            </Typography>
+          )}
+        </Box>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -192,32 +366,8 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
               <Typography color="black">Status:</Typography>
-              <Chip
-                icon={getStatusIcon(order.status)}
-                label={order.status}
-                size="small"
-                sx={{
-                  ...getStatusColor(order.status),
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  borderRadius: "16px",
-                  height: 28,
-                  "& .MuiChip-icon": {
-                    color: "inherit",
-                  },
-                }}
-              />
+              <StatusBadge status={order.status} />
             </Box>
-            {order.courier && (
-              <Typography color="black" sx={{ mb: 1 }}>
-                Courier: {order.courier}
-              </Typography>
-            )}
-            {order.trackingNumber && (
-              <Typography color="black">
-                Tracking: {order.trackingNumber}
-              </Typography>
-            )}
           </Box>
 
           {/* Customer Information */}
@@ -261,6 +411,18 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
             </Typography>
           </Box>
 
+          {/* Customer Order Notes (from checkout) */}
+          {order.customerNotes && order.status?.toLowerCase() !== 'cancelled' && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: '#FFF9C4', borderRadius: 1, border: '1px solid #FBC02D' }}>
+              <Typography variant="body2" color="black" fontWeight={600}>
+                📝 Customer Note:
+              </Typography>
+              <Typography variant="body2" color="black">
+                {order.customerNotes}
+              </Typography>
+            </Box>
+          )}
+
           {/* Products */}
           <Divider sx={{ my: 2 }} />
           <Box>
@@ -272,34 +434,76 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
             >
               Products
             </Typography>
-            {order.products.map((product, index) => (
+            {(order.items || []).map((product, index) => (
               <Box key={index} sx={{ mb: 2 }}>
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Avatar src={product.image} variant="rounded" />
+                  <Avatar 
+                    src={product.product_image || undefined} 
+                    variant="rounded"
+                    sx={{ 
+                      width: 56, 
+                      height: 56,
+                      bgcolor: product.product_image ? 'transparent' : 'grey.300'
+                    }}
+                  >
+                    {!product.product_image && '?'}
+                  </Avatar>
                   <Box flex={1}>
-                    <Typography color="black">{product.name}</Typography>
+                    <Typography color="black">{product.product_name}</Typography>
+                    {product.variant_name && (
+                      <Typography variant="caption" color="text.secondary">
+                        {product.variant_name}
+                      </Typography>
+                    )}
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Typography variant="body2" color="black">
                         Quantity: {product.quantity}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: getInventoryColor(product.inventory),
-                          fontWeight: "medium",
-                        }}
-                      >
-                        {getInventoryText(product.inventory)} (
-                        {product.inventory})
+                      <Typography variant="body2" color="text.secondary">
+                        ₱{Number(product.unit_price || 0).toFixed(2)} each
                       </Typography>
                     </Stack>
                   </Box>
                   <Typography color="black">
-                    ${product.price.toFixed(2)}
+                    ₱{Number(product.total || 0).toFixed(2)}
                   </Typography>
                 </Stack>
               </Box>
             ))}
+            <Divider sx={{ my: 2 }} />
+            
+            {/* Order Summary */}
+            <Box sx={{ mb: 2 }}>
+              <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Subtotal
+                </Typography>
+                <Typography variant="body2" color="black">
+                  ₱{Number(order.rawData?.subtotal || 0).toFixed(2)}
+                </Typography>
+              </Box>
+              
+              {order.rawData?.voucher_discount > 0 && (
+                <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
+                    Voucher Discount {order.rawData?.voucher_code && `(${order.rawData.voucher_code})`}
+                  </Typography>
+                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
+                    -₱{Number(order.rawData.voucher_discount || 0).toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
+              
+              <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Shipping Fee
+                </Typography>
+                <Typography variant="body2" color="black">
+                  ₱{Number(order.rawData?.shipping_fee || 0).toFixed(2)}
+                </Typography>
+              </Box>
+            </Box>
+            
             <Divider sx={{ my: 2 }} />
             <Box display="flex" justifyContent="space-between">
               <Typography
@@ -310,67 +514,23 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                 Total
               </Typography>
               <Typography variant="subtitle1" color="black">
-                ${order.total.toFixed(2)}
+                ₱{(() => {
+                  const subtotal = Number(order.rawData?.subtotal || 0);
+                  const voucherDiscount = Number(order.rawData?.voucher_discount || 0);
+                  const shippingFee = Number(order.rawData?.shipping_fee || 0);
+                  const total = subtotal - voucherDiscount + shippingFee;
+                  return total.toFixed(2);
+                })()}
               </Typography>
             </Box>
           </Box>
 
-          {/* Action Buttons - NEW STATUS */}
-          {order.status === "New" && (
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{
-                  color: "white",
-                  backgroundColor: "black",
-                  "&:hover": {
-                    backgroundColor: "#333",
-                  },
-                }}
-                onClick={handleAcceptOrder}
-                disabled={isUpdating}
-              >
-                {isUpdating ? "Accepting Order..." : "Accept Order"}
-              </Button>
-              <Button
-                variant="outlined"
-                fullWidth
-                sx={{
-                  color: "black",
-                  borderColor: "black",
-                  "&:hover": {
-                    borderColor: "black",
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                  },
-                }}
-                onClick={handleCancelOrder}
-              >
-                Cancel Order
-              </Button>
-            </Stack>
-          )}
+          {/* Action Buttons */}
+          {getActionButtons()}
 
-          {/* Action Buttons - ON GOING STATUS (Only Ship Package button) */}
-          {order.status === "On Going" && (
-            <Button
-              variant="contained"
-              fullWidth
-              sx={{
-                color: "white",
-                backgroundColor: "#FF9800",
-                "&:hover": {
-                  backgroundColor: "#F57C00",
-                },
-              }}
-              onClick={handleShipPackage}
-            >
-              Ship Package
-            </Button>
-          )}
-
-          {/* Show tracking info for To Ship and Completed orders */}
-          {(order.status === "To Ship" || order.status === "Completed") && (
+          {/* Show shipping tracking info for shipped/delivered orders */}
+          {(order.status?.toLowerCase() === 'shipped' || order.status?.toLowerCase() === 'delivered') && 
+           (order.courierName || order.trackingNumber) && (
             <Box
               sx={{
                 p: 2,
@@ -380,12 +540,11 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
               }}
             >
               <Typography variant="body2" color="black" fontWeight={600}>
-                📦 Package{" "}
-                {order.status === "To Ship" ? "Ready to Ship" : "Delivered"}
+                📦 Shipping Information
               </Typography>
-              {order.courier && (
+              {order.courierName && (
                 <Typography variant="body2" color="black">
-                  Courier: {order.courier}
+                  Courier: {order.courierName}
                 </Typography>
               )}
               {order.trackingNumber && (
@@ -398,15 +557,15 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
         </Stack>
       </Drawer>
 
-      {/* Ship Modal */}
-      <OrderShip
-        visible={showShipModal}
-        onClose={() => setShowShipModal(false)}
-        onShipped={handleShipped}
-        order={order}
+      {/* Shipping Dialog */}
+      <ShippingDialog
+        open={shippingDialogOpen}
+        onClose={() => setShippingDialogOpen(false)}
+        onSubmit={handleShippingSubmit}
+        orderNumber={order?.id}
       />
 
-      {/* Confirm Cancellation Dialog */}
+      {/* Confirm Action Dialog */}
       <Dialog
         open={confirmDialogOpen}
         sx={{
@@ -420,12 +579,14 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
         }}
       >
         <DialogTitle sx={{ fontWeight: 600, fontSize: 20 }}>
-          Confirm Cancellation
+          {actionType === 'cancel' ? 'Confirm Cancellation' : 'Confirm Delivery'}
         </DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to cancel order #{order?.id}? This action
-            cannot be undone.
+            {actionType === 'cancel' 
+              ? `Are you sure you want to cancel order #${order?.id}? This action cannot be undone.`
+              : `Confirm that order #${order?.id} has been delivered to the customer?`
+            }
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
@@ -442,21 +603,21 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
               },
             }}
           >
-            No
+            Cancel
           </Button>
           <Button
-            onClick={handleConfirmCancel}
+            onClick={handleConfirmAction}
             variant="contained"
             fullWidth
             sx={{
-              backgroundColor: "#F44336",
+              backgroundColor: actionType === 'cancel' ? "#F44336" : "#00E676",
               color: "white",
               "&:hover": {
-                backgroundColor: "#D32F2F",
+                backgroundColor: actionType === 'cancel' ? "#D32F2F" : "#00C767",
               },
             }}
           >
-            Yes, Cancel
+            {actionType === 'cancel' ? 'Yes, Cancel Order' : 'Yes, Mark as Delivered'}
           </Button>
         </DialogActions>
       </Dialog>

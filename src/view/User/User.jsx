@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Snackbar, Alert } from "@mui/material";
+import { Box, Snackbar, Alert, Typography } from "@mui/material";
 import UserHeader from "./User Components/UserHeader";
 import EmployeeTable from "./User Components/EmployeeTable";
 import CustomerTable from "./User Components/CustomerTable";
@@ -75,8 +75,44 @@ const initialCustomers = [
 ];
 
 const User = () => {
-  const { user: currentUser, profile } = useAuth();
+  const { user: currentUser, profile, loading: authLoading } = useAuth();
   const permissions = usePermissions(); // Add permission hook
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid #E0E0E0',
+          borderTop: '4px solid #4CAF50',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+      </Box>
+    );
+  }
+
+  // Check if user has permission to view users
+  if (!permissions.can(PERMISSIONS.USER_VIEW)) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ bgcolor: 'white', p: 4, borderRadius: 2, textAlign: 'center' }}>
+          <Typography variant="h5" gutterBottom color="error">
+            Access Denied
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            You don't have permission to view users and customers.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Only Admins and Managers can access this page.
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   const [employeesList, setEmployeesList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -593,6 +629,7 @@ const User = () => {
             setEmployeePage(0);
           }}
           onUserClick={handleEmployeeClick}
+          loading={loading}
         />
       ) : (
         <CustomerTable
@@ -605,6 +642,7 @@ const User = () => {
             setCustomerPage(0);
           }}
           onCustomerClick={handleCustomerClick}
+          loading={loading}
         />
       )}
 

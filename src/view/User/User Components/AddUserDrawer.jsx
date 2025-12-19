@@ -164,7 +164,13 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        // Handle user-friendly error messages
+        if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
+          throw new Error('This email address is already registered in the system.');
+        }
+        throw authError;
+      }
 
       const userId = authData.user?.id;
 
@@ -203,7 +209,11 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
 
           if (insertError) {
             console.error('Error inserting profile:', insertError);
-            throw new Error(`Failed to create profile: ${insertError.message}`);
+            // Handle user-friendly error messages
+            if (insertError.code === '23505' || insertError.message.includes('duplicate key') || insertError.message.includes('profiles_email_key')) {
+              throw new Error('This email address is already registered in the system.');
+            }
+            throw new Error('Failed to create user profile. Please try again.');
           }
         } else {
           // Profile exists, update it
@@ -253,7 +263,17 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
 
     } catch (err) {
       console.error('Error creating user:', err);
-      setError(err.message || 'Failed to create user');
+      // Display user-friendly error message
+      let errorMessage = err.message || 'Failed to create user. Please try again.';
+      
+      // Handle any remaining technical errors with friendly messages
+      if (errorMessage.includes('duplicate key') || errorMessage.includes('already exists')) {
+        errorMessage = 'This email address is already registered in the system.';
+      } else if (errorMessage.includes('profiles_email_key')) {
+        errorMessage = 'This email address is already registered in the system.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

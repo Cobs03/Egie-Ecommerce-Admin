@@ -57,6 +57,9 @@ const ProductCreate = () => {
     state?.officialPrice || ""
   );
   const [initialPrice, setInitialPrice] = useState(state?.initialPrice || "");
+  const [compatibilityTags, setCompatibilityTags] = useState(
+    state?.compatibility_tags || []
+  );
   const fileInputRef = useRef();
   const [openAddComponent, setOpenAddComponent] = useState(false);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
@@ -432,6 +435,7 @@ const ProductCreate = () => {
           id: comp.id,
           name: comp.name
         })), // Save only id and name (not full category object)
+        compatibility_tags: compatibilityTags, // Tags for product recommendations
         specifications: specifications, // From ComponentSpecifications
         variants: variants, // From VariantManager
         metadata: {
@@ -505,6 +509,11 @@ const ProductCreate = () => {
         const oldSpecs = state.specifications || {};
         const newSpecs = specifications || {};
         if (JSON.stringify(oldSpecs) !== JSON.stringify(newSpecs)) preCheckChanges.push('specifications');
+        
+        // Pre-check compatibility tags
+        const oldTags = (state.compatibility_tags || []).sort();
+        const newTags = (compatibilityTags || []).sort();
+        if (JSON.stringify(oldTags) !== JSON.stringify(newTags)) preCheckChanges.push('compatibility_tags');
         
         console.log("🔍 PRE-CHECK: Changes detected:", preCheckChanges);
         
@@ -793,6 +802,27 @@ const ProductCreate = () => {
                 JSON.stringify(oldSpecs[key]) !== JSON.stringify(newSpecs[key])
               ).length
             };
+          }
+          
+          // Compare compatibility tags
+          const oldTags = (state.compatibility_tags || []).sort();
+          const newTags = (compatibilityTags || []).sort();
+          
+          if (JSON.stringify(oldTags) !== JSON.stringify(newTags)) {
+            const tagsAdded = newTags.filter(tag => !oldTags.includes(tag));
+            const tagsRemoved = oldTags.filter(tag => !newTags.includes(tag));
+            
+            changes.push('compatibility_tags');
+            detailedChanges.compatibility_tags = {
+              oldCount: oldTags.length,
+              newCount: newTags.length,
+              added: tagsAdded,
+              removed: tagsRemoved
+            };
+            
+            console.log("📝 Compatibility tags changed:");
+            console.log("  Added:", tagsAdded);
+            console.log("  Removed:", tagsRemoved);
           }
           
           // CRITICAL FIX: Only create log if there are actual changes
@@ -1316,10 +1346,12 @@ const ProductCreate = () => {
               description={description}
               warranty={warranty}
               brandId={brandId}
+              compatibilityTags={compatibilityTags}
               onNameChange={setName}
               onDescriptionChange={setDescription}
               onWarrantyChange={setWarranty}
               onBrandChange={setBrandId}
+              onCompatibilityTagsChange={setCompatibilityTags}
             />
 
             {/* Component Specifications */}

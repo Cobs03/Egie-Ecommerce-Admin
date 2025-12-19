@@ -1,14 +1,55 @@
 import * as React from "react";
 import { Card, CardContent, Typography, Box, Stack } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
-
-const data = [
-  { id: 0, value: 215, label: "Delivered", color: "#63e01d" },
-  { id: 1, value: 235, label: "Dispatched", color: "#2176ae" },
-  { id: 2, value: 235, label: "Ongoing", color: "#ffe14d" },
-];
+import DashboardService from "../../../services/DashboardService";
 
 export default function ShippingChart() {
+  const [data, setData] = React.useState([
+    { id: 0, value: 0, label: "Delivered", color: "#63e01d" },
+    { id: 1, value: 0, label: "Dispatched", color: "#2176ae" },
+    { id: 2, value: 0, label: "Ongoing", color: "#ffe14d" },
+  ]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchShippingData = async () => {
+      try {
+        const stats = await DashboardService.getShippingStats();
+        const chartData = [
+          { id: 0, value: stats.delivered, label: "Delivered", color: "#63e01d" },
+          { id: 1, value: stats.dispatched, label: "Dispatched", color: "#2176ae" },
+          { id: 2, value: stats.ongoing, label: "Ongoing", color: "#ffe14d" },
+        ];
+        setData(chartData);
+      } catch (error) {
+        console.error("Error fetching shipping data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShippingData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          borderRadius: 3,
+          boxShadow: 3,
+          minWidth: 300,
+          minHeight: 300,
+          p: 2,
+          m: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography>Loading...</Typography>
+      </Card>
+    );
+  }
   return (
     <Card
       sx={{

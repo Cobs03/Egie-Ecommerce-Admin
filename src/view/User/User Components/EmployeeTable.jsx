@@ -39,6 +39,7 @@ const EmployeeTable = ({
   onPageChange,
   onRowsPerPageChange,
   onUserClick,
+  loading = false,
 }) => {
   const [employeeFilterAnchor, setEmployeeFilterAnchor] = useState(null);
   const [accessFilterAnchor, setAccessFilterAnchor] = useState(null);
@@ -300,9 +301,41 @@ const EmployeeTable = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredAndSortedUsers
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((user, idx) => (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={5} sx={{ border: 'none', py: 0 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',
+                  minHeight: '300px',
+                  justifyContent: 'center',
+                  gap: 1.5
+                }}>
+                  <Box
+                    sx={{
+                      width: '60px',
+                      height: '60px',
+                      border: '6px solid rgba(0, 230, 118, 0.1)',
+                      borderTop: '6px solid #00E676',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(360deg)' }
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" color="#00E676" sx={{ mt: 1, fontWeight: 500 }}>
+                    Loading employees...
+                  </Typography>
+                </Box>
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredAndSortedUsers
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((user, idx) => (
               <TableRow
                 key={idx}
                 sx={{
@@ -361,8 +394,8 @@ const EmployeeTable = ({
                   </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
-          {filteredAndSortedUsers.length === 0 && (
+            )))}
+          {!loading && filteredAndSortedUsers.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
                 <Typography variant="body1" color="text.secondary">

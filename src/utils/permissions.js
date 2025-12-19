@@ -227,9 +227,8 @@ const rolePermissions = {
   ],
 
   [ROLES.EMPLOYEE]: [
-    // User Management - Very Limited
-    PERMISSIONS.USER_VIEW, // Read-only
-    // NO: All other user permissions
+    // User Management - None
+    // NO: All user permissions including USER_VIEW
 
     // Product Management - Limited
     PERMISSIONS.PRODUCT_CREATE,
@@ -247,16 +246,11 @@ const rolePermissions = {
     PERMISSIONS.BUNDLE_SET_PRICE, // Within approved range
     // NO: BUNDLE_DELETE
 
-    // Order Management - Limited
-    PERMISSIONS.ORDER_VIEW,
-    PERMISSIONS.ORDER_ACCEPT,
-    PERMISSIONS.ORDER_UPDATE_STATUS, // Basic statuses only
-    PERMISSIONS.ORDER_MANAGE_SHIPPING, // Update only
-    // NO: ORDER_REJECT, ORDER_CANCEL, ORDER_REFUND, ORDER_EXPORT
+    // Order Management - None
+    // NO: All order permissions including ORDER_VIEW
 
-    // Payment & Financial - Very Limited
-    PERMISSIONS.PAYMENT_VIEW, // Status only, read-only
-    // NO: All other payment permissions
+    // Payment & Financial - None
+    // NO: All payment permissions including PAYMENT_VIEW
 
     // Promotions - None
     // NO: All promo permissions
@@ -267,10 +261,8 @@ const rolePermissions = {
     PERMISSIONS.SUPPORT_MANAGE, // Assigned tickets only
     // NO: FEEDBACK_DELETE
 
-    // Shipping - Limited
-    PERMISSIONS.SHIPPING_VIEW, // Assigned only
-    PERMISSIONS.SHIPPING_UPDATE_STATUS, // Basic statuses
-    // NO: SHIPPING_MANAGE_PROVIDERS, SHIPPING_SET_RATES
+    // Shipping - None
+    // NO: All shipping permissions including SHIPPING_VIEW
 
     // System & Settings - None
     // NO: All system permissions
