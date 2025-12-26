@@ -214,9 +214,9 @@ export class OrderService {
         updateData.delivered_at = new Date().toISOString();
       } else if (status === 'cancelled') {
         updateData.cancelled_at = new Date().toISOString();
-      } else if (status === 'ready_for_pickup') {
-        updateData.ready_for_pickup_at = new Date().toISOString();
       }
+      // Note: ready_for_pickup doesn't need a separate timestamp column
+      // It uses updated_at which is automatically set
 
       const { data, error } = await supabase
         .from('orders')
@@ -235,7 +235,7 @@ export class OrderService {
           .eq('order_id', id);
       }
 
-      return handleSupabaseSuccess(data[0])
+      return handleSupabaseSuccess(data)
     } catch (error) {
       return handleSupabaseError(error)
     }
@@ -375,4 +375,47 @@ export class OrderService {
       return handleSupabaseError(error)
     }
   }
+
+  // Get order logs from admin_logs table
+  static async getOrderLogs(orderId) {
+    try {
+      const { data, error } = await supabase
+        .from('admin_logs')
+        .select(`
+          *,
+          user:user_id(
+            full_name,
+            email,
+            role
+          )
+        `)
+        .eq('target_type', 'Orders')
+        .eq('target_id', orderId)
+        .order('created_at', { ascending: false });
+
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(data);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  }
+
+  // Add manual order log entry to admin_logs
+  static async addOrderLog(orderId, actionType, description, metadata = {}) {
+    try {
+      const { data, error } = await supabase
+        .rpc('add_order_log', {
+          p_order_id: orderId,
+          p_action_type: actionType,
+          p_description: description,
+          p_metadata: metadata
+        });
+
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(data);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  }
 }
+

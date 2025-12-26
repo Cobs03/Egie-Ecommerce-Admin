@@ -3,6 +3,7 @@ import { Box, Snackbar, Alert } from "@mui/material";
 import PromotionsHeader from "./Promotion Components/PromotionsHeader";
 import VoucherTable from "./Promotion Components/VoucherTable";
 import DiscountTable from "./Promotion Components/DiscountsTable";
+import PopupAdsTab from "./Promotion Components/PopupAdsTab";
 import VoucherEditDialog from "./Promotion Components/VoucherEditDialog";
 import VoucherDeleteDialog from "./Promotion Components/VoucherDeleteDialog";
 import DiscountEditDialog from "./Promotion Components/DiscountEditDialog";
@@ -17,13 +18,13 @@ const Promotions = () => {
   const [discounts, setDiscounts] = useState([]);
   const [filteredDiscounts, setFilteredDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Dialog states
   const [voucherEditOpen, setVoucherEditOpen] = useState(false);
   const [voucherDeleteOpen, setVoucherDeleteOpen] = useState(false);
   const [discountEditOpen, setDiscountEditOpen] = useState(false);
   const [discountDeleteOpen, setDiscountDeleteOpen] = useState(false);
-  
+
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
   const [isAddMode, setIsAddMode] = useState(false);
@@ -54,13 +55,13 @@ const Promotions = () => {
           const validFrom = new Date(voucher.valid_from);
           const validUntil = new Date(voucher.valid_until);
           const dateRange = `${validFrom.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })} - ${validUntil.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}`;
-          
+
           // Format price based on discount type
           const discountType = voucher.discount_type || 'fixed';
-          const formattedPrice = discountType === 'percent' 
-            ? `${voucher.price}%` 
+          const formattedPrice = discountType === 'percent'
+            ? `${voucher.price}%`
             : `₱ ${voucher.price.toFixed(2)}`;
-          
+
           return {
             id: voucher.id,
             name: voucher.name,
@@ -80,7 +81,7 @@ const Promotions = () => {
             discountType: discountType // Keep for edit dialog
           };
         });
-        
+
         setVouchers(transformedVouchers);
         setFilteredVouchers(transformedVouchers);
       } else {
@@ -100,25 +101,25 @@ const Promotions = () => {
       if (result.success) {
         // Debug: Log the raw data to see what we're getting
         console.log('Raw discount data from database:', result.data);
-        
+
         // Transform database format to UI format
         const transformedDiscounts = result.data.map(discount => {
           // Debug: Log each discount's date fields
           console.log('Discount:', discount.name, 'valid_from:', discount.valid_from, 'valid_until:', discount.valid_until);
-          
+
           // Format dates for display with better error handling
           let dateRange = 'N/A';
-          
+
           try {
             if (discount.valid_from && discount.valid_until) {
               // Parse dates - handle both YYYY-MM-DD and ISO timestamp formats
               // Extract just the date part if it's a timestamp
               const fromDateStr = discount.valid_from.split('T')[0];
               const toDateStr = discount.valid_until.split('T')[0];
-              
+
               const validFrom = new Date(fromDateStr + 'T00:00:00Z');
               const validUntil = new Date(toDateStr + 'T00:00:00Z');
-              
+
               // Format dates correctly
               const formatDate = (date) => {
                 if (isNaN(date.getTime())) return 'Invalid';
@@ -127,7 +128,7 @@ const Promotions = () => {
                 const year = String(date.getUTCFullYear()).slice(-2);
                 return `${month}/${day}/${year}`;
               };
-              
+
               dateRange = `${formatDate(validFrom)} - ${formatDate(validUntil)}`;
               console.log('Formatted date range:', dateRange);
             } else {
@@ -137,7 +138,7 @@ const Promotions = () => {
             console.error('Error parsing dates for discount:', discount.id, dateError);
             dateRange = 'Invalid Date';
           }
-          
+
           return {
             id: discount.id,
             name: discount.name,
@@ -160,7 +161,7 @@ const Promotions = () => {
             applyToType: discount.apply_to_type || 'all'
           };
         });
-        
+
         setDiscounts(transformedDiscounts);
         setFilteredDiscounts(transformedDiscounts);
       } else {
@@ -200,7 +201,7 @@ const Promotions = () => {
           name: voucherData.name,
           code: voucherData.code,
           discountType: voucherData.discountType || 'fixed', // Add discount type
-          price: typeof voucherData.price === 'string' 
+          price: typeof voucherData.price === 'string'
             ? parseFloat(voucherData.price.replace(/[₱,%\s]/g, ''))
             : voucherData.price,
           validFrom: voucherData.validFrom,
@@ -214,17 +215,17 @@ const Promotions = () => {
 
         if (result.success) {
           await loadVouchers();
-          
+
           // Send notification to customers
           try {
-            const discountValue = voucherData.discountType === 'percent' 
-              ? `${voucherData.price}%` 
+            const discountValue = voucherData.discountType === 'percent'
+              ? `${voucherData.price}%`
               : `₱${voucherData.price}`;
-            
-            const message = voucherData.description 
-              ? voucherData.description 
+
+            const message = voucherData.description
+              ? voucherData.description
               : `Use the code ${voucherData.code} for ${discountValue} discount`;
-            
+
             console.log('Sending voucher notification with params:', {
               p_title: voucherData.name || 'New Voucher Available',
               p_message: message,
@@ -234,7 +235,7 @@ const Promotions = () => {
               p_action_data: { code: voucherData.code, discount: discountValue },
               p_target_users: 'all'
             });
-            
+
             const { data: notifResult, error: notifError } = await supabase.rpc('create_promotion_notification', {
               p_title: voucherData.name || 'New Voucher Available',
               p_message: message,
@@ -244,9 +245,9 @@ const Promotions = () => {
               p_action_data: { code: voucherData.code, discount: discountValue },
               p_target_users: 'all'
             });
-            
+
             console.log('Notification RPC result:', { notifResult, notifError });
-            
+
             if (notifError) {
               console.error('Notification error:', notifError);
               showSnackbar("Voucher created but notification failed: " + notifError.message, "warning");
@@ -267,7 +268,7 @@ const Promotions = () => {
           name: voucherData.name,
           code: voucherData.code,
           discountType: voucherData.discountType || 'fixed', // Add discount type
-          price: typeof voucherData.price === 'string' 
+          price: typeof voucherData.price === 'string'
             ? parseFloat(voucherData.price.replace(/[₱,%\s]/g, ''))
             : voucherData.price,
           validFrom: voucherData.validFrom,
@@ -365,49 +366,49 @@ const Promotions = () => {
 
         if (result.success) {
           await loadDiscounts();
-          
+
           // Send notification to customers
           try {
-            const discountValue = discountData.type === 'percentage' 
-              ? `${discountData.value}%` 
+            const discountValue = discountData.type === 'percentage'
+              ? `${discountData.value}%`
               : `₱${discountData.value}`;
-            
-            const productScope = applicableProducts.length > 0 
-              ? 'on selected products' 
+
+            const productScope = applicableProducts.length > 0
+              ? 'on selected products'
               : 'store-wide';
-            
-            const message = discountData.description 
-              ? discountData.description 
+
+            const message = discountData.description
+              ? discountData.description
               : `Enjoy ${discountValue} off ${productScope}!`;
-            
+
             console.log('Sending discount notification with params:', {
               p_title: discountData.name || 'New Discount Available',
               p_message: message,
               p_voucher_id: null,
               p_discount_id: result.data.id,
               p_action_type: 'view_products',
-              p_action_data: { 
-                discount: discountValue, 
-                productIds: applicableProducts 
+              p_action_data: {
+                discount: discountValue,
+                productIds: applicableProducts
               },
               p_target_users: 'all'
             });
-            
+
             const { data: notifResult, error: notifError } = await supabase.rpc('create_promotion_notification', {
               p_title: discountData.name || 'New Discount Available',
               p_message: message,
               p_voucher_id: null,
               p_discount_id: result.data.id,
               p_action_type: 'view_products',
-              p_action_data: { 
-                discount: discountValue, 
-                productIds: applicableProducts 
+              p_action_data: {
+                discount: discountValue,
+                productIds: applicableProducts
               },
               p_target_users: 'all'
             });
-            
+
             console.log('Notification RPC result:', { notifResult, notifError });
-            
+
             if (notifError) {
               console.error('Notification error:', notifError);
               showSnackbar("Discount created but notification failed: " + notifError.message, "warning");
@@ -471,7 +472,7 @@ const Promotions = () => {
   // Search handlers
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
+
     if (activeTab === "vouchers") {
       if (!query.trim()) {
         setFilteredVouchers(vouchers);
@@ -504,9 +505,10 @@ const Promotions = () => {
     setSearchQuery("");
     if (tab === "vouchers") {
       setFilteredVouchers(vouchers);
-    } else {
+    } else if (tab === "discount") {
       setFilteredDiscounts(discounts);
     }
+    // popupads tab doesn't need search filtering
   };
 
   const handleAddClick = () => {
@@ -514,10 +516,11 @@ const Promotions = () => {
     if (activeTab === "vouchers") {
       setSelectedVoucher(null);
       setVoucherEditOpen(true);
-    } else {
+    } else if (activeTab === "discount") {
       setSelectedDiscount(null);
       setDiscountEditOpen(true);
     }
+    // popupads tab handles its own add button
   };
 
   const handleDownload = () => {
@@ -547,14 +550,16 @@ const Promotions = () => {
           onDelete={handleDeleteVoucher}
           loading={loading}
         />
-      ) : (
+      ) : activeTab === "discount" ? (
         <DiscountTable
           discounts={filteredDiscounts}
           onEdit={handleEditDiscount}
           onDelete={handleDeleteDiscount}
           loading={loading}
         />
-      )}
+      ) : activeTab === "popupads" ? (
+        <PopupAdsTab />
+      ) : null}
 
       {/* Voucher Dialogs */}
       <VoucherEditDialog
