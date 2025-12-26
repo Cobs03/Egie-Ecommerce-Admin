@@ -92,6 +92,25 @@ const PromotionsHeader = ({
           >
             Vouchers
           </Button>
+          <Button
+            onClick={() => onTabChange("popupads")}
+            sx={{
+              bgcolor: activeTab === "popupads" ? "#27EF3C" : "transparent",
+              color: activeTab === "popupads" ? "#000" : "#fff",
+              fontWeight: 700,
+              textTransform: "none",
+              borderRadius: "20px",
+              px: 3,
+              py: 0.75,
+              minWidth: 120,
+              border: activeTab === "popupads" ? "none" : "2px solid #fff",
+              "&:hover": {
+                bgcolor: activeTab === "popupads" ? "#1ec32e" : "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            Pop-up Ads
+          </Button>
         </Stack>
       </Box>
 
@@ -114,7 +133,7 @@ const PromotionsHeader = ({
             "&:hover": { bgcolor: "#1ec32e" },
           }}
         >
-          {activeTab === "discount" ? "Add Discount" : "Add Voucher"}
+          {activeTab === "discount" ? "Add Discount" : activeTab === "popupads" ? "Add Pop-up Ad" : "Add Voucher"}
         </Button>
 
         <Button
@@ -132,7 +151,7 @@ const PromotionsHeader = ({
             },
           }}
         >
-          {activeTab === "discount" ? "Export Discounts" : "Export Vouchers"}
+          {activeTab === "discount" ? "Export Discounts" : activeTab === "popupads" ? "Export Pop-up Ads" : "Export Vouchers"}
         </Button>
       </Box>
     </>
