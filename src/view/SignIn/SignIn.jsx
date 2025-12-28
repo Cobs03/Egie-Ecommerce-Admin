@@ -12,6 +12,7 @@ import {
   Paper,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
 const SignIn = () => {
@@ -93,11 +94,16 @@ const SignIn = () => {
         }}
       >
         <Container maxWidth="sm">
-          <Box sx={{ textAlign: "center", mb: 4 }}>
-            {/* Logo */}
-            <Box
-              component="img"
-              src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Box sx={{ textAlign: "center", mb: 4 }}>
+              {/* Logo */}
+              <Box
+                component="img"
+                src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
               alt="EGIE Logo"
               sx={{
                 width: 80,
@@ -145,6 +151,7 @@ const SignIn = () => {
               to your account to continue
             </Typography>
           </Box>
+          </motion.div>
 
           {/* Error Alert */}
           {error && (
@@ -154,7 +161,12 @@ const SignIn = () => {
           )}
 
           {/* Login Form */}
-          <Box component="form" onSubmit={handleLogin}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Box component="form" onSubmit={handleLogin}>
             {/* Email Field */}
             <Typography
               variant="body2"
@@ -274,6 +286,7 @@ const SignIn = () => {
             </Button>
 
           </Box>
+          </motion.div>
         </Container>
       </Box>
 

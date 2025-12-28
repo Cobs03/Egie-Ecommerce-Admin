@@ -19,6 +19,7 @@ import {
   Tab,
   Snackbar,
 } from '@mui/material';
+import { motion } from 'framer-motion';
 import {
   PhotoCamera,
   Visibility,
@@ -374,16 +375,22 @@ const AdminProfile = () => {
               </IconButton>
             </label>
           </Box>
-          <Box>
-            <Typography variant="h4" fontWeight="bold">
-              Profile Settings
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {profileData.firstName && profileData.lastName
-                ? `${profileData.firstName} ${profileData.lastName}`
-                : profileData.email}
-            </Typography>
-          </Box>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Box>
+              <Typography variant="h4" fontWeight="bold" sx={{ fontFamily: "Bruno Ace SC" }}>
+                PROFILE SETTINGS
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {profileData.firstName && profileData.lastName
+                  ? `${profileData.firstName} ${profileData.lastName}`
+                  : profileData.email}
+              </Typography>
+            </Box>
+          </motion.div>
         </Box>
 
         <Divider sx={{ mb: 3 }} />

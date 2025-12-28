@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Box, Snackbar, Alert, Typography } from "@mui/material";
+import { motion } from "framer-motion";
 import UserHeader from "./User Components/UserHeader";
 import EmployeeTable from "./User Components/EmployeeTable";
 import CustomerTable from "./User Components/CustomerTable";
@@ -588,16 +589,23 @@ const User = () => {
     }
   };
 
-  const filteredEmployees = employeesList.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  // Memoize filtered employees and customers for better performance
+  const filteredEmployees = useMemo(() =>
+    employeesList.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [employeesList, searchQuery]
   );
 
-  const filteredCustomers = customersList.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCustomers = useMemo(() =>
+    customersList.filter(
+      (customer) =>
+        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [customersList, searchQuery]
   );
 
   const handleDownloadFile = () => {
@@ -619,31 +627,45 @@ const User = () => {
       />
 
       {activeTab === "employees" ? (
-        <EmployeeTable
-          users={filteredEmployees}
-          page={employeePage}
-          rowsPerPage={rowsPerPage}
-          onPageChange={(event, newPage) => setEmployeePage(newPage)}
-          onRowsPerPageChange={(event) => {
-            setRowsPerPage(parseInt(event.target.value, 10));
-            setEmployeePage(0);
-          }}
-          onUserClick={handleEmployeeClick}
-          loading={loading}
-        />
+        <motion.div
+          key="employees"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <EmployeeTable
+            users={filteredEmployees}
+            page={employeePage}
+            rowsPerPage={rowsPerPage}
+            onPageChange={(event, newPage) => setEmployeePage(newPage)}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setEmployeePage(0);
+            }}
+            onUserClick={handleEmployeeClick}
+            loading={loading}
+          />
+        </motion.div>
       ) : (
-        <CustomerTable
-          customers={filteredCustomers}
-          page={customerPage}
-          rowsPerPage={rowsPerPage}
-          onPageChange={(event, newPage) => setCustomerPage(newPage)}
-          onRowsPerPageChange={(event) => {
-            setRowsPerPage(parseInt(event.target.value, 10));
-            setCustomerPage(0);
-          }}
-          onCustomerClick={handleCustomerClick}
-          loading={loading}
-        />
+        <motion.div
+          key="customers"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <CustomerTable
+            customers={filteredCustomers}
+            page={customerPage}
+            rowsPerPage={rowsPerPage}
+            onPageChange={(event, newPage) => setCustomerPage(newPage)}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setCustomerPage(0);
+            }}
+            onCustomerClick={handleCustomerClick}
+            loading={loading}
+          />
+        </motion.div>
       )}
 
       {/* Employee Drawer */}

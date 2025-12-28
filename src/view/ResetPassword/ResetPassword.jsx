@@ -11,6 +11,7 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 
 const ResetPassword = () => {
@@ -77,11 +78,16 @@ const ResetPassword = () => {
         }}
       >
         <Container maxWidth="sm">
-          <Box sx={{ textAlign: "center", mb: 4 }}>
-            {/* Logo */}
-            <Box
-              component="img"
-              src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Box sx={{ textAlign: "center", mb: 4 }}>
+              {/* Logo */}
+              <Box
+                component="img"
+                src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
               alt="EGIE Logo"
               sx={{
                 width: 80,
@@ -115,6 +121,7 @@ const ResetPassword = () => {
               Enter your new password below.
             </Typography>
           </Box>
+          </motion.div>
 
           {/* Error Alert */}
           {error && (
@@ -132,7 +139,12 @@ const ResetPassword = () => {
 
           {/* Reset Password Form */}
           {!success && (
-            <Box component="form" onSubmit={handleResetPassword}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Box component="form" onSubmit={handleResetPassword}>
               {/* New Password Field */}
               <Typography
                 variant="body2"
@@ -270,6 +282,7 @@ const ResetPassword = () => {
                 Back to Login
               </Link>
             </Box>
+            </motion.div>
           )}
         </Container>
       </Box>

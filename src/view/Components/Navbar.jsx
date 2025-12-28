@@ -36,6 +36,7 @@ import { FaUserGroup, FaRegCreditCard } from "react-icons/fa6";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
+import { MdWebAsset } from "react-icons/md";
 import ScrollToTop from "./ScrollToTop";
 
 // Import all necessary components
@@ -48,6 +49,7 @@ import BundleView from "../Product/ProductComponents/BundleView";
 import Order from "../Order/Order";
 import Payment from "../Payment/Payment";
 import AdminProfile from "../AdminProfile/AdminProfile";
+import WebsiteSettings from "../WebsiteSettings/WebsiteSettings";
 import Promotions from "../Promotions/Promotions";
 import Shipping from "../Shipping/Shipping";
 import Users from "../User/User";
@@ -70,6 +72,7 @@ const NAVIGATION = [
   { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
   { segment: "discount", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
   { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
+  { segment: "website-settings", title: "Website", icon: <MdWebAsset size={20} /> },
 ];
 
 // Styled components
@@ -199,7 +202,7 @@ function Navbar() {
                 <MenuOpenIcon />
               </IconButton>
               <Typography variant="h6" sx={{ color: "#fff", fontWeight: 700 }}>
-                EGIE ADMIN
+                ADMIN
               </Typography>
             </Box>
           </>
@@ -485,6 +488,7 @@ function Navbar() {
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}
             {/* Settings page */}
             <Route path="/settings" element={<AdminProfile />} />
+            <Route path="/website-settings" element={<WebsiteSettings />} />
           </Routes>
         </Box>
       </Main>

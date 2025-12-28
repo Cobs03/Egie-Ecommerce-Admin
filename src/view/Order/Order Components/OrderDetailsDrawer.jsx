@@ -198,16 +198,14 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
     }
 
     if (status === 'processing') {
-      // Check if this is a pickup order - check for various formats
-      const deliveryType = (order.deliveryType || order.delivery_type || order.rawData?.delivery_type || '').toLowerCase();
+      // Check if this is a pickup order using standardized property
+      const deliveryType = (order.deliveryType || '').toLowerCase();
       const isPickup = deliveryType === 'pickup' || 
                        deliveryType === 'store_pickup' ||
                        deliveryType.includes('pickup');
       
       console.log('🔍 OrderDetailsDrawer - Delivery type check:', {
-        deliveryType: order.deliveryType,
-        delivery_type: order.delivery_type,
-        rawData_delivery_type: order.rawData?.delivery_type,
+        deliveryType,
         isPickup
       });
       

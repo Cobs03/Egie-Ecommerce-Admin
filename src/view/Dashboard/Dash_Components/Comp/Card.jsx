@@ -3,6 +3,7 @@ import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 const Card = ({
   title,
@@ -13,6 +14,7 @@ const Card = ({
   percentageColor = "#22c55e",
   percentageBg = "#dcfce7",
   iconBg = "#f3f4f6",
+  trendData = [],
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(period);
@@ -49,7 +51,7 @@ const Card = ({
         margin: 8,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
         <div
           style={{
             background: iconBg,
@@ -60,8 +62,6 @@ const Card = ({
             alignItems: "center",
             justifyContent: "center",
             marginRight: 12,
-            position: "absolute",
-            zIndex: -1,
           }}
         >
           {icon}
@@ -109,9 +109,30 @@ const Card = ({
           ))}
         </Menu>
       </div>
-      <div style={{ fontSize: 42, fontWeight: 700, marginBottom: 8 }}>
-        {value}
+      
+      {/* Value and Trend Chart */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 8 }}>
+        <div style={{ fontSize: 42, fontWeight: 700, flex: 1 }}>
+          {value}
+        </div>
+        {trendData && trendData.length > 0 && (
+          <div style={{ width: 100, height: 50, marginBottom: 8 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData}>
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke={percentageColor} 
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
+      
+      {/* Percentage and Period */}
       <div style={{ display: "flex", alignItems: "center" }}>
         <div
           style={{

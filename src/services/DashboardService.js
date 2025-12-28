@@ -18,7 +18,7 @@ export class DashboardService {
 
       const { data, error } = await supabase
         .from('orders')
-        .select('total_amount, created_at, status')
+        .select('total, created_at, status')
         .gte('created_at', startDate.toISOString());
 
       if (error) throw error;
@@ -28,7 +28,7 @@ export class DashboardService {
         order.status === 'completed' || order.status === 'delivered'
       );
 
-      const currentTotal = filteredData.reduce((sum, order) => sum + Number(order.total_amount), 0);
+      const currentTotal = filteredData.reduce((sum, order) => sum + Number(order.total), 0);
 
       // Get previous period for percentage calculation
       const previousStartDate = new Date(startDate);
@@ -43,14 +43,14 @@ export class DashboardService {
 
       const { data: previousData } = await supabase
         .from('orders')
-        .select('total_amount, status')
+        .select('total, status')
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', startDate.toISOString());
 
       const filteredPreviousData = (previousData || []).filter(order => 
         order.status === 'completed' || order.status === 'delivered'
       );
-      const previousTotal = filteredPreviousData.reduce((sum, order) => sum + Number(order.total_amount), 0);
+      const previousTotal = filteredPreviousData.reduce((sum, order) => sum + Number(order.total), 0);
       const percentageChange = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal * 100) : 0;
 
       return {
@@ -295,7 +295,7 @@ export class DashboardService {
     try {
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('id, order_number, total_amount, status, created_at, user_id')
+        .select('id, order_number, total, status, created_at, user_id')
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -484,6 +484,104 @@ export class DashboardService {
     } catch (error) {
       console.error('Error fetching orders overview:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  // Get average order value
+  static async getAverageOrderValue(period = 'month') {
+    try {
+      const now = new Date();
+      let startDate = new Date();
+      
+      if (period === 'week') {
+        startDate.setDate(now.getDate() - 7);
+      } else if (period === 'month') {
+        startDate.setMonth(now.getMonth() - 1);
+      } else if (period === 'year') {
+        startDate.setFullYear(now.getFullYear() - 1);
+      }
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('total, created_at, status')
+        .gte('created_at', startDate.toISOString());
+
+      if (error) throw error;
+
+      // Filter for completed/delivered orders
+      const completedOrders = (data || []).filter(order => 
+        order.status === 'completed' || order.status === 'delivered'
+      );
+
+      const currentTotal = completedOrders.reduce((sum, order) => sum + Number(order.total), 0);
+      const currentAverage = completedOrders.length > 0 ? currentTotal / completedOrders.length : 0;
+
+      // Get previous period for comparison
+      const previousStartDate = new Date(startDate);
+      if (period === 'week') {
+        previousStartDate.setDate(previousStartDate.getDate() - 7);
+      } else if (period === 'month') {
+        previousStartDate.setMonth(previousStartDate.getMonth() - 1);
+      } else if (period === 'year') {
+        previousStartDate.setFullYear(previousStartDate.getFullYear() - 1);
+      }
+
+      const { data: previousData } = await supabase
+        .from('orders')
+        .select('total, status')
+        .gte('created_at', previousStartDate.toISOString())
+        .lt('created_at', startDate.toISOString());
+
+      const previousCompletedOrders = (previousData || []).filter(order => 
+        order.status === 'completed' || order.status === 'delivered'
+      );
+      const previousTotal = previousCompletedOrders.reduce((sum, order) => sum + Number(order.total), 0);
+      const previousAverage = previousCompletedOrders.length > 0 ? previousTotal / previousCompletedOrders.length : 0;
+      
+      const percentageChange = previousAverage > 0 ? ((currentAverage - previousAverage) / previousAverage * 100) : 0;
+
+      return {
+        success: true,
+        average: currentAverage,
+        percentage: percentageChange,
+        isIncrease: percentageChange >= 0
+      };
+    } catch (error) {
+      console.error('Error fetching average order value:', error);
+      return { success: false, error: error.message, average: 0, percentage: 0 };
+    }
+  }
+
+  // Get conversion rate (completed orders vs total orders)
+  static async getConversionRate() {
+    try {
+      // Get total orders in last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: allOrders, error } = await supabase
+        .from('orders')
+        .select('status')
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+      if (error) throw error;
+
+      const totalOrders = (allOrders || []).length;
+      const completedOrders = (allOrders || []).filter(order => 
+        order.status === 'completed' || order.status === 'delivered'
+      ).length;
+
+      const conversionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+
+      return {
+        success: true,
+        rate: conversionRate,
+        visits: totalOrders,
+        orders: completedOrders
+      };
+    } catch (error) {
+      console.error('Error fetching conversion rate:', error);
+      return { success: false, error: error.message, rate: 0, visits: 0, orders: 0 };
     }
   }
 }

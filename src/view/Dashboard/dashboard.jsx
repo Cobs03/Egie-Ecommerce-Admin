@@ -3,6 +3,7 @@ import TotalSales from "./Dash_Components/TotalSales";
 import TotalOrders from "./Dash_Components/TotalOrders";
 import TotalUser from "./Dash_Components/TotalUser";
 import NewUser from "./Dash_Components/NewUser";
+import AverageOrderValue from "./Dash_Components/AverageOrderValue";
 import ShippingChart from "./Dash_Components/ShippingChart";
 import ActiveOrders from "./Dash_Components/ActiveOrdersCard";
 import ActiveDiscounts from "./Dash_Components/ActiveDiscountsCard";
@@ -13,98 +14,198 @@ import MostClicked from "./Dash_Components/MostClicked";
 import TopProduct from "./Dash_Components/TopProduct";
 import PaymentStatus from "./Dash_Components/PaymentStatus";
 import RecentOrders from "./Dash_Components/RecentOrders";
-import { Typography } from "@mui/material";
+import QuickActions from "./Dash_Components/QuickActions";
+import ConversionRate from "./Dash_Components/ConversionRate";
+import { Typography, Box } from "@mui/material";
+import { motion } from "framer-motion";
 
 const Dashboard = () => {
   return (
     <div style={{ padding: 24, background: "#f5f5f5", minHeight: "100vh" }}>
-      <Typography
-        variant="h4"
-        fontWeight={700}
-        mb={2}
-
-      >
-        DASHBOARD
-      </Typography>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr) 1.2fr",
-          gridTemplateRows: "auto auto",
-          gap: 4,
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <div style={{ gridColumn: "1 / 2" }}>
-          <TotalSales />
-        </div>
-        <div style={{ gridColumn: "2 / 3" }}>
-          <TotalOrders />
-        </div>
-        <div style={{ gridColumn: "3 / 4", gridRow: "1 / 3" }}>
+        <Typography
+          variant="h4"
+          fontWeight={700}
+          sx={{ fontFamily: "'Bruno Ace SC', sans-serif" }}
+        >
+          DASHBOARD
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </Typography>
+      </Box>
+
+      <hr style={{ marginBottom: "24px", border: "none", borderTop: "1px solid #e0e0e0" }} />
+
+      {/* Key Metrics Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, fontWeight: 600 }}
+          >
+            KEY METRICS
+          </Typography>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 16,
+            }}
+          >
+            <TotalSales />
+            <TotalOrders />
+            <AverageOrderValue />
+            <TotalUser />
+            <NewUser />
+          </div>
+        </Box>
+      </motion.div>
+
+      <hr style={{ marginBottom: "24px", border: "none", borderTop: "1px solid #e0e0e0" }} />
+
+      {/* Shipping Overview */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, fontWeight: 600 }}
+          >
+            SHIPPING OVERVIEW
+          </Typography>
           <ShippingChart />
-        </div>
-        <div style={{ gridColumn: "1 / 2" }}>
-          <TotalUser />
-        </div>
-        <div style={{ gridColumn: "2 / 3" }}>
-          <NewUser />
-        </div>
-      </div>
+        </Box>
+      </motion.div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1.6fr 1.5fr", // 3 equal columns
-          gridTemplateRows: "repeat(6, 0.2fr)", // 3 equal-height rows
-          gap: 14,
-          marginBottom: 10,
-        }}
+      <hr style={{ marginBottom: "24px", border: "none", borderTop: "1px solid #e0e0e0" }} />
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {/* Column 1 - 3 stacked rows */}
-        <div style={{ gridColumn: "1", gridRow: "1 /span 2" }}>
-          <ActiveOrders />
-        </div>
-        <div style={{ gridColumn: "1", gridRow: "3 /span 2" }}>
-          <ActiveDiscounts />
-        </div>
-        <div style={{ gridColumn: "1", gridRow: "5 /span 2" }}>
-          <CancelledOrders />
-        </div>
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, fontWeight: 600 }}
+          >
+            QUICK ACTIONS
+          </Typography>
+          <QuickActions />
+        </Box>
+      </motion.div>
 
-        {/* Column 2 - spans 2 rows */}
-        <div style={{ gridColumn: "2", gridRow: "1 / span 3" }}>
-          <Inventory />
-        </div>
-        <div style={{ gridColumn: "2", gridRow: "4 / span 3" }}>
-          <OrdersOverview />
-        </div>
+      <hr style={{ marginBottom: "24px", border: "none", borderTop: "1px solid #e0e0e0" }} />
 
-        {/* Column 3 - spans all 3 rows */}
-        <div style={{ gridColumn: "3", gridRow: "1 / span 6" }}>
-          <MostClicked />
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1.6fr 1.5fr", // 3 equal columns
-          gridTemplateRows: "repeat(2, 7fr)", // 3 equal-height rows
-          gap: 14,
-          marginBottom: 110,
-        }}
+      {/* Middle Section - Orders & Inventory */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <div style={{ gridColumn: "1 / span 2", gridRow: "1 / span 2" }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, fontWeight: 600 }}
+          >
+            ORDERS & INVENTORY
+          </Typography>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 14,
+            }}
+          >
+            <ActiveOrders />
+            <ActiveDiscounts />
+            <CancelledOrders />
+            <Inventory />
+            <OrdersOverview />
+          </div>
+        </Box>
+      </motion.div>
+
+      <hr style={{ marginBottom: "24px", border: "none", borderTop: "1px solid #e0e0e0" }} />
+
+      {/* Analytics Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, fontWeight: 600 }}
+          >
+            PRODUCT ANALYTICS
+          </Typography>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: 14,
+            }}
+          >
+            <MostClicked />
+            <TopProduct />
+            <PaymentStatus />
+            <ConversionRate />
+          </div>
+        </Box>
+      </motion.div>
+
+      <hr style={{ marginBottom: "24px", border: "none", borderTop: "1px solid #e0e0e0" }} />
+
+      {/* Recent Activity */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <Box sx={{ mb: 12 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, fontWeight: 600 }}
+          >
+            RECENT ORDERS
+          </Typography>
           <RecentOrders />
-        </div>
-        <div style={{ gridColumn: "3", gridRow: "1 " }}>
-          <TopProduct />
-        </div>
-        <div style={{ gridColumn: "3", gridRow: "2 " }}>
-          <PaymentStatus />
-        </div>
-      </div>
+        </Box>
+      </motion.div>
     </div>
   );
 };

@@ -17,6 +17,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { motion } from "framer-motion";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -512,25 +513,28 @@ const BundleView = () => {
         </Box>
       </Stack>
 
-      {/* Publish Button - Show for both create and edit modes */}
-      <Button
-        variant="contained"
-        fullWidth
-        size="large"
-        onClick={handleOpenDialog}
-        sx={{
-          py: 1.5,
-          fontSize: "1rem",
-          fontWeight: 600,
-          bgcolor: "#00E676",
-          color: "#000",
-          "&:hover": {
-            bgcolor: "#00C853",
-          },
-        }}
-      >
-        {isEditMode ? 'Update Bundle' : 'Publish Bundle'}
-      </Button>
+      {/* Publish Button - Show only for edit mode OR new bundles (when bundleId doesn't exist) */}
+      {/* Hide when just viewing an existing bundle */}
+      {(isEditMode || !bundleId) && (
+        <Button
+          variant="contained"
+          fullWidth
+          size="large"
+          onClick={handleOpenDialog}
+          sx={{
+            py: 1.5,
+            fontSize: "1rem",
+            fontWeight: 600,
+            bgcolor: "#00E676",
+            color: "#000",
+            "&:hover": {
+              bgcolor: "#00C853",
+            },
+          }}
+        >
+          {isEditMode ? 'Update Bundle' : 'Publish Bundle'}
+        </Button>
+      )}
 
       {/* Confirmation Dialog */}
       <Dialog

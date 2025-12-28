@@ -8,6 +8,7 @@ import {
   Alert,
   Container,
 } from "@mui/material";
+import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
@@ -54,11 +55,16 @@ const ForgotPassword = () => {
         }}
       >
         <Container maxWidth="sm">
-          <Box sx={{ textAlign: "center", mb: 4 }}>
-            {/* Logo */}
-            <Box
-              component="img"
-              src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Box sx={{ textAlign: "center", mb: 4 }}>
+              {/* Logo */}
+              <Box
+                component="img"
+                src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
               alt="EGIE Logo"
               sx={{
                 width: 80,
@@ -92,6 +98,7 @@ const ForgotPassword = () => {
               Enter your email address and we'll send you a link to reset your password.
             </Typography>
           </Box>
+          </motion.div>
 
           {/* Error Alert */}
           {error && (
@@ -109,7 +116,12 @@ const ForgotPassword = () => {
 
           {/* Reset Password Form */}
           {!success && (
-            <Box component="form" onSubmit={handleResetPassword}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Box component="form" onSubmit={handleResetPassword}>
               {/* Email Field */}
               <Typography
                 variant="body2"
@@ -188,6 +200,7 @@ const ForgotPassword = () => {
                 Back to Login
               </Link>
             </Box>
+            </motion.div>
           )}
 
           {/* Success - Back to Login */}

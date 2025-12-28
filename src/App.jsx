@@ -10,7 +10,6 @@ import Navbar from "./view/Components/Navbar";
 import SignIn from "./view/SignIn/SignIn";
 import ForgotPassword from "./view/ForgotPassword/ForgotPassword";
 import ResetPassword from "./view/ResetPassword/ResetPassword";
-import AIChatBox from "./view/AI-Chat/AIChatBox";
 import ContentWrapper from "./view/AI-Chat/ContentWrapper";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
@@ -107,9 +106,6 @@ const AppContent = () => {
           } 
         />
       </Routes>
-
-      {/* Add AI ChatBox - appears on all pages except auth */}
-      {!isAuthPage && user && <AIChatBox />}
     </ContentWrapper>
   );
 };

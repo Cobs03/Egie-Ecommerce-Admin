@@ -16,7 +16,7 @@ const PromotionsHeader = ({
   return (
     <>
       {/* Title */}
-      <Typography variant="h4" fontWeight={700} mb={3}>
+      <Typography variant="h4" fontWeight={700} mb={3} sx={{ fontFamily: "Bruno Ace SC" }}>
         PROMOTIONS MANAGEMENT
       </Typography>
 

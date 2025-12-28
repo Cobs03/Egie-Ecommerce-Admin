@@ -13,6 +13,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import DownloadIcon from "@mui/icons-material/Download";
+import { motion } from "framer-motion";
 import Inventory from "./ProductComponents/Inventory";
 import Stocks from "./ProductComponents/Stocks";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -83,20 +84,31 @@ const Product = () => {
         </Alert>
       )}
       
-      <Typography variant="h4" fontWeight={700} mb={2}>
-        PRODUCT MANAGEMENT
-      </Typography>
-
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={2}
-        p={1}
-        bgcolor="#000"
-        borderRadius={2}
-        boxShadow={1}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
+        <Typography variant="h4" fontWeight={700} mb={2} sx={{ fontFamily: "Bruno Ace SC" }}>
+          PRODUCT MANAGEMENT
+        </Typography>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+          p={1}
+          bgcolor="#000"
+          borderRadius={2}
+          boxShadow={1}
+        >
         <TextField
           size="small"
           placeholder="Search Product"
@@ -127,14 +139,20 @@ const Product = () => {
           Add Product
         </Button>
       </Box>
+      </motion.div>
 
       {/* Tabs with Download Button */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={2}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
         <Tabs
           value={tab}
           onChange={handleTabChange}
@@ -169,21 +187,43 @@ const Product = () => {
           {getDownloadButtonLabel()}
         </Button>
       </Box>
+      </motion.div>
 
       {tab === 0 && (
-        <ErrorBoundary fallback={<Alert severity="error">Error loading inventory. Please refresh the page.</Alert>}>
-          <Inventory key={location.state?.reloadProducts ? Date.now() : 'inventory'} />
-        </ErrorBoundary>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <ErrorBoundary fallback={<Alert severity="error">Error loading inventory. Please refresh the page.</Alert>}>
+            <Inventory key={location.state?.reloadProducts ? Date.now() : 'inventory'} />
+          </ErrorBoundary>
+        </motion.div>
       )}
       {tab === 1 && (
-        <ErrorBoundary fallback={<Alert severity="error">Error loading stocks. Please refresh the page.</Alert>}>
-          <Stocks />
-        </ErrorBoundary>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <ErrorBoundary fallback={<Alert severity="error">Error loading stocks. Please refresh the page.</Alert>}>
+            <Stocks />
+          </ErrorBoundary>
+        </motion.div>
       )}
       {tab === 2 && (
-        <ErrorBoundary fallback={<Alert severity="error">Error loading bundles. Please refresh the page.</Alert>}>
-          <Bundles />
-        </ErrorBoundary>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <ErrorBoundary fallback={<Alert severity="error">Error loading bundles. Please refresh the page.</Alert>}>
+            <Bundles />
+          </ErrorBoundary>
+        </motion.div>
       )}
     </Box>
   );

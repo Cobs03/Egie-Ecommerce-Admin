@@ -49,6 +49,9 @@ const Inventory = () => {
       </Card>
     );
   }
+  const hasLowStock = inventoryStats.lowStock > 0;
+  const hasOutOfStock = inventoryStats.outOfStock > 0;
+
   return (
     <Card
       sx={{
@@ -64,12 +67,45 @@ const Inventory = () => {
         position: "relative",
         margin: 1,
         overflow: "hidden",
+        border: hasOutOfStock ? "2px solid #f44336" : hasLowStock ? "2px solid #ff9800" : "none",
       }}
     >
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          Inventory
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>
+            Inventory
+          </Typography>
+          {hasOutOfStock && (
+            <Box
+              sx={{
+                bgcolor: "#f44336",
+                color: "#fff",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                fontSize: "0.7rem",
+                fontWeight: 600,
+              }}
+            >
+              CRITICAL
+            </Box>
+          )}
+          {!hasOutOfStock && hasLowStock && (
+            <Box
+              sx={{
+                bgcolor: "#ff9800",
+                color: "#fff",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                fontSize: "0.7rem",
+                fontWeight: 600,
+              }}
+            >
+              WARNING
+            </Box>
+          )}
+        </Box>
 
         <Stack spacing={1}>
           {/* Total Products */}
@@ -81,7 +117,7 @@ const Inventory = () => {
             <Typography variant="body2" fontWeight={500}>
               Total Products
             </Typography>
-            <Typography variant="body2" fontWeight={500}>
+            <Typography variant="body2" fontWeight={600}>
               {(inventoryStats.totalProducts || 0).toLocaleString()}
             </Typography>
           </Box>
@@ -91,11 +127,16 @@ const Inventory = () => {
             display="flex"
             justifyContent="space-between"
             alignItems="center"
+            sx={{
+              bgcolor: hasLowStock ? "#fff3e0" : "transparent",
+              p: hasLowStock ? 1 : 0,
+              borderRadius: 1,
+            }}
           >
             <Typography variant="body2" fontWeight={500} color="#ff9800">
-              Low Stocks
+              ⚠️ Low Stocks
             </Typography>
-            <Typography variant="body2" fontWeight={500} color="#ff9800">
+            <Typography variant="body2" fontWeight={700} color="#ff9800">
               {(inventoryStats.lowStock || 0).toLocaleString()}
             </Typography>
           </Box>
@@ -105,11 +146,16 @@ const Inventory = () => {
             display="flex"
             justifyContent="space-between"
             alignItems="center"
+            sx={{
+              bgcolor: hasOutOfStock ? "#ffebee" : "transparent",
+              p: hasOutOfStock ? 1 : 0,
+              borderRadius: 1,
+            }}
           >
             <Typography variant="body2" fontWeight={500} color="#f44336">
-              Out of Stock
+              🚫 Out of Stock
             </Typography>
-            <Typography variant="body2" fontWeight={500} color="#f44336">
+            <Typography variant="body2" fontWeight={700} color="#f44336">
               {(inventoryStats.outOfStock || 0).toLocaleString()}
             </Typography>
           </Box>
@@ -121,16 +167,14 @@ const Inventory = () => {
             alignItems="center"
           >
             <Typography variant="body2" fontWeight={500}>
-              Total Bundles
+              📦 Total Bundles
             </Typography>
-            <Typography variant="body2" fontWeight={500}>
+            <Typography variant="body2" fontWeight={600}>
               {(inventoryStats.totalBundles || 0).toLocaleString()}
             </Typography>
           </Box>
         </Stack>
       </CardContent>
-
-
     </Card>
   );
 };

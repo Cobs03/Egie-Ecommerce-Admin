@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Typography, TextField, Button, Stack, CircularProgress } from "@mui/material";
 import { Search, FileDownload } from "@mui/icons-material";
+import { motion } from "framer-motion";
 import ProductFeedback from "./Feedback Components/ProductFeedback";
 import Inqueries from "./Feedback Components/Inqueries";
 import ReviewService from "../../services/ReviewService";
@@ -118,21 +119,32 @@ const Feedback = () => {
   return (
     <Box p={4}>
       {/* Title */}
-      <Typography variant="h4" fontWeight={700} mb={3}>
-        FEEDBACK MANAGEMENT
-      </Typography>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography variant="h4" fontWeight={700} mb={3} sx={{ fontFamily: "Bruno Ace SC" }}>
+          FEEDBACK MANAGEMENT
+        </Typography>
+      </motion.div>
 
       {/* Search Bar & Pill Tabs */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={2}
-        p={1.5}
-        bgcolor="#000"
-        borderRadius={2}
-        boxShadow={2}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+          p={1.5}
+          bgcolor="#000"
+          borderRadius={2}
+          boxShadow={2}
+        >
         <TextField
           size="small"
           placeholder="Search Feedback"
@@ -196,14 +208,20 @@ const Feedback = () => {
           </Button>
         </Stack>
       </Box>
+      </motion.div>
 
       {/* Filter Buttons & Export Button */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
         {/* Filter buttons for Inquiries tab */}
         {activeTab === "inquiries" ? (
           <Stack direction="row" spacing={2}>
@@ -306,9 +324,16 @@ const Feedback = () => {
           {activeTab === "reviews" ? "Export Reviews" : "Export Inquiries"}
         </Button>
       </Box>
+      </motion.div>
 
       {/* Product Reviews Tab */}
       {activeTab === "reviews" && (
+        <motion.div
+          key="reviews"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
         <>
           {/* Statistics Dashboard */}
           {!loading && stats && stats.total > 0 && (
@@ -386,11 +411,19 @@ const Feedback = () => {
             reviewsPerPage={REVIEWS_PER_PAGE}
           />
         </>
+        </motion.div>
       )}
 
       {/* Inquiries Tab */}
       {activeTab === "inquiries" && (
-        <Inqueries filter={inquiryFilter} searchQuery={searchQuery} />
+        <motion.div
+          key="inquiries"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Inqueries filter={inquiryFilter} searchQuery={searchQuery} />
+        </motion.div>
       )}
 
       <Toaster position="bottom-right" richColors />

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { Toaster, toast } from "sonner";
+import { motion } from "framer-motion";
 import OrderHeader from "./Order Components/OrderHeader";
 import OrderTable from "./Order Components/OrderTable";
 import OrderDetailsDrawer from "./Order Components/OrderDetailsDrawer";
@@ -94,12 +95,16 @@ const Order = () => {
             items: processedItems,
             payment: order.payments?.[0] || null,
             shipping: order.shipping_addresses || null,
-            deliveryType: order.delivery_type,
+            deliveryType: order.delivery_type, // Single source of truth
             orderNotes: order.order_notes,
             customerNotes: order.customer_notes,
             shippingAddress: shippingAddressString,
             courierName: order.courier_name || null,
             trackingNumber: order.tracking_number || null,
+            shippedAt: order.shipped_at,
+            deliveredAt: order.delivered_at,
+            confirmedAt: order.confirmed_at,
+            cancelledAt: order.cancelled_at,
             rawData: order // Keep original data for reference
           };
         });
@@ -174,24 +179,31 @@ const Order = () => {
     );
   }
 
-  const filteredOrders = Array.isArray(orders) ? orders.filter((order) => {
-    const matchesSearch =
-      order.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchQuery.toLowerCase());
+  // Memoize filtered orders for better performance
+  const filteredOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    
+    return orders.filter((order) => {
+      // Search filter
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        order.customer.name.toLowerCase().includes(searchLower) ||
+        order.id.toLowerCase().includes(searchLower);
 
-    const matchesStatus =
-      selectedTab === 0
-        ? true
-        : selectedTab === 1
-        ? order.status === "pending" || order.status === "New"
-        : selectedTab === 2
-        ? order.status === "processing" || order.status === "On Going"
-        : selectedTab === 3
-        ? order.status === "completed" || order.status === "Completed"
-        : order.status === "cancelled" || order.status === "Cancelled";
+      // Status filter based on selected tab
+      const matchesStatus = (() => {
+        switch (selectedTab) {
+          case 0: return true; // All orders
+          case 1: return order.status === "pending" || order.status === "New";
+          case 2: return order.status === "processing" || order.status === "On Going";
+          case 3: return order.status === "completed" || order.status === "Completed";
+          default: return order.status === "cancelled" || order.status === "Cancelled";
+        }
+      })();
 
-    return matchesSearch && matchesStatus;
-  }) : [];
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, searchQuery, selectedTab]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -203,11 +215,18 @@ const Order = () => {
         totalOrders={filteredOrders.length}
       />
 
-      <OrderTable 
-        orders={filteredOrders} 
-        onOrderClick={handleOrderClick}
-        loading={loading}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <OrderTable 
+          orders={filteredOrders} 
+          onOrderClick={handleOrderClick}
+          loading={loading}
+        />
+      </motion.div>
 
       <OrderDetailsDrawer
         open={!!selectedOrder}

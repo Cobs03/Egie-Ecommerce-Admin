@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { toast, Toaster } from "sonner";
+import { motion } from "framer-motion";
 import ShippingHeader from "./Shipping Components/ShippingHeader";
 import ShippingTable from "./Shipping Components/ShippingTable";
 import { ShippingService } from "../../services/ShippingService";
@@ -176,11 +177,18 @@ const Shipping = () => {
         onExport={handleExport}
       />
 
-      <ShippingTable
-        shipments={filteredShipments}
-        onDeleteShipment={handleDeleteShipment}
-        loading={loading}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <ShippingTable
+          shipments={filteredShipments}
+          onDeleteShipment={handleDeleteShipment}
+          loading={loading}
+        />
+      </motion.div>
     </Box>
   );
 };

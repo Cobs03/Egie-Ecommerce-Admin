@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { toast, Toaster } from "sonner";
+import { motion } from "framer-motion";
 import PaymentHeader from "./Payment Components/PaymentHeader";
 import PaymentTable from "./Payment Components/PaymentTable";
 import PaymentDetailsDrawer from "./Payment Components/PaymentDetailsDrawer";
@@ -326,12 +327,19 @@ const Payment = () => {
         onFilterClick={handleFilterClick}
       />
 
-      <PaymentTable
-        payments={filteredPayments}
-        onViewPaymentDetails={handleViewPaymentDetails}
-        onViewOrderDetails={handleViewOrderDetails}
-        loading={loading}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <PaymentTable
+          payments={filteredPayments}
+          onViewPaymentDetails={handleViewPaymentDetails}
+          onViewOrderDetails={handleViewOrderDetails}
+          loading={loading}
+        />
+      </motion.div>
 
       <PaymentDetailsDrawer
         open={paymentDrawerOpen}

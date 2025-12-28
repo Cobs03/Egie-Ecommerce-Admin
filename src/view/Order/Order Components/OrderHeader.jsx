@@ -7,24 +7,36 @@ import {
   Stack,
 } from "@mui/material";
 import { Search, FilterList, FileDownload } from "@mui/icons-material";
+import { motion } from "framer-motion";
 
 const OrderHeader = ({ searchQuery, onSearchChange, totalOrders, onExport }) => {
   return (
     <>
-      <Typography variant="h4" fontWeight={700} mb={2}>
-      ORDER MANAGEMENT
-      </Typography>
-
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={2}
-        p={1}
-        bgcolor="#000"
-        borderRadius={2}
-        boxShadow={1}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
+        <Typography variant="h4" fontWeight={700} mb={2} sx={{ fontFamily: "Bruno Ace SC" }}>
+          ORDER MANAGEMENT
+        </Typography>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+          p={1}
+          bgcolor="#000"
+          borderRadius={2}
+          boxShadow={1}
+        >
         <Stack direction="row" spacing={1}>
           <TextField
             size="small"
@@ -54,6 +66,7 @@ const OrderHeader = ({ searchQuery, onSearchChange, totalOrders, onExport }) => 
           Export Orders
         </Button>
       </Box>
+      </motion.div>
     </>
   );
 };

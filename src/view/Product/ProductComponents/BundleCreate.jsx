@@ -18,7 +18,10 @@ import {
   Alert,
   Snackbar,
   CircularProgress,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
+import { motion } from "framer-motion";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -57,6 +60,7 @@ const BundleCreate = () => {
   const fileInputRef = useRef();
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProductIds, setSelectedProductIds] = useState([]); // Track selected products for multi-selection
 
   // Error handling states
   const [errors, setErrors] = useState({});
@@ -69,6 +73,9 @@ const BundleCreate = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  
+  // Publish confirmation dialog state
+  const [openPublishDialog, setOpenPublishDialog] = useState(false);
 
   // Load products from database
   useEffect(() => {
@@ -102,7 +109,47 @@ const BundleCreate = () => {
     };
 
     loadProducts();
+    
+    // Restore form state from localStorage if coming back from preview
+    const savedFormState = localStorage.getItem('bundleCreateFormState');
+    if (savedFormState && !isEditMode) {
+      try {
+        const parsedState = JSON.parse(savedFormState);
+        console.log('🔄 Restoring bundle form state from localStorage:', parsedState);
+        
+        // Restore all form fields
+        if (parsedState.images) setImages(parsedState.images);
+        if (parsedState.products) setProducts(parsedState.products);
+        if (parsedState.bundleName) setBundleName(parsedState.bundleName);
+        if (parsedState.description) setDescription(parsedState.description);
+        if (parsedState.warranty) setWarranty(parsedState.warranty);
+        if (parsedState.officialPrice) setOfficialPrice(parsedState.officialPrice);
+        if (parsedState.initialPrice) setInitialPrice(parsedState.initialPrice);
+        if (parsedState.discount !== undefined) setDiscount(parsedState.discount);
+        
+        // Clear the saved state after restoring
+        localStorage.removeItem('bundleCreateFormState');
+      } catch (error) {
+        console.error('Error restoring bundle form state:', error);
+      }
+    }
   }, []);
+
+  // Save form state to localStorage when navigating to preview
+  const saveFormState = () => {
+    const formState = {
+      images,
+      products,
+      bundleName,
+      description,
+      warranty,
+      officialPrice,
+      initialPrice,
+      discount,
+    };
+    localStorage.setItem('bundleCreateFormState', JSON.stringify(formState));
+    console.log('💾 Saved bundle form state to localStorage');
+  };
 
   // Calculate initial price from products
   useEffect(() => {
@@ -463,7 +510,7 @@ const BundleCreate = () => {
       }
 
       if (result.success) {
-        setSuccessMessage(isEditMode ? "Bundle updated successfully!" : "Bundle created successfully!");
+        setSuccessMessage(isEditMode ? "Bundle updated successfully!" : "Bundle published successfully!");
         setShowSuccess(true);
         
         // Navigate back to products page after a short delay
@@ -488,6 +535,9 @@ const BundleCreate = () => {
     if (!validateForm()) {
       return;
     }
+
+    // Save form state before navigating to preview
+    saveFormState();
 
     // If validation passes, navigate to view
     navigate("/bundles/view", {
@@ -898,12 +948,21 @@ const BundleCreate = () => {
             <Divider sx={{ my: 2 }} />
             
             {/* Action Buttons */}
-            <Stack spacing={2} sx={{ mt: 3 }}>
+            <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
               <Button
                 variant="contained"
                 color="primary"
-                sx={{ width: "100%" }}
-                onClick={handleSaveBundle}
+                
+                sx={{ 
+                  width: "100%",
+                  bgcolor: "#00E676",
+                  color: "#000",
+                  fontWeight: 600,
+                  "&:hover": {
+                    bgcolor: "#00C853",
+                  }
+                }}
+                onClick={() => setOpenPublishDialog(true)}
                 disabled={saving}
               >
                 {saving ? (
@@ -912,12 +971,21 @@ const BundleCreate = () => {
                     Saving...
                   </>
                 ) : (
-                  isEditMode ? "Update Bundle" : "Create Bundle"
+                  isEditMode ? "Update Bundle" : "Publish Bundle"
                 )}
               </Button>
               <Button
                 variant="outlined"
-                sx={{ width: "100%" }}
+                sx={{ 
+                  width: "100%",
+                  borderColor: "#00E676",
+                  color: "#00E676",
+                  fontWeight: 600,
+                  "&:hover": {
+                    borderColor: "#00C853",
+                    bgcolor: "rgba(0, 230, 118, 0.04)",
+                  }
+                }}
                 onClick={handleViewBundle}
               >
                 Preview Bundle
@@ -1009,7 +1077,6 @@ const BundleCreate = () => {
                   )
                   .map((product) => {
                     // Check if product is already added by comparing both id and code
-                    // This handles cases where bundle products might use product_id differently
                     const isAlreadyAdded = products.some(
                       (p) => {
                         const pId = String(p.id || p.product_id || '');
@@ -1020,66 +1087,171 @@ const BundleCreate = () => {
                         return (pId === productId) || (pCode && productCode && pCode === productCode);
                       }
                     );
+                    
+                    const isSelected = selectedProductIds.includes(product.id);
 
                     return (
-                      <Button
+                      <Box
                         key={product.id}
-                        variant={isAlreadyAdded ? "contained" : "outlined"}
-                        disabled={isAlreadyAdded}
-                        onClick={() => {
-                          setProducts((prev) => [
-                            ...prev,
-                            {
-                              id: product.id,
-                              name: product.name,
-                              code: product.code,
-                              price: Number(product.price),
-                              image: product.image,
-                              category: product.category,
-                            },
-                          ]);
-                          setProductDialogOpen(false);
-                          setSearchTerm("");
-                        }}
                         sx={{
-                          justifyContent: "flex-start",
-                          textAlign: "left",
+                          border: "1px solid #e0e0e0",
+                          borderRadius: 1,
                           p: 1,
-                          height: "auto",
+                          opacity: isAlreadyAdded ? 0.5 : 1,
+                          bgcolor: isSelected ? "rgba(0, 230, 118, 0.08)" : "transparent",
                           "&:hover": {
-                            backgroundColor: isAlreadyAdded
-                              ? undefined
-                              : "rgba(25, 118, 210, 0.04)",
+                            bgcolor: isAlreadyAdded ? undefined : isSelected ? "rgba(0, 230, 118, 0.12)" : "rgba(25, 118, 210, 0.04)",
                           },
                         }}
                       >
-                        <Box display="flex" alignItems="center" width="100%">
-                          <Avatar
-                            src={product.image}
-                            alt={product.name}
-                            sx={{ mr: 1, width: 40, height: 40 }}
-                          />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" fontWeight={500}>
-                              {product.name}
-                              {isAlreadyAdded && " (Already Added)"}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {product.code} - {product.category} - ₱
-                              {formatPrice(product.price)}
-                              {product.stock !== undefined && ` (Stock: ${product.stock})`}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Button>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={isSelected}
+                              disabled={isAlreadyAdded}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedProductIds((prev) => [...prev, product.id]);
+                                } else {
+                                  setSelectedProductIds((prev) => prev.filter((id) => id !== product.id));
+                                }
+                              }}
+                              sx={{
+                                color: "#00E676",
+                                "&.Mui-checked": {
+                                  color: "#00E676",
+                                },
+                              }}
+                            />
+                          }
+                          label={
+                            <Box display="flex" alignItems="center" width="100%">
+                              <Avatar
+                                src={product.image}
+                                alt={product.name}
+                                sx={{ mr: 1, width: 40, height: 40 }}
+                              />
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {product.name}
+                                  {isAlreadyAdded && " (Already Added)"}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {product.code} - {product.category} - ₱
+                                  {formatPrice(product.price)}
+                                  {product.stock !== undefined && ` (Stock: ${product.stock})`}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          }
+                          sx={{ width: "100%", m: 0 }}
+                        />
+                      </Box>
                     );
                   })}
               </Stack>
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", p: 2 }}>
-          <Button onClick={() => setProductDialogOpen(false)}>Close</Button>
+        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", p: 2, justifyContent: "space-between" }}>
+          <Typography variant="body2" color="text.secondary">
+            {selectedProductIds.length} product{selectedProductIds.length !== 1 ? 's' : ''} selected
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button onClick={() => {
+              setProductDialogOpen(false);
+              setSelectedProductIds([]);
+              setSearchTerm("");
+            }}>
+              Close
+            </Button>
+            <Button
+              variant="contained"
+              disabled={selectedProductIds.length === 0}
+              onClick={() => {
+                // Add all selected products
+                const selectedProducts = availableProducts
+                  .filter((product) => selectedProductIds.includes(product.id))
+                  .map((product) => ({
+                    id: product.id,
+                    name: product.name,
+                    code: product.code,
+                    price: Number(product.price),
+                    image: product.image,
+                    category: product.category,
+                  }));
+                
+                setProducts((prev) => [...prev, ...selectedProducts]);
+                setProductDialogOpen(false);
+                setSelectedProductIds([]);
+                setSearchTerm("");
+              }}
+              sx={{
+                bgcolor: "#00E676",
+                color: "#000",
+                fontWeight: 600,
+                "&:hover": {
+                  bgcolor: "#00C853",
+                },
+                "&:disabled": {
+                  bgcolor: "#e0e0e0",
+                  color: "#9e9e9e",
+                }
+              }}
+            >
+              Add Selected ({selectedProductIds.length})
+            </Button>
+          </Stack>
+        </DialogActions>
+      </Dialog>
+
+      {/* Publish Confirmation Dialog */}
+      <Dialog
+        open={openPublishDialog}
+        onClose={() => !saving && setOpenPublishDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: "black" }}>
+          {isEditMode ? 'Confirm Update' : 'Confirm Publish'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            {isEditMode 
+              ? 'Are you sure you want to update this bundle? Changes will be saved to the database.'
+              : 'Are you sure you want to publish this bundle? Once published, it will be visible to customers.'
+            }
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPublishDialog(false)} color="inherit" disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              setOpenPublishDialog(false);
+              handleSaveBundle();
+            }}
+            variant="contained"
+            disabled={saving}
+            sx={{
+              bgcolor: "#00E676",
+              color: "#000",
+              fontWeight: 700,
+              "&:hover": {
+                bgcolor: "#00C853",
+              },
+            }}
+          >
+            {saving ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
+                Saving...
+              </>
+            ) : (
+              "Confirm"
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

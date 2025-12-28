@@ -227,12 +227,26 @@ export class OrderService {
 
       if (error) return handleSupabaseError(error)
 
-      // If order is cancelled, also cancel the payment
+      // Update payment status based on order status
       if (status === 'cancelled') {
+        // If order is cancelled, also cancel the payment
         await supabase
           .from('payments')
-          .update({ payment_status: 'cancelled' })
+          .update({ 
+            payment_status: 'cancelled',
+            updated_at: new Date().toISOString()
+          })
           .eq('order_id', id);
+      } else if (status === 'completed') {
+        // If order is completed, mark payment as completed
+        await supabase
+          .from('payments')
+          .update({ 
+            payment_status: 'completed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('order_id', id)
+          .eq('payment_status', 'paid'); // Only update if already paid
       }
 
       return handleSupabaseSuccess(data)

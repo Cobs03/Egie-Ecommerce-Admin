@@ -22,6 +22,7 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
+import { motion } from "framer-motion";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -363,22 +364,33 @@ const AdminLogs = () => {
   return (
     <Box p={4}>
       {/* Header */}
-      <Typography variant="h4" fontWeight={700} mb={3}>
-        LOGS
-      </Typography>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography variant="h4" fontWeight={700} mb={3} sx={{ fontFamily: "Bruno Ace SC" }}>
+          LOGS
+        </Typography>
+      </motion.div>
 
       {/* Search Bar & Buttons */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-        p={1.5}
-        bgcolor="#000"
-        borderRadius={2}
-        boxShadow={2}
-        gap={2}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={3}
+          p={1.5}
+          bgcolor="#000"
+          borderRadius={2}
+          boxShadow={2}
+          gap={2}
+        >
         <TextField
           size="small"
           placeholder="Search Log"
@@ -439,10 +451,16 @@ const AdminLogs = () => {
           </Button>
         </Stack>
       </Box>
+      </motion.div>
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
-        <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
           {selectedRoles.map((role) => (
             <Chip
               key={role}
@@ -547,6 +565,7 @@ const AdminLogs = () => {
             Clear All
           </Button>
         </Box>
+        </motion.div>
       )}
 
       {/* Filter Menu */}
@@ -807,7 +826,13 @@ const AdminLogs = () => {
       </Menu>
 
       {/* Logs Table */}
-      <TableContainer component={Paper} elevation={1}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+      >
+        <TableContainer component={Paper} elevation={1}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: "#F5F5F5" }}>
@@ -951,6 +976,7 @@ const AdminLogs = () => {
           }}
         />
       </Box>
+      </motion.div>
 
       {/* Log Detail Drawer */}
       <LogDetailDrawer

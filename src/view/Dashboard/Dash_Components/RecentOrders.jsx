@@ -14,8 +14,9 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz"; // Icon for three horizontal dots
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import DashboardService from "../../../services/DashboardService";
 
 const getStatusStyles = (status) => {
@@ -137,7 +138,13 @@ const RecentOrders = () => {
   }
 
   return (
-    <Card
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card
       sx={{
         background: "#fff",
         borderRadius: 3,
@@ -250,6 +257,7 @@ const RecentOrders = () => {
         </Button>
       </Box>
     </Card>
+    </motion.div>
   );
 };
 

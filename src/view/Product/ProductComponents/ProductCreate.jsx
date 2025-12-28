@@ -8,9 +8,14 @@ import {
   Grid,
   Alert,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SaveIcon from "@mui/icons-material/Save";
+import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ProductService } from "../../../services/ProductService";
 import { CategoryService } from "../../../services/CategoryService";
@@ -82,6 +87,9 @@ const ProductCreate = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  
+  // Publish confirmation dialog state
+  const [openPublishDialog, setOpenPublishDialog] = useState(false);
 
   // Component specifications state
   const [specifications, setSpecifications] = useState(
@@ -902,14 +910,14 @@ const ProductCreate = () => {
       } else {
         const errorMsg = isEditMode && state?.id 
           ? `Failed to update product: ${result.error}`
-          : `Failed to save product: ${result.error}`;
+          : `Failed to publish product: ${result.error}`;
         setValidationError(errorMsg);
         setShowError(true);
       }
     } catch (error) {
-      console.error('❌ Error saving product:', error);
+      console.error('❌ Error publishing product:', error);
       console.error('Error stack:', error.stack);
-      setValidationError(`Error saving product: ${error.message}`);
+      setValidationError(`Error publishing product: ${error.message}`);
       setShowError(true);
       
       // Ensure we don't leave the page in a broken state
@@ -1254,18 +1262,30 @@ const ProductCreate = () => {
 
   return (
     <Box sx={{ width: "100%", maxWidth: "1400px", mx: "auto", mt: 3, px: 3 }}>
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate("/products")}
-        sx={{ mb: 2 }}
-        variant="outlined"
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
       >
-        Return
-      </Button>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate("/products")}
+          sx={{ mb: 2 }}
+          variant="outlined"
+        >
+          Return
+        </Button>
+      </motion.div>
 
-      <Typography variant="h6" fontWeight={700} mb={2}>
-        {isEditMode ? "Edit Product" : "Product Upload"}
-      </Typography>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography variant="h6" fontWeight={700} mb={2} sx={{ fontFamily: "Bruno Ace SC" }}>
+          {isEditMode ? "EDIT PRODUCT" : "PRODUCT UPLOAD"}
+        </Typography>
+      </motion.div>
 
       {/* Temporary Debug: Show category loading status */}
       {/* Validation Error Snackbar */}
@@ -1377,12 +1397,19 @@ const ProductCreate = () => {
               <Button
                 variant="contained"
                 color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSaveProduct}
+                onClick={() => setOpenPublishDialog(true)}
                 disabled={isSaving}
-                sx={{ flex: 1 }}
+                sx={{ 
+                  flex: 1,
+                  bgcolor: "#00E676",
+                  color: "#000",
+                  fontWeight: 600,
+                  "&:hover": {
+                    bgcolor: "#00C853",
+                  }
+                }}
               >
-                {isSaving ? "Saving..." : "Save Product"}
+                {isSaving ? "Publishing..." : (isEditMode ? "Update Product" : "Publish Product")}
               </Button>
               
               <Button
@@ -1390,7 +1417,16 @@ const ProductCreate = () => {
                 color="secondary"
                 onClick={handleViewProduct}
                 disabled={isSaving}
-                sx={{ flex: 1 }}
+                sx={{ 
+                  flex: 1,
+                  borderColor: "#00E676",
+                  color: "#00E676",
+                  fontWeight: 600,
+                  "&:hover": {
+                    borderColor: "#00C853",
+                    bgcolor: "rgba(0, 230, 118, 0.04)",
+                  }
+                }}
               >
                 {isEditMode ? "Preview Changes" : "Preview Product"}
               </Button>

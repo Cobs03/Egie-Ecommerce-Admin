@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography, TextField, Button, Stack } from "@mui/material";
 import { Search, PersonAdd, FileDownload } from "@mui/icons-material";
+import { motion } from "framer-motion";
 
 const UserHeader = ({ 
   onAddUser, 
@@ -14,21 +15,32 @@ const UserHeader = ({
   return (
     <>
       {/* Title */}
-      <Typography variant="h4" fontWeight={700} mb={3}>
-        USER MANAGEMENT
-      </Typography>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography variant="h4" fontWeight={700} mb={3} sx={{ fontFamily: "Bruno Ace SC" }}>
+          USER MANAGEMENT
+        </Typography>
+      </motion.div>
 
       {/* Search Bar & Pill Tabs */}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={2}
-        p={1.5}
-        bgcolor="#000"
-        borderRadius={2}
-        boxShadow={2}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
       >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+          p={1.5}
+          bgcolor="#000"
+          borderRadius={2}
+          boxShadow={2}
+        >
         <TextField
           size="small"
           placeholder="Search User"
@@ -92,14 +104,20 @@ const UserHeader = ({
           </Button>
         </Stack>
       </Box>
+      </motion.div>
 
       {/* Add Employee & Export Button */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
         {/* Only show Add Employee button when on Employees tab AND user is admin */}
         {activeTab === "employees" && currentUserRole === "admin" ? (
           <Button
@@ -138,6 +156,7 @@ const UserHeader = ({
           {activeTab === "employees" ? "Export Employees" : "Export Customers"}
         </Button>
       </Box>
+      </motion.div>
     </>
   );
 };

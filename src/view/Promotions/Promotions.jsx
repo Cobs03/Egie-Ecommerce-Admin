@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Snackbar, Alert } from "@mui/material";
+import { motion } from "framer-motion";
 import PromotionsHeader from "./Promotion Components/PromotionsHeader";
 import VoucherTable from "./Promotion Components/VoucherTable";
 import DiscountTable from "./Promotion Components/DiscountsTable";
@@ -532,34 +533,47 @@ const Promotions = () => {
 
   return (
     <Box p={4}>
-      <PromotionsHeader
-        onAddVoucher={handleAddClick}
-        onDownload={handleDownload}
-        onSearch={handleSearch}
-        onTabChange={handleTabChange}
-        activeTab={activeTab}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearch}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <PromotionsHeader
+          onAddVoucher={handleAddClick}
+          onDownload={handleDownload}
+          onSearch={handleSearch}
+          onTabChange={handleTabChange}
+          activeTab={activeTab}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearch}
+        />
+      </motion.div>
 
       {/* Conditional Table Rendering */}
-      {activeTab === "vouchers" ? (
-        <VoucherTable
-          vouchers={filteredVouchers}
-          onEdit={handleEditVoucher}
-          onDelete={handleDeleteVoucher}
-          loading={loading}
-        />
-      ) : activeTab === "discount" ? (
-        <DiscountTable
-          discounts={filteredDiscounts}
-          onEdit={handleEditDiscount}
-          onDelete={handleDeleteDiscount}
-          loading={loading}
-        />
-      ) : activeTab === "popupads" ? (
-        <PopupAdsTab />
-      ) : null}
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {activeTab === "vouchers" ? (
+          <VoucherTable
+            vouchers={filteredVouchers}
+            onEdit={handleEditVoucher}
+            onDelete={handleDeleteVoucher}
+            loading={loading}
+          />
+        ) : activeTab === "discount" ? (
+          <DiscountTable
+            discounts={filteredDiscounts}
+            onEdit={handleEditDiscount}
+            onDelete={handleDeleteDiscount}
+            loading={loading}
+          />
+        ) : activeTab === "popupads" ? (
+          <PopupAdsTab />
+        ) : null}
+      </motion.div>
 
       {/* Voucher Dialogs */}
       <VoucherEditDialog

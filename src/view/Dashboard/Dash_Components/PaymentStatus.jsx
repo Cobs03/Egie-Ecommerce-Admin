@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, Typography, Box, Stack } from "@mui/material";
-import { PieChart, Pie, Cell, Legend } from "recharts"; // Import PieChart and Pie
+import { PieChart, Pie, Cell } from "recharts";
+import { motion } from "framer-motion";
 import DashboardService from "../../../services/DashboardService";
 
 const PaymentStatus = () => {
@@ -50,41 +51,18 @@ const PaymentStatus = () => {
     );
   }
 
-  // Calculate total for percentages
+  // Calculate total and percentage
   const total = data.reduce((sum, entry) => sum + entry.value, 0);
-
-  // Custom Legend rendering function
-  const renderLegend = (props) => {
-    const { payload } = props;
-
-    return (
-      <Stack spacing={1} mt={2} width="100%">
-        {payload.map((entry, index) => (
-          <Box key={`legend-${index}`} display="flex" alignItems="center">
-            <Box
-              sx={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                backgroundColor: entry.color || entry.payload.fill, // Use color from data
-                mr: 1.5,
-                flexShrink: 0,
-              }}
-            />
-            <Typography fontWeight={600} fontSize={15} flex={1}>
-              {entry.value}
-            </Typography>
-            <Typography fontWeight={500} fontSize={15}>
-              {`${((entry.payload.value / total) * 100).toFixed(0)}% (${entry.payload.value})`}
-            </Typography>
-          </Box>
-        ))}
-      </Stack>
-    );
-  };
+  const paidPercentage = total > 0 ? ((data[0]?.value || 0) / total * 100).toFixed(1) : 0;
 
   return (
-    <Card
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
+      <Card
       sx={{
         background: "#fff",
         borderRadius: 3,
@@ -101,33 +79,77 @@ const PaymentStatus = () => {
       }}
     >
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        <Typography variant="h6" fontWeight={700}>
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
           Payment Status
         </Typography>
 
         <Box display="flex" flexDirection="column" alignItems="center">
-          <PieChart width={280} height={220}>
-            <Pie
-              data={data}
-              cx={140}
-              cy={120}
-              innerRadius={80}
-              outerRadius={100}
-              startAngle={180}
-              endAngle={0}
-              paddingAngle={2}
-              cornerRadius={5}
-              dataKey="value"
+          {/* Semi-circle gauge */}
+          <Box position="relative" display="inline-flex">
+            <PieChart width={280} height={150}>
+              <Pie
+                data={data}
+                cx={140}
+                cy={130}
+                innerRadius={70}
+                outerRadius={95}
+                startAngle={180}
+                endAngle={0}
+                paddingAngle={0}
+                dataKey="value"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
+            <Box
+              sx={{
+                position: "absolute",
+                top: "60%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                textAlign: "center",
+              }}
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Legend content={renderLegend} wrapperStyle={{ paddingLeft: 20 }} />
-          </PieChart>
+              <Typography variant="h3" fontWeight={700} color="#63e01d">
+                {paidPercentage}%
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Paid
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Legend */}
+          <Stack spacing={1.5} mt={1} width="100%" px={2}>
+            {data.map((entry, index) => (
+              <Box key={`legend-${index}`} display="flex" alignItems="center" justifyContent="space-between">
+                <Box display="flex" alignItems="center">
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      backgroundColor: entry.color,
+                      mr: 1.5,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography fontWeight={600} fontSize={14}>
+                    {entry.name}
+                  </Typography>
+                </Box>
+                <Typography fontWeight={700} fontSize={14}>
+                  {(entry.value || 0).toLocaleString()}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
         </Box>
       </CardContent>
     </Card>
+    </motion.div>
   );
 };
 

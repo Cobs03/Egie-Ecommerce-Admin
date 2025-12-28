@@ -16,6 +16,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { motion } from "framer-motion";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
