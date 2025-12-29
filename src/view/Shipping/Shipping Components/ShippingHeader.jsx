@@ -79,7 +79,7 @@ const ShippingHeader = ({
             },
           }}
         >
-          Export Shipments
+          Download Shipments
         </Button>
       </Box>
       </motion.div>

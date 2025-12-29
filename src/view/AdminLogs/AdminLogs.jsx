@@ -21,8 +21,11 @@ import {
   Divider,
   FormControlLabel,
   Checkbox,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -64,6 +67,10 @@ const AdminLogs = () => {
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
+  
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Fetch all activity logs on component mount
   useEffect(() => {
@@ -356,9 +363,58 @@ const AdminLogs = () => {
     setPage(value);
   };
 
-  const handleDownload = () => {
-    console.log("Downloading logs...");
-    // TODO: Implement download functionality
+  const handleDownload = async () => {
+    try {
+      if (filteredLogs.length === 0) {
+        alert('No logs to export');
+        return;
+      }
+
+      // Create Excel data from filtered logs
+      const excelData = filteredLogs.map((log, index) => ({
+        'No': index + 1,
+        'User': log.user || 'N/A',
+        'Role': log.userRole || 'N/A',
+        'Action': log.action || 'N/A',
+        'Module': log.module || 'N/A',
+        'Details': log.details || 'N/A',
+        'IP Address': log.ip || 'N/A',
+        'Date': log.date || 'N/A',
+        'Time': log.time || 'N/A'
+      }));
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Admin Logs");
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 25 }, // User
+        { wch: 15 }, // Role
+        { wch: 15 }, // Action
+        { wch: 20 }, // Module
+        { wch: 50 }, // Details
+        { wch: 20 }, // IP Address
+        { wch: 15 }, // Date
+        { wch: 12 }  // Time
+      ];
+
+      // Generate file name with current date
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `AdminLogs_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
+      // Show success notification
+      setSuccessMessage(`Successfully downloaded ${filteredLogs.length} log records`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      alert('Failed to download logs');
+    }
   };
 
   return (
@@ -447,7 +503,7 @@ const AdminLogs = () => {
               },
             }}
           >
-            DOWNLOAD FILE
+            DOWNLOAD LOGS
           </Button>
         </Stack>
       </Box>
@@ -984,6 +1040,22 @@ const AdminLogs = () => {
         onClose={handleDrawerClose}
         log={selectedLog}
       />
+
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          sx={{ width: '100%', bgcolor: '#4caf50', color: 'white' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

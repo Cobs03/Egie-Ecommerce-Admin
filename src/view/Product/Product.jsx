@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   TextField,
@@ -27,6 +27,11 @@ const Product = () => {
   });
   
   const [error, setError] = useState(null);
+  
+  // Refs to access child component download functions
+  const inventoryRef = useRef();
+  const stocksRef = useRef();
+  const bundlesRef = useRef();
 
   // Log location state for debugging
   useEffect(() => {
@@ -44,29 +49,13 @@ const Product = () => {
 
   // Download handlers
   const handleDownload = () => {
-    if (tab === 0) {
-      handleDownloadInventory();
-    } else if (tab === 1) {
-      handleDownloadStocks();
-    } else if (tab === 2) {
-      handleDownloadBundles();
+    if (tab === 0 && inventoryRef.current) {
+      inventoryRef.current.downloadExcel();
+    } else if (tab === 1 && stocksRef.current) {
+      stocksRef.current.downloadExcel();
+    } else if (tab === 2 && bundlesRef.current) {
+      bundlesRef.current.downloadExcel();
     }
-  };
-
-  const handleDownloadInventory = () => {
-    console.log("Downloading Inventory...");
-    // TODO: Implement inventory download logic (CSV/Excel/PDF)
-    // Example: fetch inventory data and generate file
-  };
-
-  const handleDownloadStocks = () => {
-    console.log("Downloading Stocks...");
-    // TODO: Implement stocks download logic
-  };
-
-  const handleDownloadBundles = () => {
-    console.log("Downloading Bundles...");
-    // TODO: Implement bundles download logic
   };
 
   // Get button label based on active tab
@@ -197,7 +186,7 @@ const Product = () => {
           transition={{ duration: 0.5 }}
         >
           <ErrorBoundary fallback={<Alert severity="error">Error loading inventory. Please refresh the page.</Alert>}>
-            <Inventory key={location.state?.reloadProducts ? Date.now() : 'inventory'} />
+            <Inventory ref={inventoryRef} key={location.state?.reloadProducts ? Date.now() : 'inventory'} />
           </ErrorBoundary>
         </motion.div>
       )}
@@ -209,7 +198,7 @@ const Product = () => {
           transition={{ duration: 0.5 }}
         >
           <ErrorBoundary fallback={<Alert severity="error">Error loading stocks. Please refresh the page.</Alert>}>
-            <Stocks />
+            <Stocks ref={stocksRef} />
           </ErrorBoundary>
         </motion.div>
       )}
@@ -221,7 +210,7 @@ const Product = () => {
           transition={{ duration: 0.5 }}
         >
           <ErrorBoundary fallback={<Alert severity="error">Error loading bundles. Please refresh the page.</Alert>}>
-            <Bundles />
+            <Bundles ref={bundlesRef} />
           </ErrorBoundary>
         </motion.div>
       )}

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Box, Snackbar, Alert } from "@mui/material";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { AdminLogService } from "../../services/AdminLogService";
+import { useAuth } from "../../contexts/AuthContext";
+import PopupAdService from "../../services/PopupAdService";
 import PromotionsHeader from "./Promotion Components/PromotionsHeader";
 import VoucherTable from "./Promotion Components/VoucherTable";
 import DiscountTable from "./Promotion Components/DiscountsTable";
@@ -14,6 +18,7 @@ import { DiscountService } from "../../services/DiscountService";
 import { supabase } from "../../lib/supabase";
 
 const Promotions = () => {
+  const { user } = useAuth();
   const [vouchers, setVouchers] = useState([]);
   const [filteredVouchers, setFilteredVouchers] = useState([]);
   const [discounts, setDiscounts] = useState([]);
@@ -31,6 +36,10 @@ const Promotions = () => {
   const [isAddMode, setIsAddMode] = useState(false);
   const [activeTab, setActiveTab] = useState("vouchers");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState({
@@ -524,11 +533,165 @@ const Promotions = () => {
     // popupads tab handles its own add button
   };
 
-  const handleDownload = () => {
-    showSnackbar(
-      `Exporting ${activeTab === "discount" ? "Discounts" : "Vouchers"}...`,
-      "info"
-    );
+  const handleDownload = async () => {
+    try {
+      if (activeTab === "vouchers") {
+        if (filteredVouchers.length === 0) {
+          showSnackbar('No vouchers to export', 'error');
+          return;
+        }
+
+        // Create Excel data from vouchers
+        const excelData = filteredVouchers.map((voucher, index) => ({
+          'No': index + 1,
+          'Name': voucher.name || 'N/A',
+          'Code': voucher.code || 'N/A',
+          'Type': voucher.type === 'percent' ? 'Percentage' : 'Fixed Amount',
+          'Discount': voucher.price || 'N/A',
+          'Valid Period': voucher.active || 'N/A',
+          'Usage Limit': voucher.limit || 'N/A',
+          'Used': voucher.used || 0,
+          'Remaining': (voucher.limit - voucher.used) || 0,
+          'Min Purchase': voucher.minPurchase ? `₱${voucher.minPurchase}` : 'None',
+          'Status': voucher.isActive ? 'Active' : 'Inactive'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Vouchers");
+
+        ws['!cols'] = [
+          { wch: 5 },  { wch: 25 }, { wch: 15 }, { wch: 15 },
+          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 },
+          { wch: 12 }, { wch: 15 }, { wch: 10 }
+        ];
+
+        const date = new Date().toISOString().split('T')[0];
+        const fileName = `Vouchers_${date}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        await AdminLogService.createLog(
+          user?.id,
+          'download',
+          'voucher',
+          null,
+          { count: filteredVouchers.length, fileName }
+        );
+
+        setSuccessMessage(`Successfully downloaded ${filteredVouchers.length} voucher records`);
+        setShowSuccess(true);
+
+      } else if (activeTab === "discount") {
+        if (filteredDiscounts.length === 0) {
+          showSnackbar('No discounts to export', 'error');
+          return;
+        }
+
+        // Create Excel data from discounts
+        const excelData = filteredDiscounts.map((discount, index) => {
+          const typeValue = discount.type === 'percent' 
+            ? `${discount.value}%` 
+            : `₱${discount.value}`;
+          
+          return {
+            'No': index + 1,
+            'Name': discount.name || 'N/A',
+            'Type/Value': typeValue,
+            'Dates': discount.dates || 'N/A',
+            'Used': discount.used || 0,
+            'Applies To': discount.appliesTo || 'All Products',
+            'Min Spend': discount.minSpend ? `₱${discount.minSpend}` : 'N/A',
+            'User Eligibility': discount.userEligibility || 'All Users'
+          };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Discounts");
+
+        ws['!cols'] = [
+          { wch: 5 },  // No
+          { wch: 20 }, // Name
+          { wch: 15 }, // Type/Value
+          { wch: 25 }, // Dates
+          { wch: 10 }, // Used
+          { wch: 20 }, // Applies To
+          { wch: 15 }, // Min Spend
+          { wch: 20 }  // User Eligibility
+        ];
+
+        const date = new Date().toISOString().split('T')[0];
+        const fileName = `Discounts_${date}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        await AdminLogService.createLog(
+          user?.id,
+          'download',
+          'discount',
+          null,
+          { count: filteredDiscounts.length, fileName }
+        );
+
+        setSuccessMessage(`Successfully downloaded ${filteredDiscounts.length} discount records`);
+        setShowSuccess(true);
+
+      } else if (activeTab === "popupads") {
+        // Fetch popup ads data
+        const { data, error } = await PopupAdService.getAllPopupAds();
+
+        if (error || !data || data.length === 0) {
+          showSnackbar('No popup ads to export', 'error');
+          return;
+        }
+
+        // Create Excel data from popup ads
+        const excelData = data.map((popup, index) => ({
+          'No': index + 1,
+          'Title': popup.title || 'N/A',
+          'Link Type': popup.link_type || 'N/A',
+          'Link URL': popup.link_url || 'N/A',
+          'Display Frequency': popup.display_frequency || 'N/A',
+          'Delay (seconds)': popup.delay_seconds || 'N/A',
+          'Auto Close (seconds)': popup.auto_close_seconds || 'Manual',
+          'Show on Pages': Array.isArray(popup.show_on_pages) ? popup.show_on_pages.join(', ') : 'N/A',
+          'Target Audience': popup.target_audience || 'N/A',
+          'Start Date': popup.start_date ? new Date(popup.start_date).toLocaleDateString() : 'N/A',
+          'End Date': popup.end_date ? new Date(popup.end_date).toLocaleDateString() : 'N/A',
+          'Views': popup.view_count || 0,
+          'Clicks': popup.click_count || 0,
+          'Status': popup.is_active ? 'Active' : 'Inactive'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Popup Ads");
+
+        ws['!cols'] = [
+          { wch: 5 },  { wch: 30 }, { wch: 12 }, { wch: 40 },
+          { wch: 20 }, { wch: 15 }, { wch: 18 }, { wch: 25 },
+          { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
+          { wch: 10 }, { wch: 10 }
+        ];
+
+        const date = new Date().toISOString().split('T')[0];
+        const fileName = `PopupAds_${date}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        await AdminLogService.createLog(
+          user?.id,
+          'download',
+          'popup_ad',
+          null,
+          { count: data.length, fileName }
+        );
+
+        setSuccessMessage(`Successfully downloaded ${data.length} popup ad records`);
+        setShowSuccess(true);
+      }
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      showSnackbar('Failed to download data', 'error');
+    }
   };
 
   return (
@@ -625,6 +788,22 @@ const Promotions = () => {
           sx={{ width: "100%" }}
         >
           {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          sx={{ width: '100%', bgcolor: '#4caf50', color: 'white' }}
+        >
+          {successMessage}
         </Alert>
       </Snackbar>
     </Box>

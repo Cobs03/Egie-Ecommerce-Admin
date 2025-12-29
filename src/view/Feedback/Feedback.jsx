@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography, TextField, Button, Stack, CircularProgress } from "@mui/material";
+import { Box, Typography, TextField, Button, Stack, CircularProgress, Snackbar, Alert } from "@mui/material";
 import { Search, FileDownload } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { AdminLogService } from "../../services/AdminLogService";
 import ProductFeedback from "./Feedback Components/ProductFeedback";
 import Inqueries from "./Feedback Components/Inqueries";
 import ReviewService from "../../services/ReviewService";
+import InquiryService from "../../services/InquiryService";
 import { toast, Toaster } from "sonner";
+import { useAuth } from "../../contexts/AuthContext";
 
 const REVIEWS_PER_PAGE = 10;
 
 const Feedback = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("reviews");
   const [inquiryFilter, setInquiryFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
@@ -19,6 +24,10 @@ const Feedback = () => {
   const [reviews, setReviews] = useState([]);
   const [totalReviews, setTotalReviews] = useState(0);
   const [stats, setStats] = useState({ total: 0, averageRating: 0, byRating: {} });
+  
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Load reviews from database
   useEffect(() => {
@@ -78,40 +87,153 @@ const Feedback = () => {
     }
   };
 
-  const handleDownloadFile = () => {
+  const handleDownloadFile = async () => {
     if (reviews.length === 0) {
       toast.error('No reviews to export');
       return;
     }
 
-    // Export reviews to CSV
-    const headers = ['Product', 'Customer', 'Email', 'Rating', 'Title', 'Review', 'Date', 'Time'];
-    const csvData = reviews.map(review => {
-      const productName = review.products?.name || review.products?.title || 'Unknown Product';
-      const userName = review.user_name || review.user_email?.split('@')[0] || 'Anonymous';
-      const date = new Date(review.created_at);
-      
-      return [
-        `"${productName}"`,
-        `"${userName}"`,
-        `"${review.user_email || ''}"`,
-        review.rating,
-        `"${review.title || ''}"`,
-        `"${(review.comment || '').replace(/"/g, '""')}"`,
-        date.toLocaleDateString(),
-        date.toLocaleTimeString()
-      ].join(',');
-    });
+    try {
+      // Create Excel data from reviews
+      const excelData = reviews.map((review, index) => {
+        const productName = review.products?.name || review.products?.title || 'Unknown Product';
+        const userName = review.user_name || review.user_email?.split('@')[0] || 'Anonymous';
+        const date = new Date(review.created_at);
+        
+        return {
+          'No': index + 1,
+          'Product': productName,
+          'Customer': userName,
+          'Email': review.user_email || 'N/A',
+          'Rating': review.rating,
+          'Title': review.title || 'N/A',
+          'Review': review.comment || 'N/A',
+          'Date': date.toLocaleDateString(),
+          'Time': date.toLocaleTimeString()
+        };
+      });
 
-    const csv = [headers.join(','), ...csvData].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reviews_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('Reviews exported successfully');
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Reviews");
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 30 }, // Product
+        { wch: 20 }, // Customer
+        { wch: 25 }, // Email
+        { wch: 10 }, // Rating
+        { wch: 30 }, // Title
+        { wch: 50 }, // Review
+        { wch: 15 }, // Date
+        { wch: 15 }  // Time
+      ];
+
+      // Generate file name with current date
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `Reviews_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
+      // Log admin action
+      await AdminLogService.createLog(
+        user?.id,
+        'download',
+        'review',
+        null,
+        { count: reviews.length, fileName }
+      );
+
+      // Show success notification
+      setSuccessMessage(`Successfully downloaded ${reviews.length} review records`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download reviews');
+    }
+  };
+
+  const handleDownloadInquiries = async () => {
+    try {
+      // Fetch all inquiries based on current filter and search
+      const { data, error } = await InquiryService.getAllInquiries({
+        status: inquiryFilter === 'all' ? undefined : inquiryFilter,
+        search: searchQuery
+      });
+
+      if (error || !data || data.length === 0) {
+        toast.error('No inquiries to export');
+        return;
+      }
+
+      // Create Excel data from inquiries
+      const excelData = data.map((inquiry, index) => {
+        const customerName = inquiry.customer
+          ? `${inquiry.customer.first_name} ${inquiry.customer.last_name}`
+          : 'Guest';
+        const customerEmail = inquiry.customer?.email || inquiry.guest_email || 'N/A';
+        const productName = inquiry.product?.name || 'N/A';
+        const date = new Date(inquiry.created_at);
+        
+        return {
+          'No': index + 1,
+          'Customer': customerName,
+          'Email': customerEmail,
+          'Product': productName,
+          'Subject': inquiry.subject || 'N/A',
+          'Question': inquiry.question || 'N/A',
+          'Status': inquiry.status.charAt(0).toUpperCase() + inquiry.status.slice(1),
+          'Replies': inquiry.reply_count || 0,
+          'Date': date.toLocaleDateString(),
+          'Time': date.toLocaleTimeString()
+        };
+      });
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inquiries");
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 25 }, // Customer
+        { wch: 30 }, // Email
+        { wch: 30 }, // Product
+        { wch: 30 }, // Subject
+        { wch: 50 }, // Question
+        { wch: 12 }, // Status
+        { wch: 10 }, // Replies
+        { wch: 15 }, // Date
+        { wch: 15 }  // Time
+      ];
+
+      // Generate file name with current date
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `Inquiries_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
+      // Log admin action
+      await AdminLogService.createLog(
+        user?.id,
+        'download',
+        'inquiry',
+        null,
+        { count: data.length, fileName }
+      );
+
+      // Show success notification
+      setSuccessMessage(`Successfully downloaded ${data.length} inquiry records`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download inquiries');
+    }
   };
 
   const totalPages = Math.ceil(totalReviews / REVIEWS_PER_PAGE);
@@ -309,7 +431,7 @@ const Feedback = () => {
         <Button
           variant="outlined"
           startIcon={<FileDownload />}
-          onClick={handleDownloadFile}
+          onClick={activeTab === "reviews" ? handleDownloadFile : handleDownloadInquiries}
           sx={{
             borderColor: "#1976d2",
             color: "#1976d2",
@@ -321,7 +443,7 @@ const Feedback = () => {
             },
           }}
         >
-          {activeTab === "reviews" ? "Export Reviews" : "Export Inquiries"}
+          {activeTab === "reviews" ? "Download Reviews" : "Download Inquiries"}
         </Button>
       </Box>
       </motion.div>
@@ -425,6 +547,21 @@ const Feedback = () => {
           <Inqueries filter={inquiryFilter} searchQuery={searchQuery} />
         </motion.div>
       )}
+
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          sx={{ width: '100%', bgcolor: '#4caf50', color: 'white' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
 
       <Toaster position="bottom-right" richColors />
     </Box>

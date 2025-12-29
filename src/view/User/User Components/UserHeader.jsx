@@ -153,7 +153,7 @@ const UserHeader = ({
             },
           }}
         >
-          {activeTab === "employees" ? "Export Employees" : "Export Customers"}
+          {activeTab === "employees" ? "Download Employees" : "Download Customers"}
         </Button>
       </Box>
       </motion.div>

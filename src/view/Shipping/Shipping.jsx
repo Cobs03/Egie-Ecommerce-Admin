@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, Snackbar, Alert } from "@mui/material";
 import { toast, Toaster } from "sonner";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { AdminLogService } from "../../services/AdminLogService";
 import ShippingHeader from "./Shipping Components/ShippingHeader";
 import ShippingTable from "./Shipping Components/ShippingTable";
 import { ShippingService } from "../../services/ShippingService";
@@ -13,10 +15,14 @@ import { useAuth } from "../../contexts/AuthContext";
 const Shipping = () => {
   // ALL HOOKS AT THE TOP
   const permissions = usePermissions();
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Load shipments on component mount
   useEffect(() => {
@@ -118,9 +124,70 @@ const Shipping = () => {
     }
   }
 
-  const handleExport = () => {
-    toast.success("Shipments exported successfully!", { duration: 2000 });
-    // Add your export logic here (e.g., CSV download)
+  const handleExport = async () => {
+    try {
+      // Create Excel data from filtered shipments
+      const excelData = filteredShipments.map((shipment, index) => ({
+        'No': index + 1,
+        'Order Code': shipment.order.code || 'N/A',
+        'Customer': shipment.customer || 'N/A',
+        'Product': shipment.order.name || 'N/A',
+        'Courier': shipment.courier || 'N/A',
+        'Tracking Number': shipment.tracking_number || 'N/A',
+        'Status': shipment.status || 'N/A',
+        'TAT': shipment.tat || 'N/A',
+        'Confirmation': shipment.confirmation || 'N/A',
+        'Shipped Date': shipment.shipped_date || 'N/A',
+        'Delivered Date': shipment.delivered_date || 'N/A',
+        'Contact Number': shipment.contact_number || 'N/A',
+        'Shipping Address': shipment.shipping_address || 'N/A'
+      }));
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Shipments");
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 20 }, // Order Code
+        { wch: 25 }, // Customer
+        { wch: 30 }, // Product
+        { wch: 15 }, // Courier
+        { wch: 25 }, // Tracking Number
+        { wch: 20 }, // Status
+        { wch: 10 }, // TAT
+        { wch: 15 }, // Confirmation
+        { wch: 15 }, // Shipped Date
+        { wch: 15 }, // Delivered Date
+        { wch: 20 }, // Contact Number
+        { wch: 50 }  // Shipping Address
+      ];
+
+      // Generate file name with current date
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `Shipments_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
+      // Log admin action
+      await AdminLogService.createLog(
+        user?.id,
+        'download',
+        'shipment',
+        null,
+        { count: filteredShipments.length, fileName }
+      );
+
+      // Show success notification
+      setSuccessMessage(`Successfully downloaded ${filteredShipments.length} shipment records`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download shipments');
+    }
   };
 
   const handleDeleteShipment = (orderCode) => {
@@ -189,6 +256,21 @@ const Shipping = () => {
           loading={loading}
         />
       </motion.div>
+
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          sx={{ width: '100%', bgcolor: '#4caf50', color: 'white' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

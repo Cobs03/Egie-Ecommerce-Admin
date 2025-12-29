@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from "react";
 import {
   Box,
   Table,
@@ -38,6 +38,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import BlockIcon from "@mui/icons-material/Block";
 import { useNavigate, useLocation } from "react-router-dom";
+import * as XLSX from 'xlsx';
 
 // Import ProductService to get real data
 import { ProductService } from "../../../services/ProductService";
@@ -48,7 +49,7 @@ import AdminLogService from "../../../services/AdminLogService";
 import { usePermissions } from "../../../hooks/usePermissions";
 import { PERMISSIONS } from "../../../utils/permissions";
 
-const Inventory = () => {
+const Inventory = forwardRef((props, ref) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -525,6 +526,74 @@ const Inventory = () => {
     setDeleteDialogOpen(false);
     setProductToDelete(null);
   };
+  
+  // Excel download function
+  const downloadExcel = async () => {
+    try {
+      // Prepare data for Excel - use all products, not just current page
+      const excelData = products.map((product, index) => ({
+        'No.': index + 1,
+        'Product Name': product.name || '',
+        'Code': product.code || product.sku || '',
+        'Category': product.category || '',
+        'Status': getStockStatus(product.stock),
+        'Stock': product.stock || 0,
+        'Price': `₱${parseFloat(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        'Last Edit': product.lastEdit || ''
+      }));
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No.
+        { wch: 40 }, // Product Name
+        { wch: 35 }, // Code
+        { wch: 15 }, // Category
+        { wch: 15 }, // Status
+        { wch: 10 }, // Stock
+        { wch: 15 }, // Price
+        { wch: 25 }  // Last Edit
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Inventory_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+      
+      // Log the action
+      if (user?.id) {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'DOWNLOAD',
+          actionDescription: `Downloaded ${excelData.length} inventory records`,
+          targetType: 'INVENTORY',
+          targetId: null,
+          metadata: { count: excelData.length, filename }
+        });
+      }
+      
+      // Show success notification
+      setSuccessMessage(`Downloaded ${excelData.length} inventory records successfully!`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      setErrorMessage('Failed to download inventory. Please try again.');
+      setShowError(true);
+    }
+  };
+  
+  // Expose downloadExcel to parent via ref
+  useImperativeHandle(ref, () => ({
+    downloadExcel
+  }));
 
   // Function to determine stock status
   const getStockStatus = (stock) => {
@@ -1110,6 +1179,6 @@ const Inventory = () => {
       </Snackbar>
     </Box>
   );
-};
+});
 
 export default Inventory;

@@ -70,7 +70,7 @@ const PaymentHeader = ({
             },
           }}
         >
-          Export Payments
+          Download Payments
         </Button>
       </Box>
       </motion.div>

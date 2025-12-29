@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import {
   Box,
   Table,
@@ -42,12 +42,13 @@ import { useNavigate } from "react-router-dom";
 import { BundleService } from "../../../services/BundleService";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminLogService from "../../../services/AdminLogService";
+import * as XLSX from 'xlsx';
 
 // Import permission system
 import { usePermissions } from "../../../hooks/usePermissions";
 import { PERMISSIONS } from "../../../utils/permissions";
 
-const Bundles = () => {
+const Bundles = forwardRef((props, ref) => {
   const { user } = useAuth();
   const permissions = usePermissions(); // Add permission hook
   const [anchorEl, setAnchorEl] = useState(null);
@@ -291,6 +292,76 @@ const Bundles = () => {
     setDeleteDialogOpen(false);
     setSelectedBundle(null);
   };
+  
+  // Excel download function
+  const downloadExcel = async () => {
+    try {
+      // Get status text
+      const getStatusText = (status) => {
+        return status === 'active' ? 'Available' : 'Inactive';
+      };
+
+      // Prepare data for Excel - use all filtered bundles
+      const excelData = filteredBundles.map((bundle, index) => ({
+        'No.': index + 1,
+        'Bundle Name': bundle.name || '',
+        'Code': bundle.code || '',
+        '# of Products': bundle.products?.length || bundle.quantity || 0,
+        'Status': getStatusText(bundle.status),
+        'Price': `₱${parseFloat(bundle.officialPrice || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        'Last Edit': bundle.lastEdit || ''
+      }));
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No.
+        { wch: 40 }, // Bundle Name
+        { wch: 15 }, // Code
+        { wch: 15 }, // # of Products
+        { wch: 12 }, // Status
+        { wch: 15 }, // Price
+        { wch: 25 }  // Last Edit
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Bundles');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Bundles_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+      
+      // Log the action
+      if (user?.id) {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'DOWNLOAD',
+          actionDescription: `Downloaded ${excelData.length} bundle records`,
+          targetType: 'BUNDLES',
+          targetId: null,
+          metadata: { count: excelData.length, filename }
+        });
+      }
+      
+      setSuccessMessage(`Downloaded ${excelData.length} bundle records successfully!`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      setErrorMessage('Failed to download bundles. Please try again.');
+      setShowError(true);
+    }
+  };
+  
+  // Expose downloadExcel to parent via ref
+  useImperativeHandle(ref, () => ({
+    downloadExcel
+  }));
   
   // Filter handlers
   const handleNameFilterOpen = (event) => {
@@ -761,6 +832,6 @@ const Bundles = () => {
       </Dialog>
     </Paper>
   );
-};
+});
 
 export default Bundles;

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, Snackbar, Alert } from "@mui/material";
 import { Toaster, toast } from "sonner";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { AdminLogService } from "../../services/AdminLogService";
 import OrderHeader from "./Order Components/OrderHeader";
 import OrderTable from "./Order Components/OrderTable";
 import OrderDetailsDrawer from "./Order Components/OrderDetailsDrawer";
@@ -21,6 +23,12 @@ const Order = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  
+  const { user } = useAuth();
 
   // Load orders on component mount
   useEffect(() => {
@@ -205,6 +213,69 @@ const Order = () => {
     });
   }, [orders, searchQuery, selectedTab]);
 
+  const handleExportOrders = async () => {
+    try {
+      // Prepare data for Excel
+      const excelData = filteredOrders.map((order, index) => ({
+        'No.': index + 1,
+        'Order ID': order.id || '',
+        'Customer': order.customer?.name || '',
+        'Email': order.customer?.email || '',
+        'Total': order.total || '',
+        'Status': order.status || '',
+        'Date': order.date || '',
+        'Items': order.items?.length || 0,
+        'Delivery Type': order.deliveryType === 'local_delivery' ? 'Local Delivery' : 'Store Pickup'
+      }));
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No.
+        { wch: 25 }, // Order ID
+        { wch: 30 }, // Customer
+        { wch: 35 }, // Email
+        { wch: 15 }, // Total
+        { wch: 15 }, // Status
+        { wch: 15 }, // Date
+        { wch: 8 },  // Items
+        { wch: 18 }  // Delivery Type
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Orders_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+      
+      // Log the action
+      if (user?.id) {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'DOWNLOAD',
+          actionDescription: `Downloaded ${excelData.length} order records`,
+          targetType: 'ORDERS',
+          targetId: null,
+          metadata: { count: excelData.length, filename }
+        });
+      }
+      
+      // Show success notification
+      setSuccessMessage(`Downloaded ${excelData.length} order records successfully!`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download orders. Please try again.');
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Toaster position="bottom-right" richColors />
@@ -213,6 +284,7 @@ const Order = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         totalOrders={filteredOrders.length}
+        onExport={handleExportOrders}
       />
 
       <motion.div
@@ -234,6 +306,32 @@ const Order = () => {
         order={selectedOrder}
         onOrderUpdate={handleOrderUpdate}
       />
+      
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
