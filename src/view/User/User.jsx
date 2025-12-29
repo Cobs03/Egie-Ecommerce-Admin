@@ -162,7 +162,7 @@ const User = () => {
           id: user.id,
           name: user.full_name || user.email?.split('@')[0] || 'Unknown',
           email: user.email,
-          phoneNumber: user.phone_number || 'N/A',
+          phoneNumber: user.phone || user.phone_number || 'N/A',
           dateAdded: new Date(user.created_at).toLocaleDateString('en-US', { 
             year: 'numeric', 
             month: 'long', 

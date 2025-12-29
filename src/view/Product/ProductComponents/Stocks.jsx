@@ -400,7 +400,7 @@ const Stocks = () => {
                 </Popover>
               </TableCell>
               <TableCell align="center"><b>Stock Count</b></TableCell>
-              <TableCell><b></b></TableCell>
+              <TableCell align="center" sx={{ minWidth: 180 }}><b>Actions</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -471,7 +471,7 @@ const Stocks = () => {
                       {calculateActualStock(product)}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell align="center" sx={{ minWidth: 180 }}>
                     <Button
                       variant="contained"
                       size="small"
@@ -481,6 +481,7 @@ const Stocks = () => {
                         color: "#fff",
                         fontWeight: 600,
                         minWidth: 140,
+                        width: 140,
                         "&:hover": { bgcolor: "#115293" },
                       }}
                       onClick={() => handleUpdateStockClick(product)}

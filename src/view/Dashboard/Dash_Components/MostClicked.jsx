@@ -8,20 +8,20 @@ const MostClicked = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTopProducts = async () => {
+    const fetchMostClickedProducts = async () => {
       try {
-        const response = await DashboardService.getTopProducts(5);
+        const response = await DashboardService.getMostClickedProducts(5);
         if (response.success) {
           setProducts(response.data);
         }
       } catch (error) {
-        console.error("Error fetching top products:", error);
+        console.error("Error fetching most clicked products:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTopProducts();
+    fetchMostClickedProducts();
   }, []);
 
   if (loading) {
@@ -61,12 +61,12 @@ const MostClicked = () => {
           justifyContent: "center",
         }}
       >
-        <Typography>No product data available</Typography>
+        <Typography>No click data available yet</Typography>
       </Card>
     );
   }
 
-  const maxClicks = products[0]?.totalSold || 1;
+  const maxClicks = products[0]?.totalClicks || 1;
   const COLORS = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6"];
 
   const truncateText = (text, maxLength = 15) => {
@@ -129,12 +129,12 @@ const MostClicked = () => {
                     fontWeight={700}
                     color={COLORS[index]}
                   >
-                    {product.totalSold}
+                    {product.totalClicks}
                   </Typography>
                 </Box>
                 <LinearProgress
                   variant="determinate"
-                  value={(product.totalSold / maxClicks) * 100}
+                  value={(product.totalClicks / maxClicks) * 100}
                   sx={{
                     height: 8,
                     borderRadius: 4,

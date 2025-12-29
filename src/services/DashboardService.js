@@ -6,62 +6,52 @@ export class DashboardService {
     try {
       const now = new Date();
       let startDate = new Date();
+      let previousStartDate = new Date();
       
       // Calculate date range based on period
-      if (period === 'week') {
+      if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+        previousStartDate.setDate(now.getDate() - 1);
+        previousStartDate.setHours(0, 0, 0, 0);
+      } else if (period === 'week') {
         startDate.setDate(now.getDate() - 7);
+        previousStartDate.setDate(now.getDate() - 14);
       } else if (period === 'month') {
         startDate.setMonth(now.getMonth() - 1);
-      } else if (period === 'year') {
-        startDate.setFullYear(now.getFullYear() - 1);
+        previousStartDate.setMonth(now.getMonth() - 2);
       }
 
+      // Get current period orders
       const { data, error } = await supabase
         .from('orders')
         .select('total, created_at, status')
-        .gte('created_at', startDate.toISOString());
+        .gte('created_at', startDate.toISOString())
+        .in('status', ['completed', 'delivered']);
 
       if (error) throw error;
 
-      // Filter for completed/delivered in JS since some Supabase versions have issues with OR
-      const filteredData = (data || []).filter(order => 
-        order.status === 'completed' || order.status === 'delivered'
-      );
+      const currentTotal = (data || []).reduce((sum, order) => sum + Number(order.total || 0), 0);
 
-      const currentTotal = filteredData.reduce((sum, order) => sum + Number(order.total), 0);
-
-      // Get previous period for percentage calculation
-      const previousStartDate = new Date(startDate);
-      const previousEndDate = new Date(startDate);
-      if (period === 'week') {
-        previousStartDate.setDate(previousStartDate.getDate() - 7);
-      } else if (period === 'month') {
-        previousStartDate.setMonth(previousStartDate.getMonth() - 1);
-      } else if (period === 'year') {
-        previousStartDate.setFullYear(previousStartDate.getFullYear() - 1);
-      }
-
+      // Get previous period orders
       const { data: previousData } = await supabase
         .from('orders')
         .select('total, status')
         .gte('created_at', previousStartDate.toISOString())
-        .lt('created_at', startDate.toISOString());
+        .lt('created_at', startDate.toISOString())
+        .in('status', ['completed', 'delivered']);
 
-      const filteredPreviousData = (previousData || []).filter(order => 
-        order.status === 'completed' || order.status === 'delivered'
-      );
-      const previousTotal = filteredPreviousData.reduce((sum, order) => sum + Number(order.total), 0);
-      const percentageChange = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal * 100) : 0;
+      const previousTotal = (previousData || []).reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const percentageChange = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal * 100) : (currentTotal > 0 ? 100 : 0);
 
       return {
         success: true,
         total: currentTotal,
-        percentage: percentageChange,
+        percentage: Math.abs(percentageChange),
         isIncrease: percentageChange >= 0
       };
     } catch (error) {
       console.error('Error fetching total sales:', error);
-      return { success: false, error: error.message, total: 0, percentage: 0 };
+      return { success: false, error: error.message, total: 0, percentage: 0, isIncrease: false };
     }
   }
 
@@ -70,13 +60,18 @@ export class DashboardService {
     try {
       const now = new Date();
       let startDate = new Date();
+      let previousStartDate = new Date();
       
-      if (period === 'week') {
+      if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+        previousStartDate.setDate(now.getDate() - 1);
+        previousStartDate.setHours(0, 0, 0, 0);
+      } else if (period === 'week') {
         startDate.setDate(now.getDate() - 7);
+        previousStartDate.setDate(now.getDate() - 14);
       } else if (period === 'month') {
         startDate.setMonth(now.getMonth() - 1);
-      } else if (period === 'year') {
-        startDate.setFullYear(now.getFullYear() - 1);
+        previousStartDate.setMonth(now.getMonth() - 2);
       }
 
       const { count: currentCount, error } = await supabase
@@ -87,112 +82,174 @@ export class DashboardService {
       if (error) throw error;
 
       // Get previous period count
-      const previousStartDate = new Date(startDate);
-      if (period === 'week') {
-        previousStartDate.setDate(previousStartDate.getDate() - 7);
-      } else if (period === 'month') {
-        previousStartDate.setMonth(previousStartDate.getMonth() - 1);
-      } else if (period === 'year') {
-        previousStartDate.setFullYear(previousStartDate.getFullYear() - 1);
-      }
-
       const { count: previousCount } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', startDate.toISOString());
 
-      const percentageChange = previousCount > 0 ? ((currentCount - previousCount) / previousCount * 100) : 0;
+      const percentageChange = previousCount > 0 ? ((currentCount - previousCount) / previousCount * 100) : (currentCount > 0 ? 100 : 0);
 
       return {
         success: true,
         total: currentCount || 0,
-        percentage: percentageChange,
+        percentage: Math.abs(percentageChange),
         isIncrease: percentageChange >= 0
       };
     } catch (error) {
       console.error('Error fetching total orders:', error);
-      return { success: false, error: error.message, total: 0, percentage: 0 };
+      return { success: false, error: error.message, total: 0, percentage: 0, isIncrease: false };
     }
   }
 
-  // Get total users count
-  static async getTotalUsers(period = 'week') {
+  // Get average order value
+  static async getAverageOrderValue(period = 'month') {
     try {
       const now = new Date();
       let startDate = new Date();
+      let previousStartDate = new Date();
       
-      if (period === 'week') {
+      if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+        previousStartDate.setDate(now.getDate() - 1);
+        previousStartDate.setHours(0, 0, 0, 0);
+      } else if (period === 'week') {
         startDate.setDate(now.getDate() - 7);
+        previousStartDate.setDate(now.getDate() - 14);
       } else if (period === 'month') {
         startDate.setMonth(now.getMonth() - 1);
+        previousStartDate.setMonth(now.getMonth() - 2);
       }
 
-      const { count: currentCount, error } = await supabase
+      // Get current period orders
+      const { data, error } = await supabase
+        .from('orders')
+        .select('total')
+        .gte('created_at', startDate.toISOString())
+        .in('status', ['completed', 'delivered']);
+
+      if (error) throw error;
+
+      const currentTotal = (data || []).reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const currentCount = data?.length || 0;
+      const currentAverage = currentCount > 0 ? currentTotal / currentCount : 0;
+
+      // Get previous period orders
+      const { data: previousData } = await supabase
+        .from('orders')
+        .select('total')
+        .gte('created_at', previousStartDate.toISOString())
+        .lt('created_at', startDate.toISOString())
+        .in('status', ['completed', 'delivered']);
+
+      const previousTotal = (previousData || []).reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const previousCount = previousData?.length || 0;
+      const previousAverage = previousCount > 0 ? previousTotal / previousCount : 0;
+
+      const percentageChange = previousAverage > 0 ? ((currentAverage - previousAverage) / previousAverage * 100) : (currentAverage > 0 ? 100 : 0);
+
+      return {
+        success: true,
+        average: currentAverage,
+        percentage: Math.abs(percentageChange),
+        isIncrease: percentageChange >= 0
+      };
+    } catch (error) {
+      console.error('Error fetching average order value:', error);
+      return { success: false, error: error.message, average: 0, percentage: 0, isIncrease: false };
+    }
+  }
+
+  // Get total users count (always shows total, but growth % is based on period)
+  static async getTotalUsers(period = 'month') {
+    try {
+      // Always get total count of all users
+      const { count: totalCount, error } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'customer');
 
       if (error) throw error;
 
-      // Get new users in period
-      const { count: newCount } = await supabase
+      // Calculate growth based on new users in the selected period
+      const now = new Date();
+      let startDate = new Date();
+      
+      if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+      } else if (period === 'week') {
+        startDate.setDate(now.getDate() - 7);
+      } else if (period === 'month') {
+        startDate.setMonth(now.getMonth() - 1);
+      }
+
+      const { count: newUsersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'customer')
         .gte('created_at', startDate.toISOString());
 
-      const percentageChange = currentCount > 0 ? ((newCount / currentCount) * 100) : 0;
+      const previousTotal = (totalCount || 0) - (newUsersCount || 0);
+      const percentageChange = previousTotal > 0 ? ((newUsersCount || 0) / previousTotal * 100) : ((newUsersCount || 0) > 0 ? 100 : 0);
 
       return {
         success: true,
-        total: currentCount || 0,
-        newUsers: newCount || 0,
-        percentage: percentageChange,
-        isIncrease: true
+        total: totalCount || 0,
+        percentage: Math.abs(percentageChange),
+        isIncrease: (newUsersCount || 0) > 0
       };
     } catch (error) {
       console.error('Error fetching total users:', error);
-      return { success: false, error: error.message, total: 0, percentage: 0 };
+      return { success: false, error: error.message, total: 0, percentage: 0, isIncrease: false };
     }
   }
 
-  // Get new users in the last week
-  static async getNewUsers() {
+  // Get new users in the specified period
+  static async getNewUsers(period = 'week') {
     try {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
+      const now = new Date();
+      let startDate = new Date();
+      let previousStartDate = new Date();
+      
+      if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+        previousStartDate.setDate(now.getDate() - 1);
+        previousStartDate.setHours(0, 0, 0, 0);
+      } else if (period === 'week') {
+        startDate.setDate(now.getDate() - 7);
+        previousStartDate.setDate(now.getDate() - 14);
+      } else if (period === 'month') {
+        startDate.setMonth(now.getMonth() - 1);
+        previousStartDate.setMonth(now.getMonth() - 2);
+      }
 
       const { count, error } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'customer')
-        .gte('created_at', weekAgo.toISOString());
+        .gte('created_at', startDate.toISOString());
 
       if (error) throw error;
 
-      // Get previous week count for percentage
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-
+      // Get previous period count
       const { count: previousCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'customer')
-        .gte('created_at', twoWeeksAgo.toISOString())
-        .lt('created_at', weekAgo.toISOString());
+        .gte('created_at', previousStartDate.toISOString())
+        .lt('created_at', startDate.toISOString());
 
-      const percentageChange = previousCount > 0 ? ((count - previousCount) / previousCount * 100) : 0;
+      const percentageChange = previousCount > 0 ? ((count - previousCount) / previousCount * 100) : (count > 0 ? 100 : 0);
 
       return {
         success: true,
         total: count || 0,
-        percentage: percentageChange,
+        percentage: Math.abs(percentageChange),
         isIncrease: percentageChange >= 0
       };
     } catch (error) {
       console.error('Error fetching new users:', error);
-      return { success: false, error: error.message, total: 0, percentage: 0 };
+      return { success: false, error: error.message, total: 0, percentage: 0, isIncrease: false };
     }
   }
 
@@ -227,10 +284,17 @@ export class DashboardService {
         }
       });
 
-      return { success: true, data: stats };
+      return stats;
     } catch (error) {
       console.error('Error fetching shipping stats:', error);
-      return { success: false, error: error.message };
+      return {
+        pending: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        pickup: 0,
+        readyForPickup: 0
+      };
     }
   }
 
@@ -354,38 +418,84 @@ export class DashboardService {
   // Get inventory stats
   static async getInventoryStats() {
     try {
-      const { data, error } = await supabase
+      // Get all products
+      const { data: products, error: productsError } = await supabase
         .from('products')
         .select('stock_quantity, status');
 
-      if (error) throw error;
+      if (productsError) throw productsError;
+
+      // Get all bundles
+      const { count: bundlesCount, error: bundlesError } = await supabase
+        .from('bundles')
+        .select('*', { count: 'exact', head: true });
+
+      if (bundlesError) throw bundlesError;
 
       const stats = {
-        total: data.length,
-        inStock: 0,
+        totalProducts: products.length,
         lowStock: 0,
-        outOfStock: 0
+        outOfStock: 0,
+        totalBundles: bundlesCount || 0
       };
 
-      data.forEach(product => {
+      products.forEach(product => {
         const stock = Number(product.stock_quantity) || 0;
         if (stock === 0) {
           stats.outOfStock++;
         } else if (stock <= 10) {
           stats.lowStock++;
-        } else {
-          stats.inStock++;
         }
       });
 
-      return { success: true, data: stats };
+      return stats;
     } catch (error) {
       console.error('Error fetching inventory stats:', error);
-      return { success: false, error: error.message };
+      return {
+        totalProducts: 0,
+        lowStock: 0,
+        outOfStock: 0,
+        totalBundles: 0
+      };
     }
   }
 
-  // Get top products
+  // Get most clicked products (based on product views)
+  static async getMostClickedProducts(limit = 5) {
+    try {
+      const { data, error } = await supabase
+        .from('product_views')
+        .select('product_id, products(id, name, images)');
+
+      if (error) throw error;
+
+      // Aggregate clicks by product_id
+      const productMap = {};
+      data.forEach(view => {
+        const productId = view.product_id;
+        if (!productMap[productId]) {
+          productMap[productId] = {
+            product_id: productId,
+            product_name: view.products?.name || 'Unknown Product',
+            product_image: view.products?.images?.[0] || '',
+            totalClicks: 0
+          };
+        }
+        productMap[productId].totalClicks++;
+      });
+
+      const mostClicked = Object.values(productMap)
+        .sort((a, b) => b.totalClicks - a.totalClicks)
+        .slice(0, limit);
+
+      return { success: true, data: mostClicked };
+    } catch (error) {
+      console.error('Error fetching most clicked products:', error);
+      return { success: false, error: error.message, data: [] };
+    }
+  }
+
+  // Get top selling products (based on order items)
   static async getTopProducts(limit = 5) {
     try {
       const { data, error } = await supabase
@@ -443,10 +553,15 @@ export class DashboardService {
         }
       });
 
-      return { success: true, data: stats };
+      return stats; // Return stats directly, not wrapped
     } catch (error) {
       console.error('Error fetching payment stats:', error);
-      return { success: false, error: error.message };
+      return {
+        paid: 0,
+        pending: 0,
+        failed: 0,
+        cancelled: 0
+      };
     }
   }
 
@@ -455,35 +570,38 @@ export class DashboardService {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('status, created_at')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+        .select('status');
 
       if (error) throw error;
 
-      const overview = {
-        pending: 0,
-        processing: 0,
-        shipped: 0,
-        delivered: 0,
-        cancelled: 0,
-        completed: 0
+      const stats = {
+        total: data.length,
+        completed: 0, // delivered orders
+        ongoing: 0, // processing, shipped, ready_for_pickup
+        new: 0 // pending, confirmed
       };
 
       data.forEach(order => {
         const status = order.status.toLowerCase();
-        if (overview.hasOwnProperty(status)) {
-          overview[status]++;
-        } else if (status === 'confirmed') {
-          overview.processing++;
-        } else if (status === 'ready_for_pickup') {
-          overview.processing++;
+        
+        if (status === 'delivered') {
+          stats.completed++;
+        } else if (status === 'processing' || status === 'shipped' || status === 'ready_for_pickup') {
+          stats.ongoing++;
+        } else if (status === 'pending' || status === 'confirmed') {
+          stats.new++;
         }
       });
 
-      return { success: true, data: overview };
+      return stats;
     } catch (error) {
       console.error('Error fetching orders overview:', error);
-      return { success: false, error: error.message };
+      return {
+        total: 0,
+        completed: 0,
+        ongoing: 0,
+        new: 0
+      };
     }
   }
 
