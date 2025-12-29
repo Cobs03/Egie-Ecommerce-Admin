@@ -7,6 +7,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import DiscountIcon from "@mui/icons-material/Discount";
 import PeopleIcon from "@mui/icons-material/People";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import CategoryIcon from "@mui/icons-material/Category";
 
 const QuickActions = () => {
   const navigate = useNavigate();
@@ -16,7 +17,13 @@ const QuickActions = () => {
       label: "Add Product",
       icon: <AddIcon />,
       color: "#2196f3",
-      path: "/products/add",
+      path: "/products/create",
+    },
+    {
+      label: "Product",
+      icon: <CategoryIcon />,
+      color: "#673ab7",
+      path: "/products",
     },
     {
       label: "View Orders",
@@ -77,7 +84,13 @@ const QuickActions = () => {
               <Button
                 fullWidth
                 variant="outlined"
-                onClick={() => navigate(action.path)}
+                onClick={() => {
+                  if (action.external) {
+                    window.open(action.path, '_blank');
+                  } else {
+                    navigate(action.path);
+                  }
+                }}
                 sx={{
                   display: "flex",
                   flexDirection: "column",

@@ -63,6 +63,20 @@ const Dashboard = () => {
           >
             KEY METRICS
           </Typography>
+          {/* Row 1: Total Sales, Total Orders, Avg Order Value */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 16,
+              marginBottom: 16,
+            }}
+          >
+            <TotalSales />
+            <TotalOrders />
+            <AverageOrderValue />
+          </div>
+          {/* Row 2: New Users, Total Users */}
           <div
             style={{
               display: "grid",
@@ -70,11 +84,8 @@ const Dashboard = () => {
               gap: 16,
             }}
           >
-            <TotalSales />
-            <TotalOrders />
-            <AverageOrderValue />
-            <TotalUser />
             <NewUser />
+            <TotalUser />
           </div>
         </Box>
       </motion.div>
@@ -138,6 +149,20 @@ const Dashboard = () => {
           >
             ORDERS & INVENTORY
           </Typography>
+          {/* Row 1: Active Orders, Active Discounts, Cancelled Orders */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 14,
+              marginBottom: 14,
+            }}
+          >
+            <ActiveOrders />
+            <ActiveDiscounts />
+            <CancelledOrders />
+          </div>
+          {/* Row 2: Inventory, Orders Overview */}
           <div
             style={{
               display: "grid",
@@ -145,9 +170,6 @@ const Dashboard = () => {
               gap: 14,
             }}
           >
-            <ActiveOrders />
-            <ActiveDiscounts />
-            <CancelledOrders />
             <Inventory />
             <OrdersOverview />
           </div>

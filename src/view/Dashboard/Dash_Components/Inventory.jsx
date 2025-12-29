@@ -60,12 +60,11 @@ const Inventory = () => {
         boxShadow: 3,
         padding: 1,
         minWidth: 240,
-        minHeight: 180,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
         position: "relative",
-        margin: 1,
         overflow: "hidden",
         border: hasOutOfStock ? "2px solid #f44336" : hasLowStock ? "2px solid #ff9800" : "none",
       }}
@@ -165,11 +164,16 @@ const Inventory = () => {
             display="flex"
             justifyContent="space-between"
             alignItems="center"
+            sx={{
+              bgcolor: inventoryStats.totalBundles > 0 ? "#e3f2fd" : "transparent",
+              p: inventoryStats.totalBundles > 0 ? 1 : 0,
+              borderRadius: 1,
+            }}
           >
-            <Typography variant="body2" fontWeight={500}>
+            <Typography variant="body2" fontWeight={500} color="#2196f3">
               📦 Total Bundles
             </Typography>
-            <Typography variant="body2" fontWeight={600}>
+            <Typography variant="body2" fontWeight={700} color="#2196f3">
               {(inventoryStats.totalBundles || 0).toLocaleString()}
             </Typography>
           </Box>
