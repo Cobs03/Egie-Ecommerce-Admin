@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from "react";
 import {
   Box,
   Table,
@@ -44,8 +44,9 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminLogService from "../../../services/AdminLogService";
 import { supabase } from "../../../lib/supabase";
+import * as XLSX from 'xlsx';
 
-const Stocks = () => {
+const Stocks = forwardRef((props, ref) => {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -275,6 +276,73 @@ const Stocks = () => {
     setConfirmOpen(false);
     handleDrawerClose();
   };
+  
+  // Excel download function
+  const downloadExcel = async () => {
+    try {
+      // Get stock status
+      const getStockStatus = (stock) => {
+        if (stock === 0) return "Out of Stock";
+        if (stock <= 10) return "Low Stock";
+        return "Available";
+      };
+
+      // Prepare data for Excel - use all filtered products
+      const excelData = filteredProducts.map((product, index) => ({
+        'No.': index + 1,
+        'Product Name': product.name || '',
+        'Code': product.code || '',
+        'Stock Status': getStockStatus(product.stock),
+        'Stock Count': product.stock || 0
+      }));
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No.
+        { wch: 50 }, // Product Name
+        { wch: 40 }, // Code
+        { wch: 15 }, // Stock Status
+        { wch: 12 }  // Stock Count
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Stocks');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Stocks_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+      
+      // Log the action
+      if (user?.id) {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'DOWNLOAD',
+          actionDescription: `Downloaded ${excelData.length} stock records`,
+          targetType: 'STOCKS',
+          targetId: null,
+          metadata: { count: excelData.length, filename }
+        });
+      }
+      
+      setSuccessMessage(`Downloaded ${excelData.length} stock records successfully!`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      alert('Failed to download stocks. Please try again.');
+    }
+  };
+  
+  // Expose downloadExcel to parent via ref
+  useImperativeHandle(ref, () => ({
+    downloadExcel
+  }));
 
   const handleNameFilterOpen = (event) => {
     setNameFilterAnchor(event.currentTarget);
@@ -400,7 +468,7 @@ const Stocks = () => {
                 </Popover>
               </TableCell>
               <TableCell align="center"><b>Stock Count</b></TableCell>
-              <TableCell><b></b></TableCell>
+              <TableCell align="center" sx={{ minWidth: 180 }}><b>Actions</b></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -471,7 +539,7 @@ const Stocks = () => {
                       {calculateActualStock(product)}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell align="center" sx={{ minWidth: 180 }}>
                     <Button
                       variant="contained"
                       size="small"
@@ -481,6 +549,7 @@ const Stocks = () => {
                         color: "#fff",
                         fontWeight: 600,
                         minWidth: 140,
+                        width: 140,
                         "&:hover": { bgcolor: "#115293" },
                       }}
                       onClick={() => handleUpdateStockClick(product)}
@@ -742,6 +811,6 @@ const Stocks = () => {
       </Snackbar>
     </>
   );
-};
+});
 
 export default Stocks;

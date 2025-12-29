@@ -241,7 +241,7 @@ const CustomerTable = ({
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {customer.phoneNumber || "(+63) 9184548421"}
+                    {customer.phoneNumber || "N/A"}
                   </Typography>
                 </TableCell>
                 <TableCell>

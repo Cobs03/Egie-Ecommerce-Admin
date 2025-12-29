@@ -14,7 +14,7 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import DashboardService from "../../../services/DashboardService";
@@ -211,7 +211,7 @@ const RecentOrders = () => {
                       onClick={(event) => handleClick(event, order)}
                       size="small"
                     >
-                      <MoreHorizIcon sx={{ fontSize: 18, color: "#888" }} />
+                      <MoreVertIcon sx={{ fontSize: 18, color: "#888" }} />
                     </IconButton>
                     <Menu
                       id="order-menu"

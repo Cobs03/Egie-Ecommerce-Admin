@@ -16,6 +16,7 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import AdminLogService from "../../services/AdminLogService";
 import { formatLastLogin } from "../../utils/dateUtils";
+import * as XLSX from 'xlsx';
 
 // Import permission system
 import { usePermissions } from "../../hooks/usePermissions";
@@ -126,6 +127,11 @@ const User = () => {
   // Error notification state
   const [errorMessage, setErrorMessage] = useState("");
   const [showError, setShowError] = useState(false);
+  
+  // Success notification state
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  
   const [demotionDialogOpen, setDemotionDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
@@ -162,7 +168,7 @@ const User = () => {
           id: user.id,
           name: user.full_name || user.email?.split('@')[0] || 'Unknown',
           email: user.email,
-          phoneNumber: user.phone_number || 'N/A',
+          phoneNumber: user.phone || user.phone_number || 'N/A',
           dateAdded: new Date(user.created_at).toLocaleDateString('en-US', { 
             year: 'numeric', 
             month: 'long', 
@@ -608,8 +614,98 @@ const User = () => {
     [customersList, searchQuery]
   );
 
-  const handleDownloadFile = () => {
-    console.log("Downloading user data...");
+  const handleDownloadFile = async () => {
+    try {
+      if (activeTab === 'employees') {
+        // Download Employees
+        const excelData = filteredEmployees.map((employee, index) => ({
+          'No.': index + 1,
+          'Name': employee.name || '',
+          'Email': employee.email || '',
+          'Access/Role': employee.access?.join(', ') || '',
+          'Date Added': employee.dateAdded || '',
+          'Last Login': employee.lastLogin || 'Never'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [
+          { wch: 5 },  // No.
+          { wch: 30 }, // Name
+          { wch: 35 }, // Email
+          { wch: 20 }, // Access/Role
+          { wch: 20 }, // Date Added
+          { wch: 20 }  // Last Login
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Employees');
+
+        const date = new Date().toISOString().split('T')[0];
+        const filename = `Employees_${date}.xlsx`;
+        XLSX.writeFile(wb, filename);
+
+        // Log action
+        if (currentUser?.id) {
+          await AdminLogService.createLog({
+            userId: currentUser.id,
+            actionType: 'DOWNLOAD',
+            actionDescription: `Downloaded ${excelData.length} employee records`,
+            targetType: 'EMPLOYEES',
+            targetId: null,
+            metadata: { count: excelData.length, filename }
+          });
+        }
+
+        setSuccessMessage(`Downloaded ${excelData.length} employee records successfully!`);
+        setShowSuccess(true);
+      } else {
+        // Download Customers
+        const excelData = filteredCustomers.map((customer, index) => ({
+          'No.': index + 1,
+          'Name': customer.name || '',
+          'Email': customer.email || '',
+          'Phone Number': customer.phoneNumber || '',
+          'Date Added': customer.dateAdded || '',
+          'Last Login': customer.lastLogin || 'Never'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [
+          { wch: 5 },  // No.
+          { wch: 30 }, // Name
+          { wch: 35 }, // Email
+          { wch: 20 }, // Phone Number
+          { wch: 20 }, // Date Added
+          { wch: 20 }  // Last Login
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+
+        const date = new Date().toISOString().split('T')[0];
+        const filename = `Customers_${date}.xlsx`;
+        XLSX.writeFile(wb, filename);
+
+        // Log action
+        if (currentUser?.id) {
+          await AdminLogService.createLog({
+            userId: currentUser.id,
+            actionType: 'DOWNLOAD',
+            actionDescription: `Downloaded ${excelData.length} customer records`,
+            targetType: 'CUSTOMERS',
+            targetId: null,
+            metadata: { count: excelData.length, filename }
+          });
+        }
+
+        setSuccessMessage(`Downloaded ${excelData.length} customer records successfully!`);
+        setShowSuccess(true);
+      }
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      setErrorMessage('Failed to download data. Please try again.');
+      setShowError(true);
+    }
   };
 
   return (
@@ -729,6 +825,32 @@ const User = () => {
         onConfirm={handleUnbanConfirm}
         customerName={selectedUser?.name}
       />
+
+      {/* Success Notification */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccess(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white'
+            },
+            '& .MuiAlert-action': {
+              color: 'white'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
 
       {/* Error Notification */}
       <Snackbar

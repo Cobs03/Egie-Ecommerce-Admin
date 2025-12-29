@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, Snackbar, Alert } from "@mui/material";
 import { toast, Toaster } from "sonner";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { AdminLogService } from "../../services/AdminLogService";
 import PaymentHeader from "./Payment Components/PaymentHeader";
 import PaymentTable from "./Payment Components/PaymentTable";
 import PaymentDetailsDrawer from "./Payment Components/PaymentDetailsDrawer";
@@ -16,7 +18,7 @@ import { useAuth } from "../../contexts/AuthContext";
 const Payment = () => {
   // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
   const permissions = usePermissions();
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [payments, setPayments] = useState([]);
   const [selectedPayment, setSelectedPayment] = useState(null);
@@ -24,6 +26,10 @@ const Payment = () => {
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
   const [orderDrawerOpen, setOrderDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Success notification state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Load payments on component mount
   useEffect(() => {
@@ -283,6 +289,60 @@ const Payment = () => {
     toast.info("Filter feature coming soon!", { duration: 2000 });
   };
 
+  const handleExportPayments = async () => {
+    try {
+      // Create Excel data from filtered payments
+      const excelData = filteredPayments.map((payment, index) => ({
+        'No': index + 1,
+        'Payment ID': payment.transactionId || 'N/A',
+        'Order ID': payment.orderId || 'N/A',
+        'Amount': payment.amount || 'N/A',
+        'Payment Method': payment.method || 'N/A',
+        'Status': payment.status || 'N/A',
+        'Date & Time': payment.dateTime || 'N/A'
+      }));
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Payments");
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 30 }, // Payment ID
+        { wch: 15 }, // Order ID
+        { wch: 15 }, // Amount
+        { wch: 20 }, // Payment Method
+        { wch: 15 }, // Status
+        { wch: 25 }  // Date & Time
+      ];
+
+      // Generate file name with current date
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `Payments_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
+      // Log admin action
+      await AdminLogService.createLog(
+        user?.id,
+        'download',
+        'payment',
+        null,
+        { count: filteredPayments.length, fileName }
+      );
+
+      // Show success notification
+      setSuccessMessage(`Successfully downloaded ${filteredPayments.length} payment records`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download payments');
+    }
+  };
+
   // Show loading while auth is initializing
   if (authLoading) {
     return (
@@ -325,6 +385,7 @@ const Payment = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onFilterClick={handleFilterClick}
+        onExport={handleExportPayments}
       />
 
       <motion.div
@@ -353,6 +414,21 @@ const Payment = () => {
         onClose={() => setOrderDrawerOpen(false)}
         order={selectedOrder}
       />
+
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={4000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          sx={{ width: '100%', bgcolor: '#4caf50', color: 'white' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -18,13 +18,14 @@ export default function ShippingChart() {
       try {
         const stats = await DashboardService.getShippingStats();
         const chartData = [
-          { id: 0, value: stats.delivered, label: "Delivered", color: "#63e01d" },
-          { id: 1, value: stats.shipped, label: "Shipped", color: "#2176ae" },
-          { id: 2, value: stats.processing, label: "Processing", color: "#ffe14d" },
-          { id: 3, value: stats.pending, label: "Pending", color: "#ff9800" },
+          { id: 0, value: stats.delivered || 0, label: "Delivered", color: "#63e01d" },
+          { id: 1, value: stats.shipped || 0, label: "Shipped", color: "#2176ae" },
+          { id: 2, value: stats.processing || 0, label: "Processing", color: "#ffe14d" },
+          { id: 3, value: stats.pending || 0, label: "Pending", color: "#ff9800" },
         ];
         setData(chartData);
-        setTotal(stats.delivered + stats.shipped + stats.processing + stats.pending);
+        const totalOrders = (stats.delivered || 0) + (stats.shipped || 0) + (stats.processing || 0) + (stats.pending || 0);
+        setTotal(totalOrders);
       } catch (error) {
         console.error("Error fetching shipping data:", error);
       } finally {
@@ -60,13 +61,13 @@ export default function ShippingChart() {
         borderRadius: 3,
         boxShadow: 3,
         minWidth: 300,
-        minHeight: 300,
+        minHeight: 350,
         p: 2,
         m: 1,
       }}
     >
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h6" fontWeight={700}>
             Shipping Status
           </Typography>
@@ -84,55 +85,57 @@ export default function ShippingChart() {
           </Box>
         </Box>
         <Box display="flex" flexDirection="column" alignItems="center">
+          {/* Pie Chart - Larger and Centered */}
           <PieChart
             series={[
               {
                 data,
-                innerRadius: 60,
-                outerRadius: 80,
+                innerRadius: 70,
+                outerRadius: 110,
                 paddingAngle: 2,
                 cornerRadius: 5,
-                cx: 100,
-                cy: 90,
               },
             ]}
-            width={200}
-            height={180}
+            width={300}
+            height={240}
             slotProps={{
               legend: { hidden: true },
             }}
           />
-          <Stack spacing={1} mt={2} width="100%">
+          {/* Legend - Horizontal Layout at Bottom */}
+          <Box 
+            display="flex" 
+            flexWrap="wrap" 
+            gap={3} 
+            mt={2} 
+            justifyContent="center"
+            width="100%"
+          >
             {data.map((item) => {
               const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
               return (
-                <Box key={item.id} display="flex" alignItems="center" justifyContent="space-between">
-                  <Box display="flex" alignItems="center" flex={1}>
-                    <Box
-                      sx={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: "50%",
-                        backgroundColor: item.color,
-                        mr: 1.5,
-                      }}
-                    />
-                    <Typography fontWeight={600} fontSize={13}>
-                      {item.label}
-                    </Typography>
-                  </Box>
-                  <Box display="flex" gap={2} alignItems="center">
-                    <Typography fontWeight={500} fontSize={12} color="text.secondary">
-                      {percentage}%
-                    </Typography>
-                    <Typography fontWeight={700} fontSize={13}>
-                      {item.value}
-                    </Typography>
-                  </Box>
+                <Box key={item.id} display="flex" alignItems="center" gap={1}>
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      backgroundColor: item.color,
+                    }}
+                  />
+                  <Typography fontWeight={600} fontSize={13}>
+                    {item.label}
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={12} color="text.secondary">
+                    {percentage}%
+                  </Typography>
+                  <Typography fontWeight={700} fontSize={13}>
+                    {item.value}
+                  </Typography>
                 </Box>
               );
             })}
-          </Stack>
+          </Box>
         </Box>
       </CardContent>
     </Card>

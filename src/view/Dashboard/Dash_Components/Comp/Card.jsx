@@ -15,6 +15,7 @@ const Card = ({
   percentageBg = "#dcfce7",
   iconBg = "#f3f4f6",
   trendData = [],
+  onPeriodChange,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(period);
@@ -30,10 +31,13 @@ const Card = ({
 
   const handleMenuItemClick = (newPeriod) => {
     setSelectedPeriod(newPeriod);
+    if (onPeriodChange) {
+      onPeriodChange(newPeriod);
+    }
     handleClose();
   };
 
-  const options = ["In the Last Week", "In the Last Day", "In the Last Month"];
+  const options = ["Today", "In the Last Day", "In the Last Week", "In the Last Month"];
 
   return (
     <div
@@ -145,7 +149,7 @@ const Card = ({
             marginRight: 8,
           }}
         >
-          ↑ {percentage}
+          {percentage}
         </div>
         <div style={{ color: "#888", fontSize: 14 }}>{selectedPeriod}</div>
       </div>

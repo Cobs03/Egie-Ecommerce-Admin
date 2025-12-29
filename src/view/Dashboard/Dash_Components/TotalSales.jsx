@@ -6,22 +6,39 @@ import { DashboardService } from "../../../services/DashboardService";
 const TotalSales = () => {
   const [data, setData] = useState({ total: 0, percentage: 0, isIncrease: true });
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('week');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(period);
+  }, [period]);
 
-  const loadData = async () => {
+  const loadData = async (selectedPeriod) => {
     setLoading(true);
-    const result = await DashboardService.getTotalSales('week');
+    const periodMap = {
+      'Today': 'day',
+      'In the Last Day': 'day',
+      'In the Last Week': 'week',
+      'In the Last Month': 'month'
+    };
+    const result = await DashboardService.getTotalSales(periodMap[selectedPeriod] || selectedPeriod);
     if (result.success) {
       setData({
         total: result.total,
-        percentage: Math.abs(result.percentage).toFixed(1),
+        percentage: result.percentage.toFixed(1),
         isIncrease: result.isIncrease
       });
     }
     setLoading(false);
+  };
+
+  const handlePeriodChange = (newPeriod) => {
+    const periodMap = {
+      'Today': 'day',
+      'In the Last Day': 'day',
+      'In the Last Week': 'week',
+      'In the Last Month': 'month'
+    };
+    setPeriod(periodMap[newPeriod] || 'week');
   };
 
   if (loading) {
@@ -42,13 +59,14 @@ const TotalSales = () => {
   return (
     <Card
       title="Total Sales"
-      value={`₱ ${data.total.toLocaleString()}`}
-      percentage={`${data.percentage}%`}
-      period="In the Last Week"
+      value={`₱ ${data.total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+      percentage={`${data.isIncrease ? '↑' : '↓'} ${data.percentage}%`}
+      period={period === 'day' ? 'Today' : period === 'week' ? 'In the Last Week' : 'In the Last Month'}
       icon={<MdOutlineEventNote size={28} color="#888" />}
       percentageColor={data.isIncrease ? "#22c55e" : "#ef4444"}
       percentageBg={data.isIncrease ? "#dcfce7" : "#fee2e2"}
       iconBg="#f3f4f6"
+      onPeriodChange={handlePeriodChange}
     />
   );
 };

@@ -6,14 +6,21 @@ import { DashboardService } from "../../../services/DashboardService";
 const NewUser = () => {
   const [data, setData] = useState({ total: 0, percentage: 0, isIncrease: true });
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('week');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(period);
+  }, [period]);
 
-  const loadData = async () => {
+  const loadData = async (selectedPeriod) => {
     setLoading(true);
-    const result = await DashboardService.getNewUsers();
+    const periodMap = {
+      'Today': 'day',
+      'In the Last Day': 'day',
+      'In the Last Week': 'week',
+      'In the Last Month': 'month'
+    };
+    const result = await DashboardService.getNewUsers(periodMap[selectedPeriod] || selectedPeriod);
     if (result.success) {
       setData({
         total: result.total,
@@ -22,6 +29,16 @@ const NewUser = () => {
       });
     }
     setLoading(false);
+  };
+
+  const handlePeriodChange = (newPeriod) => {
+    const periodMap = {
+      'Today': 'day',
+      'In the Last Day': 'day',
+      'In the Last Week': 'week',
+      'In the Last Month': 'month'
+    };
+    setPeriod(periodMap[newPeriod] || 'week');
   };
 
   if (loading) {
@@ -43,12 +60,13 @@ const NewUser = () => {
     <Card
       title="New Users"
       value={data.total.toString()}
-      percentage={`${data.percentage}%`}
-      period="In the Last Week"
+      percentage={`${data.isIncrease ? '↑' : '↓'} ${data.percentage}%`}
+      period={period === 'day' ? 'Today' : period === 'week' ? 'In the Last Week' : 'In the Last Month'}
       icon={<FaUserPlus size={28} color="#888" />}
       percentageColor={data.isIncrease ? "#22c55e" : "#ef4444"}
       percentageBg={data.isIncrease ? "#dcfce7" : "#fee2e2"}
       iconBg="#f3f4f6"
+      onPeriodChange={handlePeriodChange}
     />
   );
 };

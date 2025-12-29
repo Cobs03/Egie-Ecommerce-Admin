@@ -151,7 +151,7 @@ const PromotionsHeader = ({
             },
           }}
         >
-          {activeTab === "discount" ? "Export Discounts" : activeTab === "popupads" ? "Export Pop-up Ads" : "Export Vouchers"}
+          {activeTab === "discount" ? "Download Discounts" : activeTab === "popupads" ? "Download Pop-up Ads" : "Download Vouchers"}
         </Button>
       </Box>
     </>
