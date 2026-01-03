@@ -145,8 +145,6 @@ export class OrderService {
 
       // Fetch shipping address directly
       if (data && data.shipping_address_id) {
-        console.log('🔍 Fetching shipping address for ID:', data.shipping_address_id)
-        
         // Try direct query first (will work if RLS allows)
         let addressData = null
         const { data: addr, error: addrError } = await supabase
@@ -157,7 +155,6 @@ export class OrderService {
         
         if (!addrError && addr) {
           addressData = addr
-          console.log('✅ Address fetched directly:', addr)
         } else {
           console.warn('⚠️ Direct fetch failed, trying query builder')
           // Alternative: use the shipping_address_id relationship
@@ -175,7 +172,6 @@ export class OrderService {
           
           if (orderWithAddr?.shipping_addresses) {
             addressData = orderWithAddr.shipping_addresses
-            console.log('✅ Address fetched via join:', addressData)
           }
         }
         

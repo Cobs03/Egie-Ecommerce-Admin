@@ -37,6 +37,7 @@ import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
 import { MdWebAsset } from "react-icons/md";
+import { HiOutlineMail } from "react-icons/hi";
 import ScrollToTop from "./ScrollToTop";
 
 // Import all necessary components
@@ -56,6 +57,7 @@ import Users from "../User/User";
 import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipping Components/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
+import ContactSubmissions from "../ContactSubmissions/ContactSubmissions";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -69,6 +71,7 @@ const NAVIGATION = [
   { segment: "orders", title: "Orders", icon: <IoDocumentTextOutline size={20} /> },
   { segment: "payment", title: "Payment", icon: <FaRegCreditCard size={20} /> },
   { segment: "shipping", title: "Shipping", icon: <MdOutlineLocalShipping size={20} /> },
+  { segment: "contact", title: "Contact", icon: <HiOutlineMail size={20} /> },
   { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
   { segment: "discount", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
   { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
@@ -154,7 +157,6 @@ function Navbar() {
   
   const handleSettingsClick = () => {
     // Handle settings click
-    console.log("Settings clicked");
     navigate("/settings");
     handleProfileMenuClose();
   };
@@ -483,6 +485,7 @@ function Navbar() {
             <Route path="/payment" element={<Payment />} />
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/shipping/view/:orderCode" element={<Shipview />} />
+            <Route path="/contact" element={<ContactSubmissions />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/discount" element={<Promotions />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}

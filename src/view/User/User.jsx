@@ -160,9 +160,6 @@ const User = () => {
       const employees = [];
       const customers = [];
 
-      console.log('📊 Fetched users from database:', data.length);
-      console.log('🔍 Sample user data:', data[0]);
-
       data.forEach(user => {
         const transformedUser = {
           id: user.id,
@@ -182,12 +179,6 @@ const User = () => {
           status: user.status || 'active',
           isBanned: user.is_banned || false,
         };
-
-        // Debug logging for first user
-        if (employees.length === 0 && customers.length === 0) {
-          console.log('👤 First user last_login from DB:', user.last_login);
-          console.log('📅 Formatted lastLogin:', transformedUser.lastLogin);
-        }
 
         // Separate employees and customers by role
         if (user.role === 'admin' || user.role === 'manager' || user.role === 'employee') {
@@ -472,8 +463,6 @@ const User = () => {
 
   const handleBanConfirm = async () => {
     try {
-      console.log('🚫 Banning customer:', selectedUser);
-      
       // Update user status to banned in database
       const { data, error } = await supabase
         .from('profiles')
@@ -481,15 +470,9 @@ const User = () => {
         .eq('id', selectedUser.id)
         .select();
 
-      console.log('Ban update result:', { data, error });
-
       if (error) {
-        console.error('❌ Ban error:', error);
         throw error;
       }
-
-      console.log('✅ Customer banned successfully');
-
       // Create activity log
       await AdminLogService.createLog(
         currentUser.id,
@@ -540,8 +523,6 @@ const User = () => {
 
   const handleUnbanConfirm = async () => {
     try {
-      console.log('✅ Unbanning customer:', selectedUser);
-      
       // Update user status to active in database
       const { data, error } = await supabase
         .from('profiles')
@@ -549,15 +530,9 @@ const User = () => {
         .eq('id', selectedUser.id)
         .select();
 
-      console.log('Unban update result:', { data, error });
-
       if (error) {
-        console.error('❌ Unban error:', error);
         throw error;
       }
-
-      console.log('✅ Customer unbanned successfully');
-
       // Create activity log
       await AdminLogService.createLog(
         currentUser.id,

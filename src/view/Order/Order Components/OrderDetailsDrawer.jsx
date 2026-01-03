@@ -203,12 +203,6 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
       const isPickup = deliveryType === 'pickup' || 
                        deliveryType === 'store_pickup' ||
                        deliveryType.includes('pickup');
-      
-      console.log('🔍 OrderDetailsDrawer - Delivery type check:', {
-        deliveryType,
-        isPickup
-      });
-      
       if (isPickup) {
         return (
           <Button
@@ -278,11 +272,6 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
 
     // For delivered, completed, or cancelled - show info only
     if (status === 'cancelled') {
-      console.log('🔍 Cancelled order data:', order);
-      console.log('🔍 Order notes (orderNotes):', order.orderNotes);
-      console.log('🔍 Order notes (order_notes):', order.order_notes);
-      console.log('🔍 Raw data:', order.rawData);
-      
       // Check both camelCase and snake_case versions
       const cancellationReason = order.orderNotes || order.order_notes || order.rawData?.order_notes;
       const customerNotes = order.rawData?.customer_notes;

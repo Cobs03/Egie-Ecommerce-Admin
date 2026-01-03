@@ -15,16 +15,16 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, profile, isAdmin } = useAuth();
   const [maxLoadingTimeout, setMaxLoadingTimeout] = React.useState(false);
 
-  // Safety timeout - if loading takes more than 8 seconds, show error
+  // Safety timeout - if loading takes more than 15 seconds, show error
   React.useEffect(() => {
     if (loading) {
       const timeout = setTimeout(() => {
-        console.error('⏱️ App loading timeout after 8 seconds');
+        console.error('⏱️ App loading timeout after 15 seconds');
         setMaxLoadingTimeout(true);
-      }, 8000);
+      }, 15000);
 
       return () => clearTimeout(timeout);
     } else {
@@ -65,6 +65,36 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // CRITICAL SECURITY CHECK: Only allow admin, manager, or employee
+  const isAuthorized = isAdmin === true || 
+    ['admin', 'manager', 'employee'].includes(profile?.role?.toLowerCase());
+
+  if (!loading && !isAuthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md">
+          <div className="text-red-500 text-5xl mb-4">🚫</div>
+          <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You do not have permission to access the admin panel.
+          </p>
+          <p className="text-sm text-gray-500 mb-4">
+            Only administrators, managers, and employees can access this area.
+          </p>
+          <button
+            onClick={() => {
+              // Sign out and redirect to auth page
+              window.location.href = '/auth';
+            }}
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return children;

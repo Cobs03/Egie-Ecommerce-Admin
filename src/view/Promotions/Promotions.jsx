@@ -110,13 +110,9 @@ const Promotions = () => {
       const result = await DiscountService.getAllDiscounts();
       if (result.success) {
         // Debug: Log the raw data to see what we're getting
-        console.log('Raw discount data from database:', result.data);
-
         // Transform database format to UI format
         const transformedDiscounts = result.data.map(discount => {
           // Debug: Log each discount's date fields
-          console.log('Discount:', discount.name, 'valid_from:', discount.valid_from, 'valid_until:', discount.valid_until);
-
           // Format dates for display with better error handling
           let dateRange = 'N/A';
 
@@ -140,7 +136,6 @@ const Promotions = () => {
               };
 
               dateRange = `${formatDate(validFrom)} - ${formatDate(validUntil)}`;
-              console.log('Formatted date range:', dateRange);
             } else {
               console.warn('Missing date fields for discount:', discount.name);
             }
@@ -235,17 +230,6 @@ const Promotions = () => {
             const message = voucherData.description
               ? voucherData.description
               : `Use the code ${voucherData.code} for ${discountValue} discount`;
-
-            console.log('Sending voucher notification with params:', {
-              p_title: voucherData.name || 'New Voucher Available',
-              p_message: message,
-              p_voucher_id: result.data.id,
-              p_discount_id: null,
-              p_action_type: 'copy_code',
-              p_action_data: { code: voucherData.code, discount: discountValue },
-              p_target_users: 'all'
-            });
-
             const { data: notifResult, error: notifError } = await supabase.rpc('create_promotion_notification', {
               p_title: voucherData.name || 'New Voucher Available',
               p_message: message,
@@ -255,14 +239,10 @@ const Promotions = () => {
               p_action_data: { code: voucherData.code, discount: discountValue },
               p_target_users: 'all'
             });
-
-            console.log('Notification RPC result:', { notifResult, notifError });
-
             if (notifError) {
               console.error('Notification error:', notifError);
               showSnackbar("Voucher created but notification failed: " + notifError.message, "warning");
             } else {
-              console.log(`Notification sent to ${notifResult} customers`);
               showSnackbar(`Voucher created and ${notifResult} customers notified!`, "success");
             }
           } catch (notifError) {
@@ -390,20 +370,6 @@ const Promotions = () => {
             const message = discountData.description
               ? discountData.description
               : `Enjoy ${discountValue} off ${productScope}!`;
-
-            console.log('Sending discount notification with params:', {
-              p_title: discountData.name || 'New Discount Available',
-              p_message: message,
-              p_voucher_id: null,
-              p_discount_id: result.data.id,
-              p_action_type: 'view_products',
-              p_action_data: {
-                discount: discountValue,
-                productIds: applicableProducts
-              },
-              p_target_users: 'all'
-            });
-
             const { data: notifResult, error: notifError } = await supabase.rpc('create_promotion_notification', {
               p_title: discountData.name || 'New Discount Available',
               p_message: message,
@@ -416,14 +382,10 @@ const Promotions = () => {
               },
               p_target_users: 'all'
             });
-
-            console.log('Notification RPC result:', { notifResult, notifError });
-
             if (notifError) {
               console.error('Notification error:', notifError);
               showSnackbar("Discount created but notification failed: " + notifError.message, "warning");
             } else {
-              console.log(`Notification sent to ${notifResult} customers`);
               showSnackbar(`Discount created and ${notifResult} customers notified!`, "success");
             }
           } catch (notifError) {

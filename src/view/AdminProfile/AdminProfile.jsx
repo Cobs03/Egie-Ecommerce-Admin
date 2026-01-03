@@ -99,9 +99,6 @@ const AdminProfile = () => {
       }
 
       if (data) {
-        console.log('Loaded profile data:', data);
-        console.log('Full name:', data.full_name, 'Phone:', data.phone);
-        
         // Split full_name into first and last name
         const nameParts = (data.full_name || '').split(' ');
         const firstName = nameParts[0] || '';

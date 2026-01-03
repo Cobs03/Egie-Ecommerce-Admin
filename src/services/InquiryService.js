@@ -456,18 +456,12 @@ class InquiryService {
    */
   async markRepliesAsReadByAdmin(inquiry_id) {
     try {
-      console.log('📝 Updating replies for inquiry:', inquiry_id);
-      
       const { data, error } = await supabase
         .from('inquiry_replies')
         .update({ read_by_staff: true })
         .eq('inquiry_id', inquiry_id)
         .eq('is_admin_reply', false) // Only mark customer replies
         .select();
-
-      console.log('✅ Updated replies:', data?.length || 0, 'rows');
-      console.log('Updated data:', data);
-      
       if (error) throw error;
 
       return { error: null };

@@ -65,9 +65,6 @@ const Order = () => {
           // Process order items to ensure images have full URLs
           const processedItems = (order.order_items || []).map(item => {
             const imageUrl = getImageUrl(item.product_image);
-            console.log(`Order ${order.order_number} - Product: ${item.product_name}`);
-            console.log(`  Raw image path: ${item.product_image}`);
-            console.log(`  Processed URL: ${imageUrl}`);
             return {
               ...item,
               product_image: imageUrl

@@ -115,8 +115,6 @@ const BundleCreate = () => {
     if (savedFormState && !isEditMode) {
       try {
         const parsedState = JSON.parse(savedFormState);
-        console.log('🔄 Restoring bundle form state from localStorage:', parsedState);
-        
         // Restore all form fields
         if (parsedState.images) setImages(parsedState.images);
         if (parsedState.products) setProducts(parsedState.products);
@@ -148,7 +146,6 @@ const BundleCreate = () => {
       discount,
     };
     localStorage.setItem('bundleCreateFormState', JSON.stringify(formState));
-    console.log('💾 Saved bundle form state to localStorage');
   };
 
   // Calculate initial price from products
@@ -413,11 +410,6 @@ const BundleCreate = () => {
           // Enhanced product comparison with detailed tracking
           const oldProducts = state.products || [];
           const newProducts = products || [];
-          
-          console.log("🔍 Comparing bundle products:");
-          console.log("  Old products:", oldProducts);
-          console.log("  New products:", newProducts);
-          
           // Normalize product IDs - handle both id and product_id fields
           const oldProductIds = oldProducts
             .map(p => String(p.id || p.product_id))
@@ -430,11 +422,6 @@ const BundleCreate = () => {
           
           const productsAddedIds = newProductIds.filter(id => !oldProductIds.includes(id));
           const productsRemovedIds = oldProductIds.filter(id => !newProductIds.includes(id));
-          
-          console.log("🔍 Product analysis:");
-          console.log("  Added IDs:", productsAddedIds);
-          console.log("  Removed IDs:", productsRemovedIds);
-          
           if (productsAddedIds.length > 0 || productsRemovedIds.length > 0) {
             changes.push('products');
             

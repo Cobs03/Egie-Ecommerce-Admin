@@ -97,14 +97,9 @@ const AdminLogs = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      console.log('📊 Raw logs data:', data);
-
       // Transform data to match the UI format
       const transformedLogs = data.map(log => {
         const userRole = log.profiles?.role || 'employee';
-        console.log(`User: ${log.profiles?.email}, Role: ${userRole}`);
-        
         return {
           id: log.id,
           timestamp: new Date(log.created_at).toLocaleString('en-US', {
@@ -124,8 +119,6 @@ const AdminLogs = () => {
           metadata: log.metadata,
         };
       });
-
-      console.log('✅ Transformed logs:', transformedLogs);
       setActivityLogs(transformedLogs);
     } catch (error) {
       console.error('Error fetching logs:', error);
@@ -274,10 +267,8 @@ const AdminLogs = () => {
     if (selectedRoles.length > 0) {
       const matches = selectedRoles.includes(log.userRole);
       if (!matches) {
-        console.log(`❌ Filtered out: ${log.user} (role: ${log.userRole}, looking for: ${selectedRoles.join(', ')})`);
         return false;
       }
-      console.log(`✅ Passed filter: ${log.user} (role: ${log.userRole})`);
     }
 
     // Module filter
@@ -300,26 +291,15 @@ const AdminLogs = () => {
       const logDateStart = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
       
       const daysDiff = Math.floor((todayStart - logDateStart) / (1000 * 60 * 60 * 24));
-
-      console.log(`🔍 Date filter check for log: ${log.details}`);
-      console.log(`  - Log date: ${logDate.toLocaleString()}`);
-      console.log(`  - Days diff: ${daysDiff}`);
-      console.log(`  - Date range: ${dateRange}`);
-
       if (dateRange === "today" && daysDiff !== 0) {
-        console.log(`  ❌ Filtered out (not today)`);
         return false;
       }
       if (dateRange === "week" && daysDiff > 7) {
-        console.log(`  ❌ Filtered out (older than 7 days)`);
         return false;
       }
       if (dateRange === "month" && daysDiff > 30) {
-        console.log(`  ❌ Filtered out (older than 30 days)`);
         return false;
       }
-      
-      console.log(`  ✅ Passed date filter`);
     }
 
     // Custom date range filter
@@ -332,7 +312,6 @@ const AdminLogs = () => {
       if (startDate) {
         const startDateStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
         if (logDateStart < startDateStart) {
-          console.log(`❌ Log filtered out: before start date (${logDate.toLocaleDateString()} < ${startDate.toLocaleDateString()})`);
           return false;
         }
       }
@@ -342,12 +321,9 @@ const AdminLogs = () => {
         // Include the end date by comparing if log date is after end of end date
         const endDateEnd = new Date(endDateStart.getTime() + 86400000); // Add 24 hours
         if (logDateStart >= endDateEnd) {
-          console.log(`❌ Log filtered out: after end date (${logDate.toLocaleDateString()} > ${endDate.toLocaleDateString()})`);
           return false;
         }
       }
-      
-      console.log(`✅ Log passed custom date range filter`);
     }
 
     return true;

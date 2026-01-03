@@ -233,9 +233,6 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
           }
         }
       }
-
-      console.log('User created successfully:', authData);
-
       // Show success message
       setSuccess(true);
 

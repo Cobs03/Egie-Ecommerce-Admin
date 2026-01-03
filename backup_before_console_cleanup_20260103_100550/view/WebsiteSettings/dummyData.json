@@ -1,0 +1,63 @@
+{
+  "websiteSettings": {
+    "id": 1,
+    "brand_name": "EGIE E-Commerce",
+    "logo_url": "",
+    "primary_color": "#22c55e",
+    "secondary_color": "#2176ae",
+    "accent_color": "#ffe14d"
+  },
+  "termsItems": [
+    {
+      "id": "term-1",
+      "title": "User Agreement",
+      "description": "By accessing and using this website, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.",
+      "type": "terms",
+      "created_at": "2025-01-01T10:00:00Z"
+    },
+    {
+      "id": "term-2",
+      "title": "Refund Policy",
+      "description": "We offer a 30-day money-back guarantee for all products. If you are not satisfied with your purchase, you may request a full refund within 30 days of the purchase date. The product must be in its original condition.",
+      "type": "terms",
+      "created_at": "2025-01-01T10:05:00Z"
+    },
+    {
+      "id": "term-3",
+      "title": "Shipping Terms",
+      "description": "Standard shipping takes 5-7 business days. Express shipping is available for an additional fee and takes 2-3 business days. We are not responsible for delays caused by shipping carriers.",
+      "type": "terms",
+      "created_at": "2025-01-01T10:10:00Z"
+    }
+  ],
+  "privacyItems": [
+    {
+      "id": "privacy-1",
+      "title": "Data Collection",
+      "description": "We collect information that you provide directly to us, including your name, email address, shipping address, and payment information. We use this information to process your orders and provide customer support.",
+      "type": "privacy",
+      "created_at": "2025-01-01T11:00:00Z"
+    },
+    {
+      "id": "privacy-2",
+      "title": "Cookie Policy",
+      "description": "We use cookies to improve your browsing experience and analyze site traffic. Cookies are small text files stored on your device. You can disable cookies in your browser settings, but some features may not work properly.",
+      "type": "privacy",
+      "created_at": "2025-01-01T11:05:00Z"
+    },
+    {
+      "id": "privacy-3",
+      "title": "Third-Party Services",
+      "description": "We use third-party services for payment processing (PayMongo) and analytics (Google Analytics). These services may collect information about your use of our website. Please review their privacy policies for more information.",
+      "type": "privacy",
+      "created_at": "2025-01-01T11:10:00Z"
+    },
+    {
+      "id": "privacy-4",
+      "title": "Data Security",
+      "description": "We implement industry-standard security measures to protect your personal information. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.",
+      "type": "privacy",
+      "created_at": "2025-01-01T11:15:00Z"
+    }
+  ]
+}

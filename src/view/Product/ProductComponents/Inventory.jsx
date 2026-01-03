@@ -83,32 +83,13 @@ const Inventory = forwardRef((props, ref) => {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      console.log("Loading products from database...");
       const result = await ProductService.getAllProducts();
       
       if (result.success) {
-        console.log(`Found ${result.data.length} products in database`);
-        
-        // Debug: Log first product to see structure
-        if (result.data.length > 0) {
-          console.log('First product from database:', result.data[0]);
-          console.log('First product images:', result.data[0].images);
-          console.log('Product names:', result.data.map(p => p.name));
-          console.log('All products images status:', result.data.map(p => ({
-            name: p.name,
-            hasImages: p.images && p.images.length > 0,
-            imageCount: p.images?.length || 0,
-            images: p.images
-          })));
-        }
-        
         // Transform products to match existing component structure
         const transformedProducts = result.data.map((product) => {
           // Debug: Check if enrichment worked
           if (product.selected_components && product.selected_components.length > 0) {
-            console.log(`🔍 Transforming product "${product.name}":`);
-            console.log('  - selected_components:', product.selected_components);
-            console.log('  - First component has name?', product.selected_components[0]?.name);
           }
           
           return {
@@ -148,8 +129,6 @@ const Inventory = forwardRef((props, ref) => {
             discount: product.metadata?.discount || 0
           };
         });
-        
-        console.log('Transformed products:', transformedProducts);
         setAllProducts(transformedProducts);
         setProducts(transformedProducts);
         
@@ -180,7 +159,6 @@ const Inventory = forwardRef((props, ref) => {
   // Reload products when returning to this page (e.g., after editing)
   useEffect(() => {
     if (location.state?.reloadProducts) {
-      console.log("🔄 Reloading products after update...");
       loadProducts();
       
       // Show success message if provided
@@ -215,29 +193,21 @@ const Inventory = forwardRef((props, ref) => {
   // Extract unique component categories from loaded products
   const extractComponentCategories = (products) => {
     const categoriesSet = new Set();
-    
-    console.log('🔍 Extracting component categories from products...');
-    
     products.forEach(product => {
       if (product.selectedComponents && Array.isArray(product.selectedComponents)) {
-        console.log(`Product "${product.name}" has components:`, product.selectedComponents);
-        
         product.selectedComponents.forEach(comp => {
           // Try to get category from different possible fields
           const componentCategory = comp.category || comp.name || comp.type;
           
           if (componentCategory) {
-            console.log(`  - Found component: ${componentCategory}`);
             categoriesSet.add(componentCategory);
           } else {
-            console.log('  - Component without category/name:', comp);
           }
         });
       }
     });
     
     const categories = Array.from(categoriesSet).sort();
-    console.log('✅ Final extracted component categories:', categories);
     return categories;
   };
   
@@ -367,8 +337,6 @@ const Inventory = forwardRef((props, ref) => {
   const handleViewProduct = () => {
     const product = products.find((p) => p.id === menuProductId);
     
-    console.log("Raw product for view:", product); // Debug log
-    
     // Transform database product to match ProductView expectations
     const transformedProduct = {
       id: product.id,
@@ -401,8 +369,6 @@ const Inventory = forwardRef((props, ref) => {
       isEditMode: false,
     };
     
-    console.log("Transformed product for ProductView:", transformedProduct); // Debug log
-    
     navigate("/products/view", {
       state: transformedProduct,
     });
@@ -412,16 +378,8 @@ const Inventory = forwardRef((props, ref) => {
   const handleEditProduct = () => {
     const product = products.find((p) => p.id === menuProductId);
     
-    console.log("🔍 Raw product for edit:", product); // Debug log
-    console.log("🔍 Product.selectedComponents:", product.selectedComponents);
-    console.log("🔍 Product.selectedComponents type:", typeof product.selectedComponents);
-    console.log("🔍 Product.selectedComponents length:", product.selectedComponents?.length);
     if (product.selectedComponents && product.selectedComponents.length > 0) {
-      console.log("🔍 First component:", product.selectedComponents[0]);
-      console.log("🔍 First component has name?:", product.selectedComponents[0]?.name);
     }
-    console.log("🔍 Product.specifications:", product.specifications);
-    
     // Transform product for ProductCreate component
     const transformedProduct = {
       id: product.id,
@@ -453,9 +411,6 @@ const Inventory = forwardRef((props, ref) => {
       isEditMode: true
     };
     
-    console.log("🔍 Transformed product for ProductCreate:", transformedProduct); // Debug log
-    console.log("🔍 Transformed selectedComponents:", transformedProduct.selectedComponents);
-    
     navigate("/products/create", { state: transformedProduct });
     handleMenuClose();
   };
@@ -480,12 +435,9 @@ const Inventory = forwardRef((props, ref) => {
     
     setIsDeleting(true);
     try {
-      console.log("🗑️ Deleting product:", productToDelete.name);
       const result = await ProductService.deleteProduct(productToDelete.id);
       
       if (result.success) {
-        console.log("✅ Product deleted successfully");
-        
         // Create activity log
         if (user?.id) {
           await AdminLogService.createLog({

@@ -18,7 +18,6 @@ class ActivityTracker {
    */
   startTracking(userId) {
     if (this.isTracking) {
-      console.log('⏰ Activity tracking already started');
       return;
     }
 
@@ -26,8 +25,6 @@ class ActivityTracker {
       console.warn('⚠️ Cannot start activity tracking: No user ID');
       return;
     }
-
-    console.log('✅ Starting activity tracking for user:', userId);
     this.isTracking = true;
 
     // Update immediately on start
@@ -47,7 +44,6 @@ class ActivityTracker {
       clearInterval(this.updateInterval);
       this.updateInterval = null;
       this.isTracking = false;
-      console.log('🛑 Activity tracking stopped');
     }
   }
 
@@ -56,8 +52,6 @@ class ActivityTracker {
    */
   async updateLastActivity(userId) {
     try {
-      console.log('🔄 Updating last activity for user:', userId);
-
       // Try using RPC function first
       const { error: rpcError } = await supabase.rpc('update_user_last_login', {
         user_id: userId
@@ -77,8 +71,6 @@ class ActivityTracker {
           return;
         }
       }
-
-      console.log('✅ Last activity updated successfully at', new Date().toLocaleTimeString());
     } catch (error) {
       console.error('❌ Error updating last activity:', error);
     }
@@ -104,8 +96,6 @@ class ActivityTracker {
       this.stopTracking();
       this.startTracking(userId);
     }
-
-    console.log(`⏱️ Update frequency set to ${minutes} minutes`);
   }
 }
 

@@ -68,11 +68,6 @@ const Payment = () => {
           
           // Debug logging for cancelled orders
           if (orderStatus === 'cancelled') {
-            console.log(`🚫 Cancelled Order - ${payment.orders?.order_number}:`, {
-              orderStatus,
-              originalPaymentStatus: payment.payment_status,
-              newPaymentStatus: paymentStatus
-            });
           }
           
           return {
@@ -123,11 +118,6 @@ const Payment = () => {
       
       // Attach customer info to payment
       if (data) {
-        console.log('🔍 PAYMENT DETAILS - Order data:', data);
-        console.log('🔍 PAYMENT DETAILS - shipping_address_id:', data.shipping_address_id);
-        console.log('🔍 PAYMENT DETAILS - delivery_type:', data.delivery_type);
-        console.log('🔍 PAYMENT DETAILS - Shipping address object:', data.shipping_addresses);
-        
         const customerName = data.user_profile 
           ? `${data.user_profile.first_name} ${data.user_profile.last_name}`
           : data.shipping_addresses?.full_name || 'Unknown';
@@ -136,14 +126,6 @@ const Payment = () => {
         let addressString = 'N/A';
         if (data.shipping_addresses) {
           const addr = data.shipping_addresses;
-          console.log('🔍 PAYMENT DETAILS - Address fields:', {
-            street_address: addr.street_address,
-            barangay: addr.barangay,
-            city: addr.city,
-            province: addr.province,
-            postal_code: addr.postal_code
-          });
-          
           const parts = [
             addr.street_address,
             addr.barangay,
@@ -152,13 +134,8 @@ const Payment = () => {
             addr.postal_code
           ].filter(Boolean);
           addressString = parts.length > 0 ? parts.join(', ') : 'N/A';
-          console.log('🔍 PAYMENT DETAILS - Filtered parts:', parts);
         } else {
-          console.log('⚠️ PAYMENT DETAILS - shipping_addresses is NULL or UNDEFINED!');
         }
-        
-        console.log('🔍 PAYMENT DETAILS - Final address string:', addressString);
-        
         const enrichedPayment = {
           ...payment,
           customerInfo: {
@@ -193,9 +170,6 @@ const Payment = () => {
       }
       
       if (data) {
-        console.log('Order data for order details:', data);
-        console.log('Order items:', data.order_items);
-        
         // Transform the order data to match the expected format
         const orderTotal = (data.subtotal || 0) - (data.discount || 0) + (data.shipping_fee || 0);
         
@@ -210,7 +184,6 @@ const Payment = () => {
         // Process order items to ensure images have full URLs
         const processedItems = (data.order_items || []).map(item => {
           const imageUrl = getImageUrl(item.product_image);
-          console.log(`Product: ${item.product_name}, Image: ${item.product_image} -> ${imageUrl}`);
           return {
             ...item,
             product_image: imageUrl

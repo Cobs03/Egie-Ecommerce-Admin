@@ -86,8 +86,6 @@ export const sampleProducts = [
 
 export const seedDatabase = async () => {
   try {
-    console.log('Starting database seeding...');
-    
     const { data, error } = await supabase
       .from('products')
       .insert(sampleProducts);
@@ -96,8 +94,6 @@ export const seedDatabase = async () => {
       console.error('Error seeding database:', error);
       return { success: false, error };
     }
-    
-    console.log('Database seeded successfully!', data);
     return { success: true, data };
   } catch (error) {
     console.error('Error seeding database:', error);
@@ -117,8 +113,6 @@ export const clearProducts = async () => {
       console.error('Error clearing products:', error);
       return { success: false, error };
     }
-    
-    console.log('Products cleared successfully!');
     return { success: true, data };
   } catch (error) {
     console.error('Error clearing products:', error);

@@ -45,33 +45,23 @@ export class ShippingService {
 
         // Fetch shipping addresses
         const addressIds = data.map(order => order.shipping_address_id).filter(Boolean);
-        console.log('🚚 SERVICE - Address IDs to fetch:', addressIds);
-        
         if (addressIds.length > 0) {
           const { data: addresses } = await supabase
             .from('shipping_addresses')
             .select('*')
             .in('id', addressIds);
-          
-          console.log('🚚 SERVICE - Fetched addresses:', addresses);
-          
           const addressMap = {};
           addresses?.forEach(addr => {
             addressMap[addr.id] = addr;
           });
-          
-          console.log('🚚 SERVICE - Address map:', addressMap);
-          
           // Attach data to each order
           data.forEach(order => {
             order.user_profile = profileMap[order.user_id] || null;
             if (order.shipping_address_id && addressMap[order.shipping_address_id]) {
               order.shipping_addresses = addressMap[order.shipping_address_id];
-              console.log(`🚚 SERVICE - Attached address to order ${order.order_number}:`, order.shipping_addresses);
             }
           });
         } else {
-          console.log('🚚 SERVICE - No address IDs found');
           // Just attach profiles if no addresses
           data.forEach(order => {
             order.user_profile = profileMap[order.user_id] || null;

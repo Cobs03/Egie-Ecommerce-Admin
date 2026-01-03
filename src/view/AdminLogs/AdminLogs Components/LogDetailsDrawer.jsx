@@ -85,7 +85,6 @@ const LogDetailsDrawer = ({ open, onClose, log }) => {
   };
 
   const handleExport = () => {
-    console.log("Exporting log:", log);
     // TODO: Implement export functionality
   };
 
