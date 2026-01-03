@@ -48,9 +48,7 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
 
   useEffect(() => {
     if (voucher) {
-  console.log('🔍 Voucher data received:', JSON.stringify(voucher, null, 2));
       const [activeFrom, activeTo] = voucher.active.split(" - ");
-  console.log('📅 Split dates:', JSON.stringify({ activeFrom, activeTo }, null, 2));
       setFormData({
         name: voucher.name || "",
         code: voucher.code || "",
@@ -73,20 +71,10 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
         const daysLeft = expiryDate.diff(now, "day");
         const hoursLeft = expiryDate.diff(now, "hour");
         const willShow = daysLeft >= 0 && daysLeft <= 7;
-        console.log('⚠️ Voucher expiration check:', JSON.stringify({ 
-          activeTo, 
-          expiryDate: expiryDate.format(), 
-          now: now.format(),
-          daysLeft, 
-          hoursLeft, 
-          willShow,
-          calculation: `${expiryDate.format()} - ${now.format()} = ${daysLeft} days`
-        }, null, 2));
         setDaysUntilExpiry(daysLeft);
         setHoursUntilExpiry(hoursLeft);
         setShowExpirationWarning(willShow);
       } else {
-        console.log('❌ No activeTo date found for voucher');
         setShowExpirationWarning(false);
         setDaysUntilExpiry(0);
         setHoursUntilExpiry(0);
@@ -256,7 +244,6 @@ const VoucherEditDialog = ({ open, onClose, voucher, isAddMode, onSave, showSnac
               },
             }}
           >
-            {console.log('💡 Rendering voucher dialog,', JSON.stringify({ showExpirationWarning, daysUntilExpiry, hoursUntilExpiry }, null, 2))}
             {showExpirationWarning && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 ⚠️ This voucher will expire {

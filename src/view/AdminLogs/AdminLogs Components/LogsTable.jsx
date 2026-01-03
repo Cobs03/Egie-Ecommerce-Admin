@@ -120,7 +120,6 @@ const LogsTable = ({ logs, onRowClick }) => {
   };
 
   const handleExportLog = () => {
-    console.log("Exporting log:", selectedLog);
     // TODO: Implement export functionality
     handleMenuClose();
   };

@@ -57,12 +57,10 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
 
   useEffect(() => {
     if (discount) {
-  console.log('🔍 Discount data received:', JSON.stringify(discount, null, 2));
       // Use the database date fields (validFrom/validUntil) instead of the formatted dates string
       // Parse dates directly without timezone manipulation
       const activeFrom = discount.validFrom ? dayjs(discount.validFrom) : null;
       const activeTo = discount.validUntil ? dayjs(discount.validUntil) : null;
-  console.log('📅 Parsed dates:', JSON.stringify({ activeFrom: activeFrom?.format(), activeTo: activeTo?.format() }, null, 2));
       
       setFormData({
         name: discount.name || "",
@@ -86,19 +84,10 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
         const daysLeft = activeTo.diff(now, "day");
         const hoursLeft = activeTo.diff(now, "hour");
         const willShow = daysLeft >= 0 && daysLeft <= 7;
-        console.log('⚠️ Discount expiration check:', JSON.stringify({ 
-          now: now.format(), 
-          activeTo: activeTo.format(), 
-          daysLeft, 
-          hoursLeft, 
-          willShow,
-          calculation: `${activeTo.format()} - ${now.format()} = ${daysLeft} days`
-        }, null, 2));
         setDaysUntilExpiry(daysLeft);
         setHoursUntilExpiry(hoursLeft);
         setShowExpirationWarning(willShow);
       } else {
-  console.log('❌ No activeTo date found');
         setShowExpirationWarning(false);
         setDaysUntilExpiry(0);
         setHoursUntilExpiry(0);
@@ -329,7 +318,6 @@ const DiscountEditDialog = ({ open, onClose, discount, isAddMode, onSave, showSn
               },
             }}
           >
-            {console.log('💡 Rendering discount dialog,', JSON.stringify({ showExpirationWarning, daysUntilExpiry, hoursUntilExpiry }, null, 2))}
             {showExpirationWarning && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 ⚠️ This discount will expire {

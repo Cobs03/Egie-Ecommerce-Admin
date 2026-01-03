@@ -232,8 +232,6 @@ const Bundles = forwardRef((props, ref) => {
       handleMenuClose();
       return;
     }
-    
-    console.log('Delete clicked for bundle:', selectedBundle);
     setDeleteDialogOpen(true);
   };
 
@@ -242,14 +240,10 @@ const Bundles = forwardRef((props, ref) => {
       console.error('No bundle selected for deletion');
       return;
     }
-    
-    console.log('Deleting bundle:', selectedBundle.id);
     setDeleting(true);
     
     try {
       const result = await BundleService.deleteBundle(selectedBundle.id);
-      console.log('Delete result:', result);
-      
       if (result.success) {
         // Create activity log
         if (user?.id) {

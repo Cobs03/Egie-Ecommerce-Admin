@@ -472,11 +472,9 @@ const Inqueries = ({ filter = "all", searchQuery = "" }) => {
 
   const handleMarkAsRead = async (inquiryId) => {
     try {
-      console.log('Marking replies as read for inquiry:', inquiryId);
       const { error } = await InquiryService.markRepliesAsReadByAdmin(inquiryId);
       
       if (!error) {
-        console.log('Successfully marked as read, reloading data...');
         // Force reload to get fresh data from database
         await loadInquiries();
       } else {

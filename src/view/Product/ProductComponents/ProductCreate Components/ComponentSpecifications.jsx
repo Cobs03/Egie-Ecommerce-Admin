@@ -16,10 +16,6 @@ const ComponentSpecifications = ({
   onSpecificationChange,
   isEditMode = false, // Add isEditMode prop
 }) => {
-  console.log("Selected Components:", selectedComponents); // Debug log
-  console.log("Specifications:", specifications); // Debug log
-  console.log("Is Edit Mode:", isEditMode); // Debug log
-
   // Handle specification field change for a specific component
   const handleFieldChange = (componentId, field, value) => {
     onSpecificationChange(componentId, field, value);
@@ -301,17 +297,6 @@ const ComponentSpecifications = ({
         { name: "specifications", label: "Specifications", placeholder: "Enter specifications", multiline: true, rows: 5 },
       ],
     };
-
-    // Enhanced Debug Logging
-    console.log("========== CATEGORY DEBUG ==========");
-    console.log("Component:", component);
-    console.log("Original category:", component.category);
-    console.log("Component name:", component.name);
-    console.log("Component id:", component.id);
-    console.log("Normalized category:", normalizedCategory);
-    console.log("Found in fieldConfigs:", fieldConfigs[normalizedCategory] ? "✅ YES" : "❌ NO (using default)");
-    console.log("Number of fields:", (fieldConfigs[normalizedCategory] || fieldConfigs.default).length);
-    console.log("===================================");
 
     return fieldConfigs[normalizedCategory] || fieldConfigs.default;
   };

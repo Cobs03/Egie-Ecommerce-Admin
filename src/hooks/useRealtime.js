@@ -32,8 +32,6 @@ export const useRealtimeProducts = () => {
           table: 'products',
         },
         (payload) => {
-          console.log('Product change detected:', payload)
-          
           if (payload.eventType === 'INSERT') {
             setProducts(current => [payload.new, ...current])
           } else if (payload.eventType === 'UPDATE') {
@@ -108,8 +106,6 @@ export const useRealtimeOrders = () => {
           table: 'orders',
         },
         (payload) => {
-          console.log('Order change detected:', payload)
-          
           if (payload.eventType === 'INSERT') {
             setOrders(current => [payload.new, ...current])
           } else if (payload.eventType === 'UPDATE') {
@@ -166,8 +162,6 @@ export const useRealtimeBundles = () => {
           table: 'bundles',
         },
         (payload) => {
-          console.log('Bundle change detected:', payload)
-          
           if (payload.eventType === 'INSERT') {
             setBundles(current => [payload.new, ...current])
           } else if (payload.eventType === 'UPDATE') {

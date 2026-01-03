@@ -21,9 +21,6 @@ export class ComponentService {
 
       // Extract unique categories
       const uniqueCategories = [...new Set(data.map(item => item.category))];
-      
-      console.log('✅ Fetched component categories:', uniqueCategories);
-      
       return {
         success: true,
         data: uniqueCategories.sort(),
@@ -52,9 +49,6 @@ export class ComponentService {
         console.error('❌ Error fetching components:', error);
         return { success: false, data: [], error };
       }
-
-      console.log(`✅ Fetched ${data.length} components from database`);
-      
       return {
         success: true,
         data: data,
@@ -84,9 +78,6 @@ export class ComponentService {
         console.error(`❌ Error fetching components for category ${category}:`, error);
         return { success: false, data: [], error };
       }
-
-      console.log(`✅ Fetched ${data.length} components for category: ${category}`);
-      
       return {
         success: true,
         data: data,

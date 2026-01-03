@@ -132,9 +132,6 @@ export class ProductService {
             const fullCategories = allCategories.filter(cat => 
               componentIds.includes(cat.id)
             )
-            
-            console.log(`📦 Product "${product.name}" - Enriched categories:`, fullCategories)
-            
             return {
               ...product,
               selected_components: fullCategories // Replace with full category objects

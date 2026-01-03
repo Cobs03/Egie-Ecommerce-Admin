@@ -21,13 +21,11 @@ export class StorageService {
         const { data: buckets, error: listError } = await supabase.storage.listBuckets()
         
         if (!listError && buckets && buckets.length > 0) {
-          console.log('Available buckets:', buckets.map(b => b.name))
           const bucketExists = buckets.some(bucket => bucket.name === this.BUCKET_NAME)
           
           if (!bucketExists) {
             console.warn(`Bucket '${this.BUCKET_NAME}' not found in list. Will try to upload anyway.`)
           } else {
-            console.log(`✅ Bucket '${this.BUCKET_NAME}' confirmed to exist`)
           }
         } else {
           console.warn('Could not list buckets (this is normal with anon key). Assuming bucket exists.')

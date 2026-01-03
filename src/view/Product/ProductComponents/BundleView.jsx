@@ -56,13 +56,10 @@ const BundleView = () => {
   // Calculate hours since last edit
   const getTimeSinceEdit = () => {
     if (!lastEdit) {
-      console.log('No lastEdit provided');
       return null;
     }
 
     try {
-      console.log('Parsing lastEdit:', lastEdit);
-      
       let editDate;
       
       // Try parsing as ISO string first (from database)
@@ -113,9 +110,6 @@ const BundleView = () => {
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffHours / 24);
       const remainingHours = diffHours % 24;
-
-      console.log('Time calculation:', { diffHours, diffDays, remainingHours });
-
       return {
         totalHours: diffHours >= 0 ? diffHours : 0,
         days: diffDays >= 0 ? diffDays : 0,
@@ -176,11 +170,9 @@ const BundleView = () => {
       let result;
       if (bundleId) {
         // Update existing bundle
-        console.log('Updating bundle with ID:', bundleId);
         result = await BundleService.updateBundle(bundleId, bundleData);
       } else {
         // Create new bundle
-        console.log('Creating new bundle');
         result = await BundleService.createBundle(bundleData);
       }
 

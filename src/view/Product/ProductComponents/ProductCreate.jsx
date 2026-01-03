@@ -39,12 +39,6 @@ const ProductCreate = () => {
   const navigate = useNavigate();
   const isEditMode = state !== null;
 
-  // Debug: Log the state to see what's being passed
-  console.log("🔍 ProductCreate state:", state);
-  console.log("🔍 Is edit mode:", isEditMode);
-  console.log("🔍 State images:", state?.images);
-  console.log("🔍 State name:", state?.name);
-
   // Dynamic categories state
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -98,10 +92,6 @@ const ProductCreate = () => {
 
   // Get category assignments for the product (replaces component details from componentData.json)
   const [selectedComponents, setSelectedComponents] = useState(() => {
-    console.log("🔍 Edit mode initialization - state:", state);
-    console.log("🔍 State selected_components:", state?.selected_components);
-    console.log("🔍 State selectedComponents:", state?.selectedComponents);
-    
     if (isEditMode) {
       // Try both field names (selected_components from DB, selectedComponents from transformed data)
       const componentsData = state?.selected_components || state?.selectedComponents;
@@ -116,7 +106,6 @@ const ProductCreate = () => {
           components = [componentsData];
         }
         
-        console.log("🔍 Components to set:", components);
         return components;
       }
     }
@@ -149,38 +138,23 @@ const ProductCreate = () => {
 
   // Sync selected components after categories load (for edit mode)
   useEffect(() => {
-    console.log("🔍 useEffect triggered - Edit mode check:");
-    console.log("  - isEditMode:", isEditMode);
-    console.log("  - categories.length:", categories.length);
-    console.log("  - state?.selected_components:", state?.selected_components);
-    
     // In edit mode, selected_components should already have full category objects
     // from ProductService.getAllProducts() enrichment
     if (isEditMode && state?.selected_components && state.selected_components.length > 0) {
-      console.log("✅ Product has selected_components from database");
-      console.log("📝 Components:", state.selected_components);
-      
       // Check if components are already full objects (have 'name' property)
       const firstComp = state.selected_components[0]
       if (firstComp && firstComp.name) {
-        console.log("✨ Components already enriched with full data - using directly!");
         setSelectedComponents(state.selected_components)
       } else if (categories.length > 0) {
         // Fallback: Components only have IDs, need to match with categories
-        console.log("🔄 Components need enrichment - matching with loaded categories...");
         
         const componentIds = state.selected_components.map(comp => comp.id || comp)
         const matchedComponents = categories.filter(cat => componentIds.includes(cat.id))
         
         if (matchedComponents.length > 0) {
-          console.log("✅ Matched components:", matchedComponents)
           setSelectedComponents(matchedComponents)
-        } else {
-          console.log("⚠️ No matching components found")
         }
       }
-    } else {
-      console.log("ℹ️ No components to pre-select (new product or empty components)")
     }
   }, [isEditMode, state, categories]); // Re-run when state or categories change
 
@@ -352,13 +326,9 @@ const ProductCreate = () => {
 
   // Function to upload images to Supabase Storage using StorageService
   const uploadImages = async (imageFiles) => {
-    console.log("🔄 Starting image upload process...");
-    console.log("Images to upload:", imageFiles);
-    
     const uploadedUrls = [];
     
     if (!imageFiles || imageFiles.length === 0) {
-      console.log("No images to upload");
       return uploadedUrls;
     }
     
@@ -371,12 +341,10 @@ const ProductCreate = () => {
         // This is an existing URL (no file object)
         if (image.url && !image.url.startsWith('blob:')) {
           existingUrls.push(image.url);
-          console.log("✅ Keeping existing URL:", image.url);
         }
       } else {
         // This is a new file that needs uploading
         filesToUpload.push(image.file);
-        console.log("� Will upload file:", image.file.name);
       }
     }
     
@@ -385,8 +353,6 @@ const ProductCreate = () => {
     
     // Upload new files using StorageService
     if (filesToUpload.length > 0) {
-      console.log(`🔄 Uploading ${filesToUpload.length} new files to 'products' bucket...`);
-      
       try {
         const uploadResult = await StorageService.uploadMultipleImages(
           filesToUpload, 
@@ -395,8 +361,6 @@ const ProductCreate = () => {
         );
         
         if (uploadResult.success) {
-          console.log("✅ All files uploaded successfully!");
-          console.log("📸 Uploaded URLs:", uploadResult.data);
           uploadedUrls.push(...uploadResult.data);
         } else {
           console.error("❌ Upload failed:", uploadResult.error);
@@ -408,7 +372,6 @@ const ProductCreate = () => {
       }
     }
     
-    console.log("🎯 Final uploaded URLs:", uploadedUrls);
     return uploadedUrls;
   };
 
@@ -420,15 +383,11 @@ const ProductCreate = () => {
 
     setIsSaving(true);
     try {
-      console.log("🚀 Starting product save process...");
-      console.log("Images before upload:", images);
-      
       // First, upload images to get permanent URLs
       setSuccessMessage('Uploading images...');
       setShowSuccess(true);
       
       const uploadedImageUrls = await uploadImages(images);
-      console.log("📸 Uploaded image URLs:", uploadedImageUrls);
       
       // Prepare product data for database (matches fresh schema exactly)
       const productData = {
@@ -455,8 +414,6 @@ const ProductCreate = () => {
         status: 'active'
       };
       
-      console.log("💾 Saving selected_components:", productData.selected_components);
-
       // For edit mode, don't regenerate SKU - keep existing one
       if (isEditMode && state?.sku) {
         productData.sku = state.sku;
@@ -464,16 +421,9 @@ const ProductCreate = () => {
         productData.sku = `${name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`;
       }
 
-      console.log("🔄 Product data prepared:", productData);
-      console.log("🔄 Is edit mode:", isEditMode);
-      console.log("🔄 Product ID:", state?.id);
-
       // Save product using ProductService - check if edit or create
       let result;
       if (isEditMode && state?.id) {
-        console.log("🔄 Updating existing product with ID:", state.id);
-        console.log("🔄 Product data being sent:", productData);
-        
         // PRE-CHECK: Detect if there are ANY changes before updating
         const preCheckChanges = [];
         
@@ -522,12 +472,8 @@ const ProductCreate = () => {
         const oldTags = (state.compatibility_tags || []).sort();
         const newTags = (compatibilityTags || []).sort();
         if (JSON.stringify(oldTags) !== JSON.stringify(newTags)) preCheckChanges.push('compatibility_tags');
-        
-        console.log("🔍 PRE-CHECK: Changes detected:", preCheckChanges);
-        
         // If NO changes detected, skip the update entirely
         if (preCheckChanges.length === 0) {
-          console.log("ℹ️ No changes detected - skipping database update and logging");
           setSuccessMessage("No changes made to the product");
           setShowSuccess(true);
           setIsSaving(false);
@@ -535,7 +481,6 @@ const ProductCreate = () => {
           // Navigate back after a short delay
           setTimeout(() => {
             try {
-              console.log('✅ Navigating to /products (no changes)');
               navigate('/products', { 
                 state: { 
                   successMessage: "No changes were made" 
@@ -553,24 +498,19 @@ const ProductCreate = () => {
         
         // Continue with update if changes were detected
         result = await ProductService.updateProduct(state.id, productData);
-        console.log("🔄 Update result:", result);
         
         // Create activity log for update
         if (result.success && user?.id) {
           const changes = [];
           const detailedChanges = {};
           
-          console.log("🔍 Starting change detection...");
-          
           // Compare basic text fields
           if (name.trim() !== state.name?.trim()) {
-            console.log("📝 Name changed:", state.name, "→", name);
             changes.push('name');
             detailedChanges.name = { old: state.name, new: name };
           }
           
           if (description.trim() !== state.description?.trim()) {
-            console.log("📝 Description changed");
             changes.push('description');
             detailedChanges.description = { 
               old: state.description?.substring(0, 50), 
@@ -579,14 +519,12 @@ const ProductCreate = () => {
           }
           
           if (warranty?.trim() !== state.warranty?.trim()) {
-            console.log("📝 Warranty changed:", state.warranty, "→", warranty);
             changes.push('warranty');
             detailedChanges.warranty = { old: state.warranty, new: warranty };
           }
           
           // Compare brand
           if (brandId !== state.brand_id) {
-            console.log("📝 Brand changed:", state.brand_id, "→", brandId);
             changes.push('brand');
             detailedChanges.brand = { old: state.brand_id, new: brandId };
           }
@@ -597,7 +535,6 @@ const ProductCreate = () => {
           const oldPrice = parseFloat(state.officialPrice || oldMetadata.officialPrice) || 0;
           const newPrice = parseFloat(officialPrice) || 0;
           if (oldPrice !== newPrice) {
-            console.log("📝 Price changed:", oldPrice, "→", newPrice);
             changes.push('price');
             detailedChanges.price = { 
               old: oldPrice, 
@@ -608,7 +545,6 @@ const ProductCreate = () => {
           const oldInitialPrice = parseFloat(state.initialPrice || oldMetadata.initialPrice) || 0;
           const newInitialPrice = parseFloat(initialPrice) || 0;
           if (oldInitialPrice !== newInitialPrice) {
-            console.log("📝 Initial price changed:", oldInitialPrice, "→", newInitialPrice);
             changes.push('initialPrice');
             detailedChanges.initialPrice = { 
               old: oldInitialPrice, 
@@ -619,7 +555,6 @@ const ProductCreate = () => {
           const oldDiscount = parseFloat(state.discount || oldMetadata.discount) || 0;
           const newDiscount = parseFloat(discount) || 0;
           if (oldDiscount !== newDiscount) {
-            console.log("📝 Discount changed:", oldDiscount, "→", newDiscount);
             changes.push('discount');
             detailedChanges.discount = { 
               old: oldDiscount, 
@@ -665,11 +600,6 @@ const ProductCreate = () => {
           // Enhanced variant comparison with detailed tracking
           const oldVariants = state.variants || [];
           const newVariants = variants || [];
-          
-          console.log("🔍 Comparing variants:");
-          console.log("  Old variants:", oldVariants);
-          console.log("  New variants:", newVariants);
-          
           const variantCountChanged = oldVariants.length !== newVariants.length;
           
           // Track added, removed, and modified variants
@@ -742,12 +672,6 @@ const ProductCreate = () => {
               });
             }
           }
-          
-          console.log("🔍 Variant analysis:");
-          console.log("  Added:", variantsAdded);
-          console.log("  Removed:", variantsRemoved);
-          console.log("  Modified:", variantModifications);
-          
           // Only log if there's an actual variant change
           if (variantCountChanged || variantsAdded.length > 0 || 
               variantsRemoved.length > 0 || variantsModified.length > 0) {
@@ -827,20 +751,11 @@ const ProductCreate = () => {
               added: tagsAdded,
               removed: tagsRemoved
             };
-            
-            console.log("📝 Compatibility tags changed:");
-            console.log("  Added:", tagsAdded);
-            console.log("  Removed:", tagsRemoved);
           }
           
           // CRITICAL FIX: Only create log if there are actual changes
-          console.log("🔍 Total changes detected:", changes.length);
-          console.log("🔍 Changes:", changes);
-          
           if (changes.length > 0) {
             const changesText = ` (changed: ${changes.join(', ')})`;
-            
-            console.log("✅ Creating log entry for changes");
             await AdminLogService.createLog({
               userId: user.id,
               actionType: 'product_update',
@@ -855,11 +770,9 @@ const ProductCreate = () => {
               },
             });
           } else {
-            console.log("ℹ️ No changes detected - skipping log creation");
           }
         }
       } else {
-        console.log("🔄 Creating new product");
         result = await ProductService.createProduct(productData);
         
         // Create activity log for creation
@@ -890,10 +803,6 @@ const ProductCreate = () => {
         // Navigate back to products list after short delay
         setTimeout(() => {
           try {
-            console.log('✅ Navigating to /products with state:', {
-              reloadProducts: true,
-              successMessage: successMsg
-            });
             navigate('/products', {
               state: {
                 reloadProducts: true,
@@ -1487,6 +1396,49 @@ const ProductCreate = () => {
         onConfirm={handleConfirmAddComponent}
         component={newComponent}
       />
+
+      {/* Publish/Update Confirmation Dialog */}
+      <Dialog
+        open={openPublishDialog}
+        onClose={() => setOpenPublishDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: "black" }}>
+          {isEditMode ? 'Confirm Update' : 'Confirm Publish'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            {isEditMode 
+              ? 'Are you sure you want to update this product? Changes will be saved to the database.'
+              : 'Are you sure you want to publish this product? Once published, it will be visible to customers.'
+            }
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPublishDialog(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              setOpenPublishDialog(false);
+              handleSaveProduct();
+            }}
+            variant="contained"
+            disabled={isSaving}
+            sx={{
+              bgcolor: "#00E676",
+              color: "#000",
+              fontWeight: 700,
+              "&:hover": {
+                bgcolor: "#00C853",
+              },
+            }}
+          >
+            {isSaving ? "Saving..." : "Confirm"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

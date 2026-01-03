@@ -14,13 +14,18 @@ import {
   Description as DescriptionIcon,
   Save as SaveIcon,
   Refresh as RefreshIcon,
+  ContactMail as ContactMailIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   BrandingTab,
   ColorsTab,
+  ContactTab,
+  AboutUsTab,
   TermsTab,
   PrivacyTab,
   PolicyDialog,
@@ -29,6 +34,8 @@ import {
 import dummyData from "./dummyData.json";
 
 const WebsiteSettings = () => {
+  const { profile } = useAuth();
+  const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
@@ -37,6 +44,17 @@ const WebsiteSettings = () => {
     primaryColor: "#22c55e",
     secondaryColor: "#2176ae",
     accentColor: "#ffe14d",
+    contactEmail: "",
+    contactPhone: "",
+    contactAddress: "",
+    showroomHours: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    twitterUrl: "",
+    aboutUsTitle: "",
+    aboutUsContent: "",
+    footerText: "",
   });
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
@@ -79,6 +97,17 @@ const WebsiteSettings = () => {
           primaryColor: data.primary_color || "#22c55e",
           secondaryColor: data.secondary_color || "#2176ae",
           accentColor: data.accent_color || "#ffe14d",
+          contactEmail: data.contact_email || "",
+          contactPhone: data.contact_phone || "",
+          contactAddress: data.contact_address || "",
+          showroomHours: data.showroom_hours || "",
+          facebookUrl: data.facebook_url || "",
+          instagramUrl: data.instagram_url || "",
+          tiktokUrl: data.tiktok_url || "",
+          twitterUrl: data.twitter_url || "",
+          aboutUsTitle: data.about_us_title || "",
+          aboutUsContent: data.about_us_content || "",
+          footerText: data.footer_text || "",
         });
       }
     } catch (error) {
@@ -142,13 +171,16 @@ const WebsiteSettings = () => {
       const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, logoFile);
+        .from("products")
+        .upload(filePath, logoFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("product-images")
+        .from("products")
         .getPublicUrl(filePath);
 
       return urlData.publicUrl;
@@ -176,6 +208,22 @@ const WebsiteSettings = () => {
         logoUrl = await uploadLogo();
       }
 
+      // Combine terms items into HTML string
+      const termsHtml = termsItems.map(item => 
+        `<section class="mb-8">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">${item.title}</h2>
+          <p class="mb-4">${item.description}</p>
+        </section>`
+      ).join('\n');
+
+      // Combine privacy items into HTML string
+      const privacyHtml = privacyItems.map(item => 
+        `<section class="mb-8">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">${item.title}</h2>
+          <p class="mb-4">${item.description}</p>
+        </section>`
+      ).join('\n');
+
       const { error } = await supabase
         .from("website_settings")
         .upsert({
@@ -185,15 +233,35 @@ const WebsiteSettings = () => {
           primary_color: settings.primaryColor,
           secondary_color: settings.secondaryColor,
           accent_color: settings.accentColor,
+          contact_email: settings.contactEmail,
+          contact_phone: settings.contactPhone,
+          contact_address: settings.contactAddress,
+          showroom_hours: settings.showroomHours,
+          facebook_url: settings.facebookUrl,
+          instagram_url: settings.instagramUrl,
+          tiktok_url: settings.tiktokUrl,
+          twitter_url: settings.twitterUrl,
+          about_us_title: settings.aboutUsTitle,
+          about_us_content: settings.aboutUsContent,
+          footer_text: settings.footerText,
+          terms_and_conditions: termsHtml || null,
+          privacy_policy: privacyHtml || null,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'id'
         });
 
       if (error) throw error;
 
-      setSettings({ ...settings, logoUrl });
+      // Refetch to get latest data
+      await fetchSettings();
+      
       setLogoFile(null);
       setLogoPreview(null);
-      toast.success("Settings saved successfully!");
+      toast.success("✅ Settings saved successfully! Changes are now live.", {
+        duration: 4000,
+        position: 'top-center'
+      });
       handleConfirmDialogClose();
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -299,9 +367,6 @@ const WebsiteSettings = () => {
 
   const handleConfirmAction = async () => {
     const { type, policyType, policy } = confirmDialog;
-    
-    console.log('Confirm action triggered:', { type, policyType, policy });
-    
     // Handle reset and save actions
     if (type === 'reset') {
       await handleReset();
@@ -314,9 +379,10 @@ const WebsiteSettings = () => {
     }
     
     try {
+      let updatedTermsItems = termsItems;
+      let updatedPrivacyItems = privacyItems;
+
       if (type === 'add') {
-        console.log('Adding item locally (dummy mode)');
-        
         const newItem = {
           id: `${policyType}-${Date.now()}`,
           title: policy.title,
@@ -326,47 +392,75 @@ const WebsiteSettings = () => {
         };
         
         if (policyType === 'terms') {
-          setTermsItems([...termsItems, newItem]);
+          updatedTermsItems = [...termsItems, newItem];
+          setTermsItems(updatedTermsItems);
         } else if (policyType === 'privacy') {
-          setPrivacyItems([...privacyItems, newItem]);
+          updatedPrivacyItems = [...privacyItems, newItem];
+          setPrivacyItems(updatedPrivacyItems);
         }
         
         toast.success("Item added successfully!");
       } else if (type === 'edit') {
-        console.log('Editing item locally (dummy mode)');
-        
         if (policyType === 'terms') {
-          setTermsItems(termsItems.map(item => 
+          updatedTermsItems = termsItems.map(item => 
             item.id === policy.id 
               ? { ...item, title: policy.title, description: policy.description }
               : item
-          ));
+          );
+          setTermsItems(updatedTermsItems);
         } else if (policyType === 'privacy') {
-          setPrivacyItems(privacyItems.map(item => 
+          updatedPrivacyItems = privacyItems.map(item => 
             item.id === policy.id 
               ? { ...item, title: policy.title, description: policy.description }
               : item
-          ));
+          );
+          setPrivacyItems(updatedPrivacyItems);
         }
         
         toast.success("Item updated successfully!");
       } else if (type === 'delete') {
-        console.log('Deleting item locally (dummy mode)');
-        
         if (policyType === 'terms') {
-          setTermsItems(termsItems.filter(item => item.id !== policy.id));
+          updatedTermsItems = termsItems.filter(item => item.id !== policy.id);
+          setTermsItems(updatedTermsItems);
         } else if (policyType === 'privacy') {
-          setPrivacyItems(privacyItems.filter(item => item.id !== policy.id));
+          updatedPrivacyItems = privacyItems.filter(item => item.id !== policy.id);
+          setPrivacyItems(updatedPrivacyItems);
         }
         
         toast.success("Item deleted successfully!");
       }
-      
+
+      // Auto-save to database after any change
+      const termsHtml = updatedTermsItems.map(item => 
+        `<section class="mb-8">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">${item.title}</h2>
+          <p class="mb-4">${item.description}</p>
+        </section>`
+      ).join('\n');
+
+      const privacyHtml = updatedPrivacyItems.map(item => 
+        `<section class="mb-8">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">${item.title}</h2>
+          <p class="mb-4">${item.description}</p>
+        </section>`
+      ).join('\n');
+
+      await supabase
+        .from("website_settings")
+        .upsert({
+          id: 1,
+          terms_and_conditions: termsHtml || null,
+          privacy_policy: privacyHtml || null,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'id'
+        });
+
       handleConfirmDialogClose();
       handlePolicyDialogClose();
     } catch (error) {
-      console.error(`Error ${type}ing item:`, error);
-      toast.error(`Failed to ${type} item: ${error.message}`);
+      console.error("Error handling policy action:", error);
+      toast.error("Failed to save changes");
     }
   };
 
@@ -392,6 +486,22 @@ const WebsiteSettings = () => {
           <Typography variant="body2" color="text.secondary">
             Customize your customer-facing website appearance and policies
           </Typography>
+          {!isAdmin && (
+            <Box
+              sx={{
+                mt: 2,
+                p: 2,
+                bgcolor: "info.lighter",
+                borderRadius: 1,
+                border: "1px solid",
+                borderColor: "info.main",
+              }}
+            >
+              <Typography variant="body2" color="info.main" fontWeight={600}>
+                ℹ️ Read-Only Mode: You can view these settings but only administrators can make changes.
+              </Typography>
+            </Box>
+          )}
         </Box>
       </motion.div>
 
@@ -405,11 +515,15 @@ const WebsiteSettings = () => {
           value={activeTab}
           onChange={(e, newValue) => setActiveTab(newValue)}
           sx={{ borderBottom: 1, borderColor: "divider" }}
+          variant="scrollable"
+          scrollButtons="auto"
         >
           <Tab label="Branding" icon={<ImageIcon />} iconPosition="start" />
           <Tab label="Colors" icon={<PaletteIcon />} iconPosition="start" />
-          <Tab label="Terms and Conditions" icon={<DescriptionIcon />} iconPosition="start" />
-          <Tab label="Privacy Policy" icon={<DescriptionIcon />} iconPosition="start" />
+          <Tab label="Contact" icon={<ContactMailIcon />} iconPosition="start" />
+          <Tab label="About Us" icon={<InfoIcon />} iconPosition="start" />
+          <Tab label="Terms" icon={<DescriptionIcon />} iconPosition="start" />
+          <Tab label="Privacy" icon={<DescriptionIcon />} iconPosition="start" />
         </Tabs>
 
         <CardContent sx={{ p: 3 }}>
@@ -424,35 +538,48 @@ const WebsiteSettings = () => {
               settings={settings}
               logoPreview={logoPreview}
               onLogoChange={handleLogoChange}
-              onChange={handleChange}
               onReset={handleResetClick}
               onSave={handleSaveClick}
               loading={loading}
+              readOnly={!isAdmin}
             />
           )}
-          {activeTab === 1 && (
-            <ColorsTab 
+          {activeTab === 2 && (
+            <ContactTab 
               settings={settings}
               onChange={handleChange}
               onReset={handleResetClick}
               onSave={handleSaveClick}
               loading={loading}
+              readOnly={!isAdmin}
             />
           )}
-          {activeTab === 2 && (
+          {activeTab === 3 && (
+            <AboutUsTab 
+              settings={settings}
+              onChange={handleChange}
+              onReset={handleResetClick}
+              onSave={handleSaveClick}
+              loading={loading}
+              readOnly={!isAdmin}
+            />
+          )}
+          {activeTab === 4 && (
             <TermsTab 
               termsItems={termsItems}
               onAdd={handleAddPolicy}
               onEdit={handleEditPolicy}
               onDelete={handleDeletePolicy}
+              readOnly={!isAdmin}
             />
           )}
-          {activeTab === 3 && (
+          {activeTab === 5 && (
             <PrivacyTab 
               privacyItems={privacyItems}
               onAdd={handleAddPolicy}
               onEdit={handleEditPolicy}
               onDelete={handleDeletePolicy}
+              readOnly={!isAdmin}
             />
           )}
           </motion.div>

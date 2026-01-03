@@ -1,0 +1,76 @@
+{
+  "components": [
+    {
+      "id": "cpu",
+      "name": "Processor",
+      "category": "CPU",
+      "description": "Central Processing Unit"
+    },
+    {
+      "id": "mb",
+      "name": "Motherboard",
+      "category": "Motherboard",
+      "description": "Main circuit board"
+    },
+    {
+      "id": "ram",
+      "name": "RAM",
+      "category": "Memory",
+      "description": "Random Access Memory"
+    },
+    {
+      "id": "ssd",
+      "name": "SSD",
+      "category": "Storage",
+      "description": "Solid State Drive"
+    },
+    {
+      "id": "hdd",
+      "name": "HDD",
+      "category": "Storage",
+      "description": "Hard Disk Drive"
+    },
+    {
+      "id": "gpu",
+      "name": "Graphics Card",
+      "category": "GPU",
+      "description": "Graphics Processing Unit"
+    },
+    {
+      "id": "psu",
+      "name": "Power Supply",
+      "category": "PSU",
+      "description": "Power Supply Unit"
+    },
+    {
+      "id": "case",
+      "name": "Case",
+      "category": "Case",
+      "description": "Computer Case"
+    },
+    {
+      "id": "cooling",
+      "name": "Cooling System",
+      "category": "Cooling",
+      "description": "CPU/System Cooling"
+    },
+    {
+      "id": "monitor",
+      "name": "Monitor",
+      "category": "Display",
+      "description": "Computer Display"
+    },
+    {
+      "id": "keyboard",
+      "name": "Keyboard",
+      "category": "Peripherals",
+      "description": "Input Device"
+    },
+    {
+      "id": "mouse",
+      "name": "Mouse",
+      "category": "Peripherals",
+      "description": "Input Device"
+    }
+  ]
+} 

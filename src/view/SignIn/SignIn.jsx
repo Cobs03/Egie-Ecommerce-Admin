@@ -54,8 +54,6 @@ const SignIn = () => {
         return;
       }
 
-      console.log("Profile data:", profile); // Debug log
-
       // Allow admin, manager, and employee to access
       const allowedRoles = ['admin', 'manager', 'employee'];
       const userRole = profile?.role?.toLowerCase();

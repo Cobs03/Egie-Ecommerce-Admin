@@ -36,7 +36,6 @@ const Product = () => {
   // Log location state for debugging
   useEffect(() => {
     if (location.state) {
-      console.log('📍 Product page received state:', location.state);
     }
   }, [location.state]);
 

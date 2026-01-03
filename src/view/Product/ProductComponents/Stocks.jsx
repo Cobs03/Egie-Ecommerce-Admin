@@ -122,8 +122,6 @@ const Stocks = forwardRef((props, ref) => {
           table: 'products'
         },
         (payload) => {
-          console.log('Product updated in real-time:', payload.new);
-          
           // Update the specific product in state
           setProducts((prevProducts) => {
             return prevProducts.map((product) => {
