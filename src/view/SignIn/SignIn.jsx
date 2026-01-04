@@ -319,7 +319,7 @@ const SignIn = () => {
       >
         <Box
           component="img"
-          src="https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg"
+          src="https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg?fbclid=IwY2xjawPG4KZleHRuA2FlbQIxMABicmlkETFOMkl0RDZxSUZoM1ViS2N0c3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHrry1BND8oS0mDckmsH28NGBYEahOf-Wxj-gS9IOgu3QWLcPM5kFqHsZeGKw_aem_YECBND_4fJD6wU8qU4L1Yg"
           alt="Computer Chip"
           sx={{
             width: "100%",
