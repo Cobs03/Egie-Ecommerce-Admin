@@ -408,21 +408,26 @@ const WebsiteSettings = () => {
           });
           
           try {
-            await AdminLogService.createLog({
+            const logResult = await AdminLogService.createLog({
               userId: user.id,
               actionType: 'website_settings_update',
               actionDescription: `Updated website settings${changesText}`,
               targetType: 'website_settings',
-              targetId: '1',
+              targetId: null,
               metadata: {
+                settingsId: 1,
                 changedFields,
                 detailedChanges,
                 brandName: settings.brandName,
               },
             });
-            console.log('✅ Admin log created successfully');
+            if (logResult.error) {
+              console.error('❌ Failed to create admin log:', logResult.error);
+            } else {
+              console.log('✅ Admin log created successfully');
+            }
           } catch (logError) {
-            console.error('❌ Failed to create admin log:', logError);
+            console.error('❌ Exception creating admin log:', logError);
           }
         } else {
           console.log('ℹ️ No changes detected, skipping log creation');
