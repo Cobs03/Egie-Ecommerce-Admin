@@ -102,11 +102,19 @@ const ContactSubmissions = () => {
           console.log('Log result:', logResult);
         }
         
-        toast.success('Submission deleted successfully');
+        // Close modal and clear state first
         setShowDeleteModal(false);
         setSubmissionToDelete(null);
-        fetchSubmissions();
-        fetchStats();
+        
+        // Show success message
+        toast.success('Submission deleted successfully');
+        
+        // Wait a moment then refresh data
+        setTimeout(() => {
+          console.log('🔄 Refreshing submissions list...');
+          fetchSubmissions();
+          fetchStats();
+        }, 100);
       } else {
         console.error('❌ Delete failed:', result.error);
         toast.error(result.error || 'Failed to delete submission');
