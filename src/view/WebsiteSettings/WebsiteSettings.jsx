@@ -7,6 +7,8 @@ import {
   Tabs,
   Tab,
   Button,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Palette as PaletteIcon,
@@ -19,7 +21,6 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
-import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   BrandingTab,
@@ -38,6 +39,8 @@ const WebsiteSettings = () => {
   const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [settings, setSettings] = useState({
     brandName: "",
     logoUrl: "",
@@ -304,18 +307,6 @@ const WebsiteSettings = () => {
 
       if (error) throw error;
 
-      // Show success notification BEFORE closing dialog
-      toast.success("Settings saved successfully! Changes are now live.", {
-        duration: 5000,
-        position: 'top-center',
-        style: {
-          background: '#10b981',
-          color: '#fff',
-          fontWeight: '600',
-        },
-        icon: '✅',
-      });
-
       // Refetch to get latest data
       await fetchSettings();
       
@@ -324,9 +315,14 @@ const WebsiteSettings = () => {
       setAuthBackgroundFile(null);
       setAuthBackgroundPreview(null);
       handleConfirmDialogClose();
+      
+      // Show success notification after dialog closes
+      setSuccessMessage("Settings saved successfully! Changes are now live.");
+      setShowSuccess(true);
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("Failed to save settings");
+      setSuccessMessage("Failed to save settings. Please try again.");
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -669,6 +665,23 @@ const WebsiteSettings = () => {
         onClose={handleConfirmDialogClose}
         onConfirm={handleConfirmAction}
       />
+
+      {/* Success Notification Snackbar */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={6000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
