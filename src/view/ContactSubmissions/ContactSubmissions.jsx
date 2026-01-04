@@ -75,38 +75,45 @@ const ContactSubmissions = () => {
   const confirmDelete = async () => {
     if (!submissionToDelete) return;
     
-    console.log('🗑️ Deleting submission:', submissionToDelete.id);
-    const result = await ContactService.deleteSubmission(submissionToDelete.id);
-    console.log('Delete result:', result);
+    console.log('🗑️ Attempting to delete submission:', submissionToDelete.id);
     
-    if (result.success) {
-      // Create admin log for deletion
-      if (user?.id) {
-        console.log('📝 Creating delete log...');
-        const logResult = await AdminLogService.createLog({
-          userId: user.id,
-          actionType: 'contact_submission_deleted',
-          actionDescription: `Deleted contact submission from ${submissionToDelete.name}`,
-          targetType: 'contact_submissions',
-          targetId: null,
-          metadata: {
-            submissionId: submissionToDelete.id,
-            customerName: submissionToDelete.name,
-            customerEmail: submissionToDelete.email,
-            submissionSubject: submissionToDelete.subject || 'No subject',
-            messagePreview: submissionToDelete.message?.substring(0, 100),
-          },
-        });
-        console.log('Log result:', logResult);
-      }
+    try {
+      const result = await ContactService.deleteSubmission(submissionToDelete.id);
+      console.log('Delete result:', result);
       
-      toast.success('Submission deleted successfully');
-      setShowDeleteModal(false);
-      setSubmissionToDelete(null);
-      fetchSubmissions();
-      fetchStats();
-    } else {
-      toast.error(result.error || 'Failed to delete submission');
+      if (result.success) {
+        // Create admin log for deletion
+        if (user?.id) {
+          console.log('📝 Creating delete log...');
+          const logResult = await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'Contact Deleted',
+            actionDescription: `Deleted contact submission from ${submissionToDelete.name}`,
+            targetType: 'contact_submissions',
+            targetId: null,
+            metadata: {
+              submissionId: submissionToDelete.id,
+              customerName: submissionToDelete.name,
+              customerEmail: submissionToDelete.email,
+              submissionSubject: submissionToDelete.subject || 'No subject',
+              messagePreview: submissionToDelete.message?.substring(0, 100),
+            },
+          });
+          console.log('Log result:', logResult);
+        }
+        
+        toast.success('Submission deleted successfully');
+        setShowDeleteModal(false);
+        setSubmissionToDelete(null);
+        fetchSubmissions();
+        fetchStats();
+      } else {
+        console.error('❌ Delete failed:', result.error);
+        toast.error(result.error || 'Failed to delete submission');
+      }
+    } catch (err) {
+      console.error('❌ Delete exception:', err);
+      toast.error('An error occurred while deleting');
     }
   };
 
@@ -135,10 +142,10 @@ const ContactSubmissions = () => {
       if (user?.id) {
         await AdminLogService.createLog({
           userId: user.id,
-          actionType: 'contact_reply_sent',
+          actionType: 'Contact Reply Sent',
           actionDescription: `Replied to contact submission from ${selectedSubmission.name}`,
-          targetType: 'contact_submission',
-          targetId: selectedSubmission.id,
+          targetType: 'contact_submissions',
+          targetId: null,
           metadata: {
             customerName: selectedSubmission.name,
             customerEmail: selectedSubmission.email,

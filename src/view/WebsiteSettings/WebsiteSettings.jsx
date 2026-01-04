@@ -410,7 +410,7 @@ const WebsiteSettings = () => {
           try {
             const logResult = await AdminLogService.createLog({
               userId: user.id,
-              actionType: 'website_settings_update',
+              actionType: 'Website Settings Updated',
               actionDescription: `Updated website settings${changesText}`,
               targetType: 'website_settings',
               targetId: null,
