@@ -304,6 +304,18 @@ const WebsiteSettings = () => {
 
       if (error) throw error;
 
+      // Show success notification BEFORE closing dialog
+      toast.success("Settings saved successfully! Changes are now live.", {
+        duration: 5000,
+        position: 'top-center',
+        style: {
+          background: '#10b981',
+          color: '#fff',
+          fontWeight: '600',
+        },
+        icon: '✅',
+      });
+
       // Refetch to get latest data
       await fetchSettings();
       
@@ -312,20 +324,6 @@ const WebsiteSettings = () => {
       setAuthBackgroundFile(null);
       setAuthBackgroundPreview(null);
       handleConfirmDialogClose();
-      
-      // Show success notification after dialog closes
-      setTimeout(() => {
-        toast.success("Settings saved successfully! Changes are now live.", {
-          duration: 5000,
-          position: 'top-center',
-          style: {
-            background: '#10b981',
-            color: '#fff',
-            fontWeight: '600',
-          },
-          icon: '✅',
-        });
-      }, 100);
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error("Failed to save settings");
