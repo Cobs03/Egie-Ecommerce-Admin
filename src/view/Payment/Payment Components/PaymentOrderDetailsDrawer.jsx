@@ -127,12 +127,12 @@ const PaymentOrderDetailsDrawer = ({ open, onClose, order }) => {
                       Quantity: {product.quantity}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      ₱{(product.unit_price || 0).toFixed(2)} each
+                      ₱{Number(product.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} each
                     </Typography>
                   </Stack>
                 </Box>
                 <Typography color="black">
-                  ₱{(product.total || 0).toFixed(2)}
+                  ₱{Number(product.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Stack>
             </Box>
@@ -143,7 +143,7 @@ const PaymentOrderDetailsDrawer = ({ open, onClose, order }) => {
               Total
             </Typography>
             <Typography variant="subtitle1" color="black">
-              ₱{(order.total || 0).toFixed(2)}
+              ₱{Number(order.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Typography>
           </Box>
         </Box>

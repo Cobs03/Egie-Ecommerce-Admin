@@ -447,12 +447,12 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                         Quantity: {product.quantity}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        ₱{Number(product.unit_price || 0).toFixed(2)} each
+                        ₱{Number(product.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} each
                       </Typography>
                     </Stack>
                   </Box>
                   <Typography color="black">
-                    ₱{Number(product.total || 0).toFixed(2)}
+                    ₱{Number(product.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Typography>
                 </Stack>
               </Box>
@@ -466,7 +466,7 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                   Subtotal
                 </Typography>
                 <Typography variant="body2" color="black">
-                  ₱{Number(order.rawData?.subtotal || 0).toFixed(2)}
+                  ₱{Number(order.rawData?.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Box>
               
@@ -476,7 +476,7 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                     Voucher Discount {order.rawData?.voucher_code && `(${order.rawData.voucher_code})`}
                   </Typography>
                   <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
-                    -₱{Number(order.rawData.voucher_discount || 0).toFixed(2)}
+                    -₱{Number(order.rawData.voucher_discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Typography>
                 </Box>
               )}
@@ -486,7 +486,7 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                   Shipping Fee
                 </Typography>
                 <Typography variant="body2" color="black">
-                  ₱{Number(order.rawData?.shipping_fee || 0).toFixed(2)}
+                  ₱{Number(order.rawData?.shipping_fee || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Box>
             </Box>
@@ -506,7 +506,7 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                   const voucherDiscount = Number(order.rawData?.voucher_discount || 0);
                   const shippingFee = Number(order.rawData?.shipping_fee || 0);
                   const total = subtotal - voucherDiscount + shippingFee;
-                  return total.toFixed(2);
+                  return total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 })()}
               </Typography>
             </Box>
