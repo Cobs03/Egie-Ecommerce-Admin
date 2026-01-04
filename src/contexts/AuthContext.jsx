@@ -325,12 +325,22 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('admin_profile');
     } catch (e) {}
     
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setUser(null);
-      setProfile(null);
-      setIsAdmin(false);
+    // Always clear local state even if API call fails
+    let error = null;
+    try {
+      const result = await supabase.auth.signOut();
+      error = result.error;
+    } catch (e) {
+      // If signOut fails (e.g., session missing), we still want to clear local state
+      console.warn('Sign out API call failed, clearing local state anyway:', e);
+      error = e;
     }
+    
+    // Force clear local state regardless of API result
+    setUser(null);
+    setProfile(null);
+    setIsAdmin(false);
+    
     return { error };
   };
 
