@@ -256,7 +256,7 @@ const ForgotPassword = () => {
       >
         <Box
           component="img"
-          src="https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg"
+          src={backgroundUrl}
           alt="Computer Chip"
           sx={{
             width: "100%",

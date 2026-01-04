@@ -17,7 +17,7 @@ import {
   Save as SaveIcon,
 } from "@mui/icons-material";
 
-const BrandingTab = ({ settings, logoPreview, onLogoChange, onChange, onReset, onSave, loading }) => {
+const BrandingTab = ({ settings, logoPreview, authBackgroundPreview, onLogoChange, onAuthBackgroundChange, onChange, onReset, onSave, loading }) => {
   return (
     <Box>
       <Grid container spacing={3}>
@@ -27,7 +27,7 @@ const BrandingTab = ({ settings, logoPreview, onLogoChange, onChange, onReset, o
             <CardContent>
               <Box display="flex" alignItems="center" gap={1} mb={2}>
                 <ImageIcon color="primary" />
-                <Typography variant="h6">Logo</Typography>
+                <Typography variant="h6">Website Logo</Typography>
               </Box>
               <Divider sx={{ mb: 3 }} />
 
@@ -79,6 +79,71 @@ const BrandingTab = ({ settings, logoPreview, onLogoChange, onChange, onReset, o
                 onChange={(e) => onChange("brandName", e.target.value)}
                 placeholder="Enter your brand name"
               />
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Auth Background Image */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <ImageIcon color="secondary" />
+                <Typography variant="h6">Authentication Background</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Background image for all authentication pages (Admin & Ecommerce sign-in/sign-up)
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Box display="flex" alignItems="center" gap={3} flexWrap="wrap">
+                <Box
+                  sx={{
+                    width: 200,
+                    height: 120,
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    bgcolor: "grey.100",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px dashed",
+                    borderColor: "grey.300",
+                  }}
+                >
+                  {(authBackgroundPreview || settings.authBackgroundUrl) ? (
+                    <img
+                      src={authBackgroundPreview || settings.authBackgroundUrl}
+                      alt="Auth Background"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <ImageIcon sx={{ fontSize: 60, color: "grey.400" }} />
+                  )}
+                </Box>
+
+                <Box>
+                  <input
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    id="auth-background-upload"
+                    type="file"
+                    onChange={onAuthBackgroundChange}
+                  />
+                  <label htmlFor="auth-background-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<UploadIcon />}
+                    >
+                      Upload Background
+                    </Button>
+                  </label>
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Background for admin sign-in page (1920x1080px recommended)
+                  </Typography>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>

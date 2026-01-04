@@ -41,6 +41,7 @@ const WebsiteSettings = () => {
   const [settings, setSettings] = useState({
     brandName: "",
     logoUrl: "",
+    authBackgroundUrl: "",
     primaryColor: "#22c55e",
     secondaryColor: "#2176ae",
     accentColor: "#ffe14d",
@@ -58,6 +59,8 @@ const WebsiteSettings = () => {
   });
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [authBackgroundFile, setAuthBackgroundFile] = useState(null);
+  const [authBackgroundPreview, setAuthBackgroundPreview] = useState(null);
   const [termsItems, setTermsItems] = useState(dummyData.termsItems);
   const [privacyItems, setPrivacyItems] = useState(dummyData.privacyItems);
   
@@ -94,6 +97,7 @@ const WebsiteSettings = () => {
         setSettings({
           brandName: data.brand_name || "",
           logoUrl: data.logo_url || "",
+          authBackgroundUrl: data.auth_background_url || "",
           primaryColor: data.primary_color || "#22c55e",
           secondaryColor: data.secondary_color || "#2176ae",
           accentColor: data.accent_color || "#ffe14d",
@@ -162,6 +166,18 @@ const WebsiteSettings = () => {
     }
   };
 
+  const handleAuthBackgroundChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setAuthBackgroundFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAuthBackgroundPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const uploadLogo = async () => {
     if (!logoFile) return settings.logoUrl;
 
@@ -191,6 +207,35 @@ const WebsiteSettings = () => {
     }
   };
 
+  const uploadAuthBackground = async () => {
+    if (!authBackgroundFile) return settings.authBackgroundUrl;
+
+    try {
+      const fileExt = authBackgroundFile.name.split(".").pop();
+      const fileName = `auth-bg-${Date.now()}.${fileExt}`;
+      const filePath = `backgrounds/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("products")
+        .upload(filePath, authBackgroundFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("products")
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading auth background:", error);
+      toast.error("Failed to upload authentication background");
+      return settings.authBackgroundUrl;
+    }
+  };
+
   const handleSaveClick = () => {
     setConfirmDialog({
       open: true,
@@ -206,6 +251,11 @@ const WebsiteSettings = () => {
       let logoUrl = settings.logoUrl;
       if (logoFile) {
         logoUrl = await uploadLogo();
+      }
+
+      let authBackgroundUrl = settings.authBackgroundUrl;
+      if (authBackgroundFile) {
+        authBackgroundUrl = await uploadAuthBackground();
       }
 
       // Combine terms items into HTML string
@@ -230,6 +280,7 @@ const WebsiteSettings = () => {
           id: 1,
           brand_name: settings.brandName,
           logo_url: logoUrl,
+          auth_background_url: authBackgroundUrl,
           primary_color: settings.primaryColor,
           secondary_color: settings.secondaryColor,
           accent_color: settings.accentColor,
@@ -258,11 +309,23 @@ const WebsiteSettings = () => {
       
       setLogoFile(null);
       setLogoPreview(null);
-      toast.success("✅ Settings saved successfully! Changes are now live.", {
-        duration: 4000,
-        position: 'top-center'
-      });
+      setAuthBackgroundFile(null);
+      setAuthBackgroundPreview(null);
       handleConfirmDialogClose();
+      
+      // Show success notification after dialog closes
+      setTimeout(() => {
+        toast.success("Settings saved successfully! Changes are now live.", {
+          duration: 5000,
+          position: 'top-center',
+          style: {
+            background: '#10b981',
+            color: '#fff',
+            fontWeight: '600',
+          },
+          icon: '✅',
+        });
+      }, 100);
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error("Failed to save settings");
@@ -537,7 +600,10 @@ const WebsiteSettings = () => {
               <BrandingTab 
               settings={settings}
               logoPreview={logoPreview}
+              authBackgroundPreview={authBackgroundPreview}
               onLogoChange={handleLogoChange}
+              onAuthBackgroundChange={handleAuthBackgroundChange}
+              onChange={handleChange}
               onReset={handleResetClick}
               onSave={handleSaveClick}
               loading={loading}
