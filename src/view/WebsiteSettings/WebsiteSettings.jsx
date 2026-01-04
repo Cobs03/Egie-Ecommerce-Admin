@@ -36,7 +36,7 @@ import {
 import dummyData from "./dummyData.json";
 
 const WebsiteSettings = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
