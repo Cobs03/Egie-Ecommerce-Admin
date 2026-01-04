@@ -101,7 +101,7 @@ const SignIn = () => {
               {/* Logo */}
               <Box
                 component="img"
-                src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+                src="https://i.ibb.co/Cpx2BBt5"
               alt="EGIE Logo"
               sx={{
                 width: 80,
@@ -299,7 +299,7 @@ const SignIn = () => {
       >
         <Box
           component="img"
-          src="https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg"
+          src="https://i.ibb.co/yF04zrC9"
           alt="Computer Chip"
           sx={{
             width: "100%",

@@ -232,7 +232,7 @@ const DiscountTable = ({ discounts, onEdit, onDelete, loading = false }) => {
                   >
                     <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100px', height: '80px' }}>
                       <img 
-                        src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png" 
+                        src="https://i.ibb.co/Cpx2BBt5" 
                         alt="Loading" 
                         style={{ 
                           width: '80px', 
