@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import ContactService from '../../services/ContactService';
+import { AdminLogService } from '../../services/AdminLogService';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Mail, 
   Search, 
@@ -15,6 +17,7 @@ import {
 import './ContactSubmissions.css';
 
 const ContactSubmissions = () => {
+  const { user } = useAuth();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -96,6 +99,23 @@ const ContactSubmissions = () => {
     });
 
     if (result.success) {
+      // Create admin log for reply sent
+      if (user?.id) {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'contact_reply_sent',
+          actionDescription: `Replied to contact submission from ${selectedSubmission.name}`,
+          targetType: 'contact_submission',
+          targetId: selectedSubmission.id,
+          metadata: {
+            customerName: selectedSubmission.name,
+            customerEmail: selectedSubmission.email,
+            replyPreview: replyMessage.substring(0, 100),
+            submissionSubject: selectedSubmission.subject,
+          },
+        });
+      }
+      
       toast.success(result.message);
       setShowReplyModal(false);
       setReplyMessage('');

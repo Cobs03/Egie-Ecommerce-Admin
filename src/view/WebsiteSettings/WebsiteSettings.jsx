@@ -22,6 +22,7 @@ import {
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
+import { AdminLogService } from "../../services/AdminLogService";
 import {
   BrandingTab,
   ColorsTab,
@@ -41,6 +42,7 @@ const WebsiteSettings = () => {
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [originalSettings, setOriginalSettings] = useState(null); // Track original values
   const [settings, setSettings] = useState({
     brandName: "",
     logoUrl: "",
@@ -97,7 +99,7 @@ const WebsiteSettings = () => {
       if (error && error.code !== "PGRST116") throw error;
 
       if (data) {
-        setSettings({
+        const settingsData = {
           brandName: data.brand_name || "",
           logoUrl: data.logo_url || "",
           authBackgroundUrl: data.auth_background_url || "",
@@ -115,7 +117,9 @@ const WebsiteSettings = () => {
           aboutUsTitle: data.about_us_title || "",
           aboutUsContent: data.about_us_content || "",
           footerText: data.footer_text || "",
-        });
+        };
+        setSettings(settingsData);
+        setOriginalSettings(settingsData); // Store original for comparison
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -306,6 +310,99 @@ const WebsiteSettings = () => {
         });
 
       if (error) throw error;
+
+      // Create admin log for settings update
+      if (user?.id && originalSettings) {
+        const changedFields = [];
+        const detailedChanges = {};
+        
+        // Check for file uploads
+        if (logoFile) {
+          changedFields.push('logo');
+          detailedChanges.logo = { action: 'uploaded' };
+        }
+        if (authBackgroundFile) {
+          changedFields.push('auth_background');
+          detailedChanges.auth_background = { action: 'uploaded' };
+        }
+        
+        // Check contact info changes
+        if (originalSettings.contactEmail !== settings.contactEmail) {
+          changedFields.push('contact_email');
+          detailedChanges.contact_email = { 
+            old: originalSettings.contactEmail, 
+            new: settings.contactEmail 
+          };
+        }
+        if (originalSettings.contactPhone !== settings.contactPhone) {
+          changedFields.push('contact_phone');
+          detailedChanges.contact_phone = { 
+            old: originalSettings.contactPhone, 
+            new: settings.contactPhone 
+          };
+        }
+        if (originalSettings.contactAddress !== settings.contactAddress) {
+          changedFields.push('contact_address');
+          detailedChanges.contact_address = { 
+            old: originalSettings.contactAddress, 
+            new: settings.contactAddress 
+          };
+        }
+        if (originalSettings.showroomHours !== settings.showroomHours) {
+          changedFields.push('showroom_hours');
+          detailedChanges.showroom_hours = { 
+            old: originalSettings.showroomHours, 
+            new: settings.showroomHours 
+          };
+        }
+        
+        // Check branding changes
+        if (originalSettings.brandName !== settings.brandName) {
+          changedFields.push('brand_name');
+          detailedChanges.brand_name = { 
+            old: originalSettings.brandName, 
+            new: settings.brandName 
+          };
+        }
+        
+        // Check color changes
+        if (originalSettings.primaryColor !== settings.primaryColor || 
+            originalSettings.secondaryColor !== settings.secondaryColor || 
+            originalSettings.accentColor !== settings.accentColor) {
+          changedFields.push('colors');
+          detailedChanges.colors = {
+            primary: { old: originalSettings.primaryColor, new: settings.primaryColor },
+            secondary: { old: originalSettings.secondaryColor, new: settings.secondaryColor },
+            accent: { old: originalSettings.accentColor, new: settings.accentColor }
+          };
+        }
+        
+        // Check social media changes
+        if (originalSettings.facebookUrl !== settings.facebookUrl ||
+            originalSettings.instagramUrl !== settings.instagramUrl ||
+            originalSettings.tiktokUrl !== settings.tiktokUrl ||
+            originalSettings.twitterUrl !== settings.twitterUrl) {
+          changedFields.push('social_media');
+        }
+        
+        // Only log if there are actual changes
+        if (changedFields.length > 0) {
+          const changesText = ` (updated: ${changedFields.join(', ')})`;
+          
+          await AdminLogService.createLog({
+            userId: user.id,
+            actionType: 'website_settings_update',
+            actionDescription: `Updated website settings${changesText}`,
+            targetType: 'website_settings',
+            targetId: '1',
+            metadata: {
+              changedFields,
+              detailedChanges,
+              brandName: settings.brandName,
+            },
+          });
+        }
+      }
 
       // Refetch to get latest data
       await fetchSettings();
