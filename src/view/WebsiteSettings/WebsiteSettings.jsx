@@ -312,95 +312,120 @@ const WebsiteSettings = () => {
       if (error) throw error;
 
       // Create admin log for settings update
-      if (user?.id && originalSettings) {
+      if (user?.id) {
         const changedFields = [];
         const detailedChanges = {};
+        
+        console.log('🔍 Checking for changes...', { originalSettings, currentSettings: settings, logoFile, authBackgroundFile });
         
         // Check for file uploads
         if (logoFile) {
           changedFields.push('logo');
-          detailedChanges.logo = { action: 'uploaded' };
+          detailedChanges.logo = { action: 'uploaded', fileName: logoFile.name };
         }
         if (authBackgroundFile) {
           changedFields.push('auth_background');
-          detailedChanges.auth_background = { action: 'uploaded' };
+          detailedChanges.auth_background = { action: 'uploaded', fileName: authBackgroundFile.name };
         }
         
-        // Check contact info changes
-        if (originalSettings.contactEmail !== settings.contactEmail) {
-          changedFields.push('contact_email');
-          detailedChanges.contact_email = { 
-            old: originalSettings.contactEmail, 
-            new: settings.contactEmail 
-          };
-        }
-        if (originalSettings.contactPhone !== settings.contactPhone) {
-          changedFields.push('contact_phone');
-          detailedChanges.contact_phone = { 
-            old: originalSettings.contactPhone, 
-            new: settings.contactPhone 
-          };
-        }
-        if (originalSettings.contactAddress !== settings.contactAddress) {
-          changedFields.push('contact_address');
-          detailedChanges.contact_address = { 
-            old: originalSettings.contactAddress, 
-            new: settings.contactAddress 
-          };
-        }
-        if (originalSettings.showroomHours !== settings.showroomHours) {
-          changedFields.push('showroom_hours');
-          detailedChanges.showroom_hours = { 
-            old: originalSettings.showroomHours, 
-            new: settings.showroomHours 
-          };
+        // Check contact info changes (only if originalSettings exists)
+        if (originalSettings) {
+          if (originalSettings.contactEmail !== settings.contactEmail) {
+            changedFields.push('contact_email');
+            detailedChanges.contact_email = { 
+              old: originalSettings.contactEmail, 
+              new: settings.contactEmail 
+            };
+          }
+          if (originalSettings.contactPhone !== settings.contactPhone) {
+            changedFields.push('contact_phone');
+            detailedChanges.contact_phone = { 
+              old: originalSettings.contactPhone, 
+              new: settings.contactPhone 
+            };
+          }
+          if (originalSettings.contactAddress !== settings.contactAddress) {
+            changedFields.push('contact_address');
+            detailedChanges.contact_address = { 
+              old: originalSettings.contactAddress, 
+              new: settings.contactAddress 
+            };
+          }
+          if (originalSettings.showroomHours !== settings.showroomHours) {
+            changedFields.push('showroom_hours');
+            detailedChanges.showroom_hours = { 
+              old: originalSettings.showroomHours, 
+              new: settings.showroomHours 
+            };
+          }
+          
+          // Check branding changes
+          if (originalSettings.brandName !== settings.brandName) {
+            changedFields.push('brand_name');
+            detailedChanges.brand_name = { 
+              old: originalSettings.brandName, 
+              new: settings.brandName 
+            };
+          }
+          
+          // Check color changes
+          if (originalSettings.primaryColor !== settings.primaryColor || 
+              originalSettings.secondaryColor !== settings.secondaryColor || 
+              originalSettings.accentColor !== settings.accentColor) {
+            changedFields.push('colors');
+            detailedChanges.colors = {
+              primary: { old: originalSettings.primaryColor, new: settings.primaryColor },
+              secondary: { old: originalSettings.secondaryColor, new: settings.secondaryColor },
+              accent: { old: originalSettings.accentColor, new: settings.accentColor }
+            };
+          }
+          
+          // Check social media changes
+          if (originalSettings.facebookUrl !== settings.facebookUrl ||
+              originalSettings.instagramUrl !== settings.instagramUrl ||
+              originalSettings.tiktokUrl !== settings.tiktokUrl ||
+              originalSettings.twitterUrl !== settings.twitterUrl) {
+            changedFields.push('social_media');
+            detailedChanges.social_media = {
+              facebook: { old: originalSettings.facebookUrl, new: settings.facebookUrl },
+              instagram: { old: originalSettings.instagramUrl, new: settings.instagramUrl },
+              tiktok: { old: originalSettings.tiktokUrl, new: settings.tiktokUrl },
+              twitter: { old: originalSettings.twitterUrl, new: settings.twitterUrl }
+            };
+          }
         }
         
-        // Check branding changes
-        if (originalSettings.brandName !== settings.brandName) {
-          changedFields.push('brand_name');
-          detailedChanges.brand_name = { 
-            old: originalSettings.brandName, 
-            new: settings.brandName 
-          };
-        }
-        
-        // Check color changes
-        if (originalSettings.primaryColor !== settings.primaryColor || 
-            originalSettings.secondaryColor !== settings.secondaryColor || 
-            originalSettings.accentColor !== settings.accentColor) {
-          changedFields.push('colors');
-          detailedChanges.colors = {
-            primary: { old: originalSettings.primaryColor, new: settings.primaryColor },
-            secondary: { old: originalSettings.secondaryColor, new: settings.secondaryColor },
-            accent: { old: originalSettings.accentColor, new: settings.accentColor }
-          };
-        }
-        
-        // Check social media changes
-        if (originalSettings.facebookUrl !== settings.facebookUrl ||
-            originalSettings.instagramUrl !== settings.instagramUrl ||
-            originalSettings.tiktokUrl !== settings.tiktokUrl ||
-            originalSettings.twitterUrl !== settings.twitterUrl) {
-          changedFields.push('social_media');
-        }
+        console.log('📝 Changes detected:', changedFields);
         
         // Only log if there are actual changes
         if (changedFields.length > 0) {
           const changesText = ` (updated: ${changedFields.join(', ')})`;
           
-          await AdminLogService.createLog({
+          console.log('💾 Creating admin log...', {
             userId: user.id,
-            actionType: 'website_settings_update',
-            actionDescription: `Updated website settings${changesText}`,
-            targetType: 'website_settings',
-            targetId: '1',
-            metadata: {
-              changedFields,
-              detailedChanges,
-              brandName: settings.brandName,
-            },
+            changedFields,
+            detailedChanges
           });
+          
+          try {
+            await AdminLogService.createLog({
+              userId: user.id,
+              actionType: 'website_settings_update',
+              actionDescription: `Updated website settings${changesText}`,
+              targetType: 'website_settings',
+              targetId: '1',
+              metadata: {
+                changedFields,
+                detailedChanges,
+                brandName: settings.brandName,
+              },
+            });
+            console.log('✅ Admin log created successfully');
+          } catch (logError) {
+            console.error('❌ Failed to create admin log:', logError);
+          }
+        } else {
+          console.log('ℹ️ No changes detected, skipping log creation');
         }
       }
 

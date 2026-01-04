@@ -26,6 +26,8 @@ const ContactSubmissions = () => {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [submissionToDelete, setSubmissionToDelete] = useState(null);
 
   useEffect(() => {
     fetchSubmissions();
@@ -65,16 +67,40 @@ const ContactSubmissions = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this submission? This cannot be undone.')) {
-      const result = await ContactService.deleteSubmission(id);
-      if (result.success) {
-        toast.success('Submission deleted');
-        fetchSubmissions();
-        fetchStats();
-      } else {
-        toast.error(result.error);
+  const handleDelete = (submission) => {
+    setSubmissionToDelete(submission);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!submissionToDelete) return;
+    
+    const result = await ContactService.deleteSubmission(submissionToDelete.id);
+    if (result.success) {
+      // Create admin log for deletion
+      if (user?.id) {
+        await AdminLogService.createLog({
+          userId: user.id,
+          actionType: 'contact_submission_deleted',
+          actionDescription: `Deleted contact submission from ${submissionToDelete.name}`,
+          targetType: 'contact_submission',
+          targetId: submissionToDelete.id,
+          metadata: {
+            customerName: submissionToDelete.name,
+            customerEmail: submissionToDelete.email,
+            submissionSubject: submissionToDelete.subject || 'No subject',
+            messagePreview: submissionToDelete.message?.substring(0, 100),
+          },
+        });
       }
+      
+      toast.success('Submission deleted successfully');
+      setShowDeleteModal(false);
+      setSubmissionToDelete(null);
+      fetchSubmissions();
+      fetchStats();
+    } else {
+      toast.error(result.error);
     }
   };
 
@@ -286,7 +312,7 @@ const ContactSubmissions = () => {
                     </button>
                   )}
 
-                  <button onClick={() => handleDelete(submission.id)} className="action-button danger">
+                  <button onClick={() => handleDelete(submission)} className="action-button danger">
                     <Trash2 size={16} />
                     Delete
                   </button>
@@ -332,6 +358,47 @@ const ContactSubmissions = () => {
                   Send Reply
                 </button>
                 <button onClick={() => setShowReplyModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && submissionToDelete && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2>Delete Submission</h2>
+              <button onClick={() => setShowDeleteModal(false)} className="modal-close">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div style={{ padding: '20px 0' }}>
+                <p style={{ marginBottom: '16px', fontSize: '16px' }}>
+                  Are you sure you want to delete this submission? This action cannot be undone.
+                </p>
+                <div style={{ 
+                  backgroundColor: '#f3f4f6', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  marginTop: '16px'
+                }}>
+                  <p><strong>From:</strong> {submissionToDelete.name}</p>
+                  <p><strong>Email:</strong> {submissionToDelete.email}</p>
+                  <p><strong>Message:</strong> {submissionToDelete.message?.substring(0, 100)}...</p>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button onClick={confirmDelete} className="primary-button" style={{ backgroundColor: '#ef4444' }}>
+                  Delete Submission
+                </button>
+                <button onClick={() => setShowDeleteModal(false)} className="secondary-button">
                   Cancel
                 </button>
               </div>
