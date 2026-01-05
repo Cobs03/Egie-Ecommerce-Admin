@@ -32,7 +32,7 @@ import {
   MdFeedback,
 } from "react-icons/md";
 import { TbPackage } from "react-icons/tb";
-import { FaUserGroup, FaRegCreditCard } from "react-icons/fa6";
+import { FaUserGroup, FaRegCreditCard, FaFileContract } from "react-icons/fa6";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
@@ -58,6 +58,7 @@ import Feedback from "../Feedback/Feedback";
 import Shipview from "../Shipping/Shipping Components/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
 import ContactSubmissions from "../ContactSubmissions/ContactSubmissions";
+import Compliance from "../Compliance/Compliance";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -73,6 +74,7 @@ const NAVIGATION = [
   { segment: "shipping", title: "Shipping", icon: <MdOutlineLocalShipping size={20} /> },
   { segment: "contact", title: "Contact", icon: <HiOutlineMail size={20} /> },
   { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
+  { segment: "compliance", title: "Compliance", icon: <FaFileContract size={20} /> },
   { segment: "discount", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
   { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
   { segment: "website-settings", title: "Website", icon: <MdWebAsset size={20} /> },
@@ -216,14 +218,39 @@ function Navbar() {
 
       <Box
         sx={{
-          overflow: "auto",
-          height: "100%",
+          flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          minHeight: 0,
+          overflow: "hidden",
         }}
       >
-        <List sx={{ pt: 1 }}>
+        <List 
+          sx={{ 
+            pt: 1, 
+            flex: 1, 
+            overflowY: "auto",
+            overflowX: "hidden",
+            "&::-webkit-scrollbar": {
+              width: "6px",
+            },
+            "&::-webkit-scrollbar-track": {
+              background: "transparent",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              background: "rgba(255, 255, 255, 0.3)",
+              borderRadius: "3px",
+              "&:hover": {
+                background: "rgba(255, 255, 255, 0.5)",
+              },
+            },
+            "&::-webkit-scrollbar-button": {
+              display: "none",
+            },
+            scrollbarWidth: "thin",
+            scrollbarColor: "rgba(255, 255, 255, 0.3) transparent",
+          }}
+        >
           {NAVIGATION.map((item) => (
             <ListItem key={item.segment} disablePadding>
               <Tooltip title={isCollapsed ? item.title : ""} placement="right">
@@ -273,13 +300,13 @@ function Navbar() {
           ))}
         </List>
 
-        {/* User profile section with menu - UPDATED */}
+        {/* User profile section - UPDATED */}
         {!isCollapsed ? (
-          <Box sx={{ mt: "auto", mb: 1, mx: 2 }}>
-            <Tooltip title={user?.email || 'admin@example.com'} placement="top">
+          <Box sx={{ flexShrink: 0, mb: 1, mx: 2 }}>
+            <Tooltip title="Collapse sidebar" placement="top">
               <ListItem
                 component="div"
-                onClick={handleProfileMenuOpen}
+                onClick={toggleDrawerCollapse}
                 sx={{
                   backgroundColor: "rgba(255, 255, 255, 0.08)",
                   borderRadius: "8px",
@@ -328,16 +355,16 @@ function Navbar() {
         ) : (
           <Box
             sx={{
-              mt: "auto",
+              flexShrink: 0,
               mb: 1,
               display: "flex",
               justifyContent: "center",
             }}
           >
-            <Tooltip title={`${profile?.full_name || 'Admin User'}\n${user?.email || 'admin@example.com'}`} placement="right">
+            <Tooltip title="Expand sidebar" placement="right">
               <Avatar
                 src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
-                onClick={handleProfileMenuOpen}
+                onClick={toggleDrawerCollapse}
                 sx={{ 
                   width: 40, 
                   height: 40, 
@@ -355,55 +382,7 @@ function Navbar() {
         )}
       </Box>
       
-      {/* Profile Menu */}
-      <Menu
-        anchorEl={profileMenuAnchor}
-        id="profile-menu"
-        open={isProfileMenuOpen}
-        onClose={handleProfileMenuClose}
-        PaperProps={{
-          elevation: 0,
-          sx: {
-            overflow: 'visible',
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: -1,
-            '& .MuiAvatar-root': {
-              width: 32,
-              height: 32,
-              ml: -0.5,
-              mr: 1,
-            },
-            '&:before': {
-              content: '""',
-              display: 'block',
-              position: 'absolute',
-              bottom: -5,
-              right: 14,
-              width: 10,
-              height: 10,
-              bgcolor: 'background.paper',
-              transform: 'translateY(0) rotate(45deg)',
-              zIndex: 0,
-            },
-          },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
-      >
-        <MenuItem onClick={handleSettingsClick}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          Settings
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogoutClick}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          Logout
-        </MenuItem>
-      </Menu>
+      {/* Profile Menu - Removed, now handled by settings route */}
     </>
   );
 
@@ -438,6 +417,9 @@ function Navbar() {
             boxSizing: 'border-box', 
             width: drawerWidth, 
             backgroundColor: '#121212',
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
           },
         }}
       >
@@ -456,6 +438,9 @@ function Navbar() {
             boxSizing: 'border-box',
             backgroundColor: '#121212',
             borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
             transition: theme => theme.transitions.create('width', {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
@@ -487,6 +472,7 @@ function Navbar() {
             <Route path="/contact" element={<ContactSubmissions />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/discount" element={<Promotions />} />
+            <Route path="/compliance" element={<Compliance />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}
             {/* Settings page */}
             <Route path="/settings" element={<AdminProfile />} />
