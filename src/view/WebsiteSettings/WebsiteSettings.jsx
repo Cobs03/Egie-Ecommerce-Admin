@@ -7,6 +7,8 @@ import {
   Tabs,
   Tab,
   Button,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Palette as PaletteIcon,
@@ -19,8 +21,8 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase";
-import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
+import { AdminLogService } from "../../services/AdminLogService";
 import {
   BrandingTab,
   ColorsTab,
@@ -34,13 +36,17 @@ import {
 import dummyData from "./dummyData.json";
 
 const WebsiteSettings = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [originalSettings, setOriginalSettings] = useState(null); // Track original values
   const [settings, setSettings] = useState({
     brandName: "",
     logoUrl: "",
+    authBackgroundUrl: "",
     primaryColor: "#22c55e",
     secondaryColor: "#2176ae",
     accentColor: "#ffe14d",
@@ -58,6 +64,8 @@ const WebsiteSettings = () => {
   });
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [authBackgroundFile, setAuthBackgroundFile] = useState(null);
+  const [authBackgroundPreview, setAuthBackgroundPreview] = useState(null);
   const [termsItems, setTermsItems] = useState(dummyData.termsItems);
   const [privacyItems, setPrivacyItems] = useState(dummyData.privacyItems);
   
@@ -91,9 +99,10 @@ const WebsiteSettings = () => {
       if (error && error.code !== "PGRST116") throw error;
 
       if (data) {
-        setSettings({
+        const settingsData = {
           brandName: data.brand_name || "",
           logoUrl: data.logo_url || "",
+          authBackgroundUrl: data.auth_background_url || "",
           primaryColor: data.primary_color || "#22c55e",
           secondaryColor: data.secondary_color || "#2176ae",
           accentColor: data.accent_color || "#ffe14d",
@@ -108,7 +117,9 @@ const WebsiteSettings = () => {
           aboutUsTitle: data.about_us_title || "",
           aboutUsContent: data.about_us_content || "",
           footerText: data.footer_text || "",
-        });
+        };
+        setSettings(settingsData);
+        setOriginalSettings(settingsData); // Store original for comparison
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -162,6 +173,18 @@ const WebsiteSettings = () => {
     }
   };
 
+  const handleAuthBackgroundChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setAuthBackgroundFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAuthBackgroundPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const uploadLogo = async () => {
     if (!logoFile) return settings.logoUrl;
 
@@ -191,6 +214,35 @@ const WebsiteSettings = () => {
     }
   };
 
+  const uploadAuthBackground = async () => {
+    if (!authBackgroundFile) return settings.authBackgroundUrl;
+
+    try {
+      const fileExt = authBackgroundFile.name.split(".").pop();
+      const fileName = `auth-bg-${Date.now()}.${fileExt}`;
+      const filePath = `backgrounds/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("products")
+        .upload(filePath, authBackgroundFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("products")
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading auth background:", error);
+      toast.error("Failed to upload authentication background");
+      return settings.authBackgroundUrl;
+    }
+  };
+
   const handleSaveClick = () => {
     setConfirmDialog({
       open: true,
@@ -206,6 +258,11 @@ const WebsiteSettings = () => {
       let logoUrl = settings.logoUrl;
       if (logoFile) {
         logoUrl = await uploadLogo();
+      }
+
+      let authBackgroundUrl = settings.authBackgroundUrl;
+      if (authBackgroundFile) {
+        authBackgroundUrl = await uploadAuthBackground();
       }
 
       // Combine terms items into HTML string
@@ -230,6 +287,7 @@ const WebsiteSettings = () => {
           id: 1,
           brand_name: settings.brandName,
           logo_url: logoUrl,
+          auth_background_url: authBackgroundUrl,
           primary_color: settings.primaryColor,
           secondary_color: settings.secondaryColor,
           accent_color: settings.accentColor,
@@ -253,19 +311,145 @@ const WebsiteSettings = () => {
 
       if (error) throw error;
 
+      // Create admin log for settings update
+      if (user?.id) {
+        const changedFields = [];
+        const detailedChanges = {};
+        
+        console.log('🔍 Checking for changes...', { originalSettings, currentSettings: settings, logoFile, authBackgroundFile });
+        
+        // Check for file uploads
+        if (logoFile) {
+          changedFields.push('logo');
+          detailedChanges.logo = { action: 'uploaded', fileName: logoFile.name };
+        }
+        if (authBackgroundFile) {
+          changedFields.push('auth_background');
+          detailedChanges.auth_background = { action: 'uploaded', fileName: authBackgroundFile.name };
+        }
+        
+        // Check contact info changes (only if originalSettings exists)
+        if (originalSettings) {
+          if (originalSettings.contactEmail !== settings.contactEmail) {
+            changedFields.push('contact_email');
+            detailedChanges.contact_email = { 
+              old: originalSettings.contactEmail, 
+              new: settings.contactEmail 
+            };
+          }
+          if (originalSettings.contactPhone !== settings.contactPhone) {
+            changedFields.push('contact_phone');
+            detailedChanges.contact_phone = { 
+              old: originalSettings.contactPhone, 
+              new: settings.contactPhone 
+            };
+          }
+          if (originalSettings.contactAddress !== settings.contactAddress) {
+            changedFields.push('contact_address');
+            detailedChanges.contact_address = { 
+              old: originalSettings.contactAddress, 
+              new: settings.contactAddress 
+            };
+          }
+          if (originalSettings.showroomHours !== settings.showroomHours) {
+            changedFields.push('showroom_hours');
+            detailedChanges.showroom_hours = { 
+              old: originalSettings.showroomHours, 
+              new: settings.showroomHours 
+            };
+          }
+          
+          // Check branding changes
+          if (originalSettings.brandName !== settings.brandName) {
+            changedFields.push('brand_name');
+            detailedChanges.brand_name = { 
+              old: originalSettings.brandName, 
+              new: settings.brandName 
+            };
+          }
+          
+          // Check color changes
+          if (originalSettings.primaryColor !== settings.primaryColor || 
+              originalSettings.secondaryColor !== settings.secondaryColor || 
+              originalSettings.accentColor !== settings.accentColor) {
+            changedFields.push('colors');
+            detailedChanges.colors = {
+              primary: { old: originalSettings.primaryColor, new: settings.primaryColor },
+              secondary: { old: originalSettings.secondaryColor, new: settings.secondaryColor },
+              accent: { old: originalSettings.accentColor, new: settings.accentColor }
+            };
+          }
+          
+          // Check social media changes
+          if (originalSettings.facebookUrl !== settings.facebookUrl ||
+              originalSettings.instagramUrl !== settings.instagramUrl ||
+              originalSettings.tiktokUrl !== settings.tiktokUrl ||
+              originalSettings.twitterUrl !== settings.twitterUrl) {
+            changedFields.push('social_media');
+            detailedChanges.social_media = {
+              facebook: { old: originalSettings.facebookUrl, new: settings.facebookUrl },
+              instagram: { old: originalSettings.instagramUrl, new: settings.instagramUrl },
+              tiktok: { old: originalSettings.tiktokUrl, new: settings.tiktokUrl },
+              twitter: { old: originalSettings.twitterUrl, new: settings.twitterUrl }
+            };
+          }
+        }
+        
+        console.log('📝 Changes detected:', changedFields);
+        
+        // Only log if there are actual changes
+        if (changedFields.length > 0) {
+          const changesText = ` (updated: ${changedFields.join(', ')})`;
+          
+          console.log('💾 Creating admin log...', {
+            userId: user.id,
+            changedFields,
+            detailedChanges
+          });
+          
+          try {
+            const logResult = await AdminLogService.createLog({
+              userId: user.id,
+              actionType: 'Website Settings Updated',
+              actionDescription: `Updated website settings${changesText}`,
+              targetType: 'website_settings',
+              targetId: null,
+              metadata: {
+                settingsId: 1,
+                changedFields,
+                detailedChanges,
+                brandName: settings.brandName,
+              },
+            });
+            if (logResult.error) {
+              console.error('❌ Failed to create admin log:', logResult.error);
+            } else {
+              console.log('✅ Admin log created successfully');
+            }
+          } catch (logError) {
+            console.error('❌ Exception creating admin log:', logError);
+          }
+        } else {
+          console.log('ℹ️ No changes detected, skipping log creation');
+        }
+      }
+
       // Refetch to get latest data
       await fetchSettings();
       
       setLogoFile(null);
       setLogoPreview(null);
-      toast.success("✅ Settings saved successfully! Changes are now live.", {
-        duration: 4000,
-        position: 'top-center'
-      });
+      setAuthBackgroundFile(null);
+      setAuthBackgroundPreview(null);
       handleConfirmDialogClose();
+      
+      // Show success notification after dialog closes
+      setSuccessMessage("Settings saved successfully! Changes are now live.");
+      setShowSuccess(true);
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("Failed to save settings");
+      setSuccessMessage("Failed to save settings. Please try again.");
+      setShowSuccess(true);
     } finally {
       setLoading(false);
     }
@@ -537,7 +721,10 @@ const WebsiteSettings = () => {
               <BrandingTab 
               settings={settings}
               logoPreview={logoPreview}
+              authBackgroundPreview={authBackgroundPreview}
               onLogoChange={handleLogoChange}
+              onAuthBackgroundChange={handleAuthBackgroundChange}
+              onChange={handleChange}
               onReset={handleResetClick}
               onSave={handleSaveClick}
               loading={loading}
@@ -605,6 +792,23 @@ const WebsiteSettings = () => {
         onClose={handleConfirmDialogClose}
         onConfirm={handleConfirmAction}
       />
+
+      {/* Success Notification Snackbar */}
+      <Snackbar
+        open={showSuccess}
+        autoHideDuration={6000}
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setShowSuccess(false)}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -77,7 +77,7 @@ const LoadingSpinner = ({ message = "Loading..." }) => {
         
         {/* Logo image */}
         <img
-          src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+          src="https://i.ibb.co/Cpx2BBt5"
           alt="EGIE Logo"
           style={{
             width: '100%',

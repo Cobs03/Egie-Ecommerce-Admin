@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -22,7 +22,27 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/Cpx2BBt5");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchWebsiteLogo();
+  }, []);
+
+  const fetchWebsiteLogo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("website_settings")
+        .select("logo_url")
+        .single();
+
+      if (data && data.logo_url) {
+        setLogoUrl(data.logo_url);
+      }
+    } catch (error) {
+      console.error("Error fetching logo:", error);
+    }
+  };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -87,7 +107,7 @@ const ResetPassword = () => {
               {/* Logo */}
               <Box
                 component="img"
-                src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+                src={logoUrl}
               alt="EGIE Logo"
               sx={{
                 width: 80,
@@ -298,7 +318,7 @@ const ResetPassword = () => {
       >
         <Box
           component="img"
-          src="https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg"
+          src={backgroundUrl}
           alt="Computer Chip"
           sx={{
             width: "100%",

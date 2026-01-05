@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -21,7 +21,29 @@ const SignIn = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/Cpx2BBt5");
+  const [backgroundUrl, setBackgroundUrl] = useState("https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchWebsiteSettings();
+  }, []);
+
+  const fetchWebsiteSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("website_settings")
+        .select("logo_url, auth_background_url")
+        .single();
+
+      if (data) {
+        if (data.logo_url) setLogoUrl(data.logo_url);
+        if (data.auth_background_url) setBackgroundUrl(data.auth_background_url);
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -101,7 +123,7 @@ const SignIn = () => {
               {/* Logo */}
               <Box
                 component="img"
-                src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+                src={logoUrl}
               alt="EGIE Logo"
               sx={{
                 width: 80,
@@ -299,7 +321,7 @@ const SignIn = () => {
       >
         <Box
           component="img"
-          src="https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg"
+          src={backgroundUrl}
           alt="Computer Chip"
           sx={{
             width: "100%",

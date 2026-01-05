@@ -305,7 +305,7 @@ const CustomerSelectionDialog = ({ open, onClose, selectedCustomers, onSave }) =
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4 }}>
               <Box sx={{ mb: 2 }}>
                 <img
-                  src="https://i.ibb.co/Cpx2BBt5/egie-removebg-preview-1.png"
+                  src="https://i.ibb.co/Cpx2BBt5"
                   alt="Loading"
                   style={{ width: '60px', height: '40px', objectFit: 'contain' }}
                 />

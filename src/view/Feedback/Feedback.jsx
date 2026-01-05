@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
 import { AdminLogService } from "../../services/AdminLogService";
 import ProductFeedback from "./Feedback Components/ProductFeedback";
+import BundleFeedback from "./Feedback Components/BundleFeedback";
 import Inqueries from "./Feedback Components/Inqueries";
 import ReviewService from "../../services/ReviewService";
 import InquiryService from "../../services/InquiryService";
@@ -22,8 +23,11 @@ const Feedback = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
+  const [bundleReviews, setBundleReviews] = useState([]);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [totalBundleReviews, setTotalBundleReviews] = useState(0);
   const [stats, setStats] = useState({ total: 0, averageRating: 0, byRating: {} });
+  const [bundleStats, setBundleStats] = useState({ total: 0, averageRating: 0, byRating: {} });
   
   // Success notification state
   const [showSuccess, setShowSuccess] = useState(false);
@@ -34,6 +38,9 @@ const Feedback = () => {
     if (activeTab === "reviews") {
       loadReviews();
       loadStats();
+    } else if (activeTab === "bundles") {
+      loadBundleReviews();
+      loadBundleStats();
     }
   }, [reviewPage, searchQuery, activeTab]);
 
@@ -71,6 +78,40 @@ const Feedback = () => {
     }
   };
 
+  const loadBundleReviews = async () => {
+    setLoading(true);
+    try {
+      const { data, error, total } = await ReviewService.getAllBundleReviews({
+        search: searchQuery,
+        limit: REVIEWS_PER_PAGE,
+        offset: (reviewPage - 1) * REVIEWS_PER_PAGE
+      });
+
+      if (error) {
+        toast.error('Failed to load bundle reviews', { description: error });
+      } else {
+        setBundleReviews(data || []);
+        setTotalBundleReviews(total || 0);
+      }
+    } catch (error) {
+      console.error('Error loading bundle reviews:', error);
+      toast.error('Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadBundleStats = async () => {
+    try {
+      const { data, error } = await ReviewService.getBundleReviewStats();
+      if (!error && data) {
+        setBundleStats(data);
+      }
+    } catch (error) {
+      console.error('Error loading bundle stats:', error);
+    }
+  };
+
   const handleDeleteReview = async (reviewId, reviewData) => {
     try {
       const { error } = await ReviewService.deleteReview(reviewId, reviewData);
@@ -87,7 +128,27 @@ const Feedback = () => {
     }
   };
 
+  const handleDeleteBundleReview = async (reviewId, reviewData) => {
+    try {
+      const { error } = await ReviewService.deleteBundleReview(reviewId, reviewData);
+      if (error) {
+        toast.error('Failed to delete bundle review', { description: error.message });
+      } else {
+        toast.success('Bundle review deleted successfully');
+        loadBundleReviews();
+        loadBundleStats();
+      }
+    } catch (error) {
+      console.error('Error deleting bundle review:', error);
+      toast.error('Something went wrong');
+    }
+  };
+
   const handleDownloadFile = async () => {
+    if (activeTab === 'bundles') {
+      return handleDownloadBundleReviews();
+    }
+
     if (reviews.length === 0) {
       toast.error('No reviews to export');
       return;
@@ -153,6 +214,77 @@ const Feedback = () => {
     } catch (error) {
       console.error('Error downloading Excel:', error);
       toast.error('Failed to download reviews');
+    }
+  };
+
+  const handleDownloadBundleReviews = async () => {
+    if (bundleReviews.length === 0) {
+      toast.error('No bundle reviews to export');
+      return;
+    }
+
+    try {
+      // Create Excel data from bundle reviews
+      const excelData = bundleReviews.map((review, index) => {
+        const bundleName = review.bundles?.bundle_name || 'Unknown Bundle';
+        const customerFirstName = review.customer?.first_name || '';
+        const customerLastName = review.customer?.last_name || '';
+        const userName = `${customerFirstName} ${customerLastName}`.trim() || 'Anonymous';
+        const date = new Date(review.created_at);
+        
+        return {
+          'No': index + 1,
+          'Bundle': bundleName,
+          'Customer': userName,
+          'Email': review.customer?.email || 'N/A',
+          'Rating': review.rating,
+          'Title': review.title || 'N/A',
+          'Review': review.comment || 'N/A',
+          'Date': date.toLocaleDateString(),
+          'Time': date.toLocaleTimeString()
+        };
+      });
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Bundle Reviews");
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 30 }, // Bundle
+        { wch: 20 }, // Customer
+        { wch: 25 }, // Email
+        { wch: 10 }, // Rating
+        { wch: 30 }, // Title
+        { wch: 50 }, // Review
+        { wch: 15 }, // Date
+        { wch: 15 }  // Time
+      ];
+
+      // Generate file name with current date
+      const date = new Date().toISOString().split('T')[0];
+      const fileName = `Bundle_Reviews_${date}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, fileName);
+
+      // Log admin action
+      await AdminLogService.createLog(
+        user?.id,
+        'download',
+        'bundle_review',
+        null,
+        { count: bundleReviews.length, fileName }
+      );
+
+      // Show success notification
+      setSuccessMessage(`Successfully downloaded ${bundleReviews.length} bundle review records`);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download bundle reviews');
     }
   };
 
@@ -310,6 +442,25 @@ const Feedback = () => {
             Product Reviews
           </Button>
           <Button
+            onClick={() => setActiveTab("bundles")}
+            sx={{
+              bgcolor: activeTab === "bundles" ? "#00E676" : "transparent",
+              color: activeTab === "bundles" ? "#000" : "#fff",
+              fontWeight: 700,
+              textTransform: "none",
+              borderRadius: "20px",
+              px: 3,
+              py: 0.75,
+              minWidth: 140,
+              border: activeTab === "bundles" ? "none" : "2px solid #fff",
+              "&:hover": {
+                bgcolor: activeTab === "bundles" ? "#00C853" : "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            Bundle Reviews
+          </Button>
+          <Button
             onClick={() => setActiveTab("inquiries")}
             sx={{
               bgcolor: activeTab === "inquiries" ? "#00E676" : "transparent",
@@ -431,7 +582,7 @@ const Feedback = () => {
         <Button
           variant="outlined"
           startIcon={<FileDownload />}
-          onClick={activeTab === "reviews" ? handleDownloadFile : handleDownloadInquiries}
+          onClick={activeTab === "reviews" ? handleDownloadFile : activeTab === "bundles" ? handleDownloadFile : handleDownloadInquiries}
           sx={{
             borderColor: "#1976d2",
             color: "#1976d2",
@@ -443,7 +594,7 @@ const Feedback = () => {
             },
           }}
         >
-          {activeTab === "reviews" ? "Download Reviews" : "Download Inquiries"}
+          {activeTab === "reviews" ? "Download Reviews" : activeTab === "bundles" ? "Download Bundle Reviews" : "Download Inquiries"}
         </Button>
       </Box>
       </motion.div>
@@ -531,6 +682,90 @@ const Feedback = () => {
             setReviewPage={setReviewPage}
             totalReviews={totalReviews}
             reviewsPerPage={REVIEWS_PER_PAGE}
+          />
+        </>
+        </motion.div>
+      )}
+
+      {/* Bundle Reviews Tab */}
+      {activeTab === "bundles" && (
+        <motion.div
+          key="bundles"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+        <>
+          {/* Statistics Dashboard */}
+          {!loading && bundleStats && bundleStats.total > 0 && (
+            <Box sx={{ mb: 3, p: 3, bgcolor: '#f5f5f5', borderRadius: 2, boxShadow: 1 }}>
+              <Stack direction="row" spacing={4} alignItems="center" flexWrap="wrap">
+                <Box>
+                  <Typography variant="h3" fontWeight={700} color="#00E676">
+                    {bundleStats.total}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    Total Reviews
+                  </Typography>
+                </Box>
+                <Box>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Typography variant="h3" fontWeight={700}>
+                      {bundleStats.averageRating.toFixed(1)}
+                    </Typography>
+                    <Typography variant="h5" color="#FFD600">★</Typography>
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    Average Rating
+                  </Typography>
+                </Box>
+                <Box flex={1} minWidth={300}>
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} mb={1}>
+                    Rating Distribution
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {[5, 4, 3, 2, 1].map(rating => {
+                      const count = bundleStats.byRating[rating] || 0;
+                      const percentage = bundleStats.total > 0 ? (count / bundleStats.total) * 100 : 0;
+                      return (
+                        <Stack key={rating} direction="row" alignItems="center" spacing={1}>
+                          <Typography variant="caption" sx={{ minWidth: 25, fontWeight: 600 }}>
+                            {rating}★
+                          </Typography>
+                          <Box 
+                            sx={{ 
+                              flex: 1, 
+                              height: 10, 
+                              bgcolor: '#e0e0e0', 
+                              borderRadius: 1,
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box 
+                              sx={{ 
+                                height: '100%', 
+                                width: `${percentage}%`, 
+                                bgcolor: '#FFD600',
+                                transition: 'width 0.3s ease'
+                              }} 
+                            />
+                          </Box>
+                          <Typography variant="caption" sx={{ minWidth: 40, fontWeight: 600 }}>
+                            {count} ({percentage.toFixed(0)}%)
+                          </Typography>
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              </Stack>
+            </Box>
+          )}
+          
+          <BundleFeedback
+            reviews={bundleReviews}
+            loading={loading}
+            onDelete={handleDeleteBundleReview}
           />
         </>
         </motion.div>
