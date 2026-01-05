@@ -309,6 +309,205 @@ class ReviewService {
       };
     }
   }
+
+  /**
+   * Get all bundle reviews with optional filtering
+   * @param {Object} options - Filter options
+   * @param {string} options.bundle_id - Filter by bundle ID
+   * @param {number} options.rating - Filter by rating (1-5)
+   * @param {string} options.search - Search in title, comment, user name, user email
+   * @param {number} options.limit - Number of results per page (default: 10)
+   * @param {number} options.offset - Offset for pagination (default: 0)
+   * @returns {Object} { data, error, total }
+   */
+  async getAllBundleReviews({ bundle_id, rating, search, limit = 10, offset = 0 } = {}) {
+    try {
+      let query = supabase
+        .from('bundle_reviews')
+        .select('*, profiles:user_id (id, first_name, last_name, email, avatar_url)', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (bundle_id) {
+        query = query.eq('bundle_id', bundle_id);
+      }
+
+      if (rating) {
+        query = query.eq('rating', rating);
+      }
+
+      if (search && search.trim()) {
+        query = query.or(
+          `title.ilike.%${search}%,comment.ilike.%${search}%`
+        );
+      }
+
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+
+      const { data: reviews, error, count } = await query;
+
+      if (error) throw error;
+
+      // Fetch bundle details for each review
+      if (reviews && reviews.length > 0) {
+        const bundleIds = [...new Set(reviews.map(r => r.bundle_id).filter(id => id))];
+        
+        // Fetch bundles
+        const { data: bundles, error: bundlesError } = await supabase
+          .from('bundles')
+          .select('id, bundle_name, images')
+          .in('id', bundleIds);
+
+        if (bundlesError) {
+          console.error('Error fetching bundles:', bundlesError);
+        }
+
+        // Map bundles to reviews
+        const bundlesMap = {};
+        if (bundles) {
+          bundles.forEach(b => {
+            bundlesMap[b.id] = b;
+          });
+        }
+
+        // Attach bundle data and rename profile to customer for consistency
+        reviews.forEach(review => {
+          review.bundles = bundlesMap[review.bundle_id] || null;
+          review.customer = review.profiles || null;
+          delete review.profiles;
+        });
+      }
+
+      return {
+        data: reviews || [],
+        error: null,
+        total: count || 0
+      };
+    } catch (error) {
+      console.error('Error fetching bundle reviews:', error);
+      return {
+        data: [],
+        error: error.message,
+        total: 0
+      };
+    }
+  }
+
+  /**
+   * Get bundle review statistics
+   * @returns {Object} { data: { total, averageRating, byRating }, error }
+   */
+  async getBundleReviewStats() {
+    try {
+      const { data, error } = await supabase
+        .from('bundle_reviews')
+        .select('rating');
+
+      if (error) throw error;
+
+      const total = data.length;
+      const sum = data.reduce((acc, review) => acc + review.rating, 0);
+      const averageRating = total > 0 ? sum / total : 0;
+
+      // Count by rating
+      const byRating = {
+        5: data.filter(r => r.rating === 5).length,
+        4: data.filter(r => r.rating === 4).length,
+        3: data.filter(r => r.rating === 3).length,
+        2: data.filter(r => r.rating === 2).length,
+        1: data.filter(r => r.rating === 1).length,
+      };
+
+      return {
+        data: {
+          total,
+          averageRating,
+          byRating
+        },
+        error: null
+      };
+    } catch (error) {
+      console.error('Error fetching bundle review stats:', error);
+      return {
+        data: { total: 0, averageRating: 0, byRating: {} },
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Delete a bundle review (admin only) with activity logging
+   * @param {string} review_id - Review ID to delete
+   * @param {Object} reviewData - Review data for logging
+   * @returns {Object} { error }
+   */
+  async deleteBundleReview(review_id, reviewData = null) {
+    try {
+      // Delete the review first (most important operation)
+      const { error: deleteError } = await supabase
+        .from('bundle_reviews')
+        .delete()
+        .eq('id', review_id);
+
+      if (deleteError) {
+        console.error('Error deleting bundle review:', deleteError);
+        throw deleteError;
+      }
+
+      // Try to log the activity (optional - won't fail delete if logging fails)
+      try {
+        if (reviewData) {
+          // Get current user info
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user) {
+            // Get user profile for role information
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, role')
+              .eq('id', user.id)
+              .single();
+
+            const actorName = profile 
+              ? `${profile.first_name} ${profile.last_name}`.trim() 
+              : user.email;
+            const actorRole = profile?.role || 'admin';
+            const customerName = reviewData.customer 
+              ? `${reviewData.customer.first_name} ${reviewData.customer.last_name}`.trim()
+              : 'Anonymous';
+            const bundleName = reviewData.bundles?.name || 'Unknown Bundle';
+
+            // Insert into existing admin_logs table
+            await supabase.from('admin_logs').insert({
+              user_id: user.id,
+              action_type: 'bundle_review_delete',
+              action_description: `Deleted bundle review by ${customerName} for bundle "${bundleName}"`,
+              target_type: 'bundle_review',
+              target_id: review_id,
+              metadata: {
+                review_title: reviewData.title || 'No title',
+                review_comment: reviewData.comment || 'No comment',
+                review_rating: reviewData.rating,
+                bundle_name: bundleName,
+                customer_name: customerName,
+                deleted_by: actorName,
+                deleted_by_role: actorRole
+              }
+            });
+          }
+        }
+      } catch (loggingError) {
+        // Log to console but don't fail the delete operation
+        console.warn('Activity logging failed:', loggingError.message);
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in deleteBundleReview:', error);
+      return { error: error.message };
+    }
+  }
 }
 
 // Export singleton instance
