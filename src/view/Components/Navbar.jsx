@@ -317,7 +317,7 @@ function Navbar() {
               }}
             >
               <Avatar
-                src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
+                src={profile?.avatar_url || undefined}
                 sx={{ width: 32, height: 32, mr: 1.5 }}
               >
                 {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
@@ -360,7 +360,7 @@ function Navbar() {
             }}
           >
             <Avatar
-              src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
+              src={profile?.avatar_url || undefined}
               onClick={handleProfileMenuOpen}
               sx={{ 
                 width: 40, 
