@@ -18,23 +18,29 @@ const ForgotPassword = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/Cpx2BBt5");
+  const [backgroundUrl, setBackgroundUrl] = useState("https://i.ibb.co/yF04zrC9");
 
   useEffect(() => {
-    fetchWebsiteLogo();
+    fetchWebsiteSettings();
   }, []);
 
-  const fetchWebsiteLogo = async () => {
+  const fetchWebsiteSettings = async () => {
     try {
       const { data, error } = await supabase
         .from("website_settings")
-        .select("logo_url")
+        .select("logo_url, auth_background_url")
         .single();
 
-      if (data && data.logo_url) {
-        setLogoUrl(data.logo_url);
+      if (data) {
+        if (data.logo_url) {
+          setLogoUrl(data.logo_url);
+        }
+        if (data.auth_background_url) {
+          setBackgroundUrl(data.auth_background_url);
+        }
       }
     } catch (error) {
-      console.error("Error fetching logo:", error);
+      console.error("Error fetching website settings:", error);
     }
   };
 
