@@ -47,6 +47,8 @@ const WebsiteSettings = () => {
     brandName: "",
     logoUrl: "",
     authBackgroundUrl: "",
+    aiName: "",
+    aiLogoUrl: "",
     primaryColor: "#22c55e",
     secondaryColor: "#2176ae",
     accentColor: "#ffe14d",
@@ -66,6 +68,8 @@ const WebsiteSettings = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const [authBackgroundFile, setAuthBackgroundFile] = useState(null);
   const [authBackgroundPreview, setAuthBackgroundPreview] = useState(null);
+  const [aiLogoFile, setAiLogoFile] = useState(null);
+  const [aiLogoPreview, setAiLogoPreview] = useState(null);
   const [termsItems, setTermsItems] = useState(dummyData.termsItems);
   const [privacyItems, setPrivacyItems] = useState(dummyData.privacyItems);
   
@@ -103,6 +107,8 @@ const WebsiteSettings = () => {
           brandName: data.brand_name || "",
           logoUrl: data.logo_url || "",
           authBackgroundUrl: data.auth_background_url || "",
+          aiName: data.ai_name || "",
+          aiLogoUrl: data.ai_logo_url || "",
           primaryColor: data.primary_color || "#22c55e",
           secondaryColor: data.secondary_color || "#2176ae",
           accentColor: data.accent_color || "#ffe14d",
@@ -257,6 +263,18 @@ const WebsiteSettings = () => {
     }
   };
 
+  const handleAILogoChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setAiLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAiLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const uploadLogo = async () => {
     if (!logoFile) return settings.logoUrl;
 
@@ -315,6 +333,35 @@ const WebsiteSettings = () => {
     }
   };
 
+  const uploadAILogo = async () => {
+    if (!aiLogoFile) return settings.aiLogoUrl;
+
+    try {
+      const fileExt = aiLogoFile.name.split(".").pop();
+      const fileName = `ai-logo-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("products")
+        .upload(filePath, aiLogoFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("products")
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading AI logo:", error);
+      toast.error("Failed to upload AI logo");
+      return settings.aiLogoUrl;
+    }
+  };
+
   const handleSaveClick = () => {
     setConfirmDialog({
       open: true,
@@ -335,6 +382,11 @@ const WebsiteSettings = () => {
       let authBackgroundUrl = settings.authBackgroundUrl;
       if (authBackgroundFile) {
         authBackgroundUrl = await uploadAuthBackground();
+      }
+
+      let aiLogoUrl = settings.aiLogoUrl;
+      if (aiLogoFile) {
+        aiLogoUrl = await uploadAILogo();
       }
 
       // Combine terms items into HTML string
@@ -360,6 +412,8 @@ const WebsiteSettings = () => {
           brand_name: settings.brandName,
           logo_url: logoUrl,
           auth_background_url: authBackgroundUrl,
+          ai_name: settings.aiName,
+          ai_logo_url: aiLogoUrl,
           primary_color: settings.primaryColor,
           secondary_color: settings.secondaryColor,
           accent_color: settings.accentColor,
@@ -513,6 +567,8 @@ const WebsiteSettings = () => {
       setLogoPreview(null);
       setAuthBackgroundFile(null);
       setAuthBackgroundPreview(null);
+      setAiLogoFile(null);
+      setAiLogoPreview(null);
       handleConfirmDialogClose();
       
       // Show success notification after dialog closes
@@ -794,8 +850,10 @@ const WebsiteSettings = () => {
               settings={settings}
               logoPreview={logoPreview}
               authBackgroundPreview={authBackgroundPreview}
+              aiLogoPreview={aiLogoPreview}
               onLogoChange={handleLogoChange}
               onAuthBackgroundChange={handleAuthBackgroundChange}
+              onAILogoChange={handleAILogoChange}
               onChange={handleChange}
               onReset={handleResetClick}
               onSave={handleSaveClick}
