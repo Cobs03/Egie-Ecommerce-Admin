@@ -303,54 +303,52 @@ function Navbar() {
         {/* User profile section - UPDATED */}
         {!isCollapsed ? (
           <Box sx={{ flexShrink: 0, mb: 1, mx: 2 }}>
-            <Tooltip title="Collapse sidebar" placement="top">
-              <ListItem
-                component="div"
-                onClick={toggleDrawerCollapse}
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.08)",
-                  borderRadius: "8px",
-                  padding: "8px",
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: "rgba(255, 255, 255, 0.12)",
-                  },
-                }}
+            <ListItem
+              component="div"
+              onClick={handleProfileMenuOpen}
+              sx={{
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                borderRadius: "8px",
+                padding: "8px",
+                cursor: "pointer",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 255, 255, 0.12)",
+                },
+              }}
+            >
+              <Avatar
+                src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
+                sx={{ width: 32, height: 32, mr: 1.5 }}
               >
-                <Avatar
-                  src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
-                  sx={{ width: 32, height: 32, mr: 1.5 }}
+                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
+              </Avatar>
+              <Box sx={{ overflow: 'hidden' }}>
+                <Typography
+                  variant="body2"
+                  sx={{ 
+                    color: "#fff", 
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
-                </Avatar>
-                <Box sx={{ overflow: 'hidden' }}>
-                  <Typography
-                    variant="body2"
-                    sx={{ 
-                      color: "#fff", 
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {profile?.full_name || 'Admin User'}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ 
-                      color: "rgba(255, 255, 255, 0.7)",
-                      display: 'block',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {truncateEmail(user?.email)}
-                  </Typography>
-                </Box>
-              </ListItem>
-            </Tooltip>
+                  {profile?.full_name || 'Admin User'}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ 
+                    color: "rgba(255, 255, 255, 0.7)",
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {truncateEmail(user?.email)}
+                </Typography>
+              </Box>
+            </ListItem>
           </Box>
         ) : (
           <Box
@@ -361,28 +359,62 @@ function Navbar() {
               justifyContent: "center",
             }}
           >
-            <Tooltip title="Expand sidebar" placement="right">
-              <Avatar
-                src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
-                onClick={toggleDrawerCollapse}
-                sx={{ 
-                  width: 40, 
-                  height: 40, 
-                  cursor: "pointer",
-                  "&:hover": {
-                    opacity: 0.8,
-                    boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
-                  },
-                }}
-              >
-                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
-              </Avatar>
-            </Tooltip>
+            <Avatar
+              src={profile?.avatar_url || "https://xsgames.co/randomusers/avatar.php?g=male"}
+              onClick={handleProfileMenuOpen}
+              sx={{ 
+                width: 40, 
+                height: 40, 
+                cursor: "pointer",
+                "&:hover": {
+                  opacity: 0.8,
+                  boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
+                },
+              }}
+            >
+              {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A'}
+            </Avatar>
           </Box>
         )}
       </Box>
       
-      {/* Profile Menu - Removed, now handled by settings route */}
+      {/* Profile Menu */}
+      <Menu
+        anchorEl={profileMenuAnchor}
+        open={isProfileMenuOpen}
+        onClose={handleProfileMenuClose}
+        onClick={handleProfileMenuClose}
+        transformOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+        anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+        slotProps={{
+          paper: {
+            elevation: 0,
+            sx: {
+              overflow: 'visible',
+              filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+              mt: -1,
+              minWidth: 180,
+              '& .MuiMenuItem-root': {
+                px: 2,
+                py: 1,
+              },
+            },
+          },
+        }}
+      >
+        <MenuItem onClick={handleSettingsClick}>
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Profile Settings</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleLogoutClick}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Sign Out</ListItemText>
+        </MenuItem>
+      </Menu>
     </>
   );
 
