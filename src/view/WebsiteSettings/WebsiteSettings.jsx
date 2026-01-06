@@ -161,13 +161,85 @@ const WebsiteSettings = () => {
     }
   };
 
-  const handleLogoChange = (event) => {
+  const extractColorsFromImage = (imageDataUrl) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        
+        // Count color frequency
+        const colorMap = {};
+        for (let i = 0; i < pixels.length; i += 4) {
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+          const a = pixels[i + 3];
+          
+          // Skip transparent or near-white pixels
+          if (a < 128 || (r > 240 && g > 240 && b > 240)) continue;
+          
+          const color = `rgb(${r},${g},${b})`;
+          colorMap[color] = (colorMap[color] || 0) + 1;
+        }
+        
+        // Get most frequent colors
+        const sortedColors = Object.entries(colorMap)
+          .sort((a, b) => b[1] - a[1])
+          .map(([color]) => color);
+        
+        // Convert RGB to hex
+        const rgbToHex = (rgb) => {
+          const match = rgb.match(/\d+/g);
+          if (!match) return '#000000';
+          const [r, g, b] = match.map(Number);
+          return '#' + [r, g, b].map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+          }).join('');
+        };
+        
+        const colors = sortedColors.slice(0, 3).map(rgbToHex);
+        resolve({
+          primary: colors[0] || '#22c55e',
+          secondary: colors[1] || '#2176ae',
+          accent: colors[2] || '#ffe14d'
+        });
+      };
+      img.src = imageDataUrl;
+    });
+  };
+
+  const handleLogoChange = async (event) => {
     const file = event.target.files[0];
     if (file) {
       setLogoFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result);
+      reader.onloadend = async () => {
+        const dataUrl = reader.result;
+        setLogoPreview(dataUrl);
+        
+        // Extract colors from logo
+        try {
+          const extractedColors = await extractColorsFromImage(dataUrl);
+          setSettings(prev => ({
+            ...prev,
+            primaryColor: extractedColors.primary,
+            secondaryColor: extractedColors.secondary,
+            accentColor: extractedColors.accent
+          }));
+          setSuccessMessage('Colors extracted from logo!');
+          setShowSuccess(true);
+        } catch (error) {
+          console.error('Error extracting colors:', error);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -729,6 +801,37 @@ const WebsiteSettings = () => {
               onSave={handleSaveClick}
               loading={loading}
               readOnly={!isAdmin}
+            />
+          )}
+          {activeTab === 1 && (
+            <ColorsTab 
+              settings={settings}
+              onChange={handleChange}
+              onReset={handleResetClick}
+              onSave={handleSaveClick}
+              loading={loading}
+              readOnly={!isAdmin}
+              logoPreview={logoPreview}
+              onExtractColors={async () => {
+                const imageUrl = logoPreview || settings.logoUrl;
+                if (imageUrl) {
+                  try {
+                    const extractedColors = await extractColorsFromImage(imageUrl);
+                    setSettings(prev => ({
+                      ...prev,
+                      primaryColor: extractedColors.primary,
+                      secondaryColor: extractedColors.secondary,
+                      accentColor: extractedColors.accent
+                    }));
+                    setSuccessMessage('Colors extracted from logo!');
+                    setShowSuccess(true);
+                  } catch (error) {
+                    console.error('Error extracting colors:', error);
+                    setSuccessMessage('Failed to extract colors from logo');
+                    setShowSuccess(true);
+                  }
+                }
+              }}
             />
           )}
           {activeTab === 2 && (

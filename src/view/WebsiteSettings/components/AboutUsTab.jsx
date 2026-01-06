@@ -62,8 +62,8 @@ const AboutUsTab = ({ settings, onChange, onReset, onSave, loading }) => {
               onClick={onSave}
               disabled={loading}
               sx={{
-                bgcolor: "success.main",
-                "&:hover": { bgcolor: "success.dark" },
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
               }}
             >
               Save Changes

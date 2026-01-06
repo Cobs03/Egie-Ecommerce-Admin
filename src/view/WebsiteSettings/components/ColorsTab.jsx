@@ -9,14 +9,16 @@ import {
   TextField,
   Alert,
   Button,
+  Avatar,
 } from "@mui/material";
 import {
   Palette as PaletteIcon,
   Refresh as RefreshIcon,
   Save as SaveIcon,
+  AutoFixHigh as AutoFixHighIcon,
 } from "@mui/icons-material";
 
-const ColorsTab = ({ settings, onChange, onReset, onSave, loading }) => {
+const ColorsTab = ({ settings, onChange, onReset, onSave, loading, logoPreview, onExtractColors }) => {
   return (
     <Box>
       <Card>
@@ -26,6 +28,42 @@ const ColorsTab = ({ settings, onChange, onReset, onSave, loading }) => {
             <Typography variant="h6">Color Scheme</Typography>
           </Box>
           <Divider sx={{ mb: 3 }} />
+
+          {/* Logo Preview and Extract Button */}
+          {(logoPreview || settings.logoUrl) && (
+            <Box mb={3} p={2} bgcolor="grey.50" borderRadius={2}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item>
+                  <Avatar
+                    src={logoPreview || settings.logoUrl}
+                    sx={{ width: 80, height: 80 }}
+                    variant="rounded"
+                  />
+                </Grid>
+                <Grid item xs>
+                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                    Current Logo
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Colors are automatically extracted when you upload a logo
+                  </Typography>
+                </Grid>
+                {onExtractColors && (
+                  <Grid item>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<AutoFixHighIcon />}
+                      onClick={onExtractColors}
+                      disabled={loading}
+                    >
+                      Re-extract Colors
+                    </Button>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
 
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
