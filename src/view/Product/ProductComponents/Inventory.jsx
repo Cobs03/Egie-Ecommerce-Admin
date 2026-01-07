@@ -438,18 +438,28 @@ const Inventory = forwardRef((props, ref) => {
       const result = await ProductService.deleteProduct(productToDelete.id);
       
       if (result.success) {
+        // Check if it was a soft delete (product has orders)
+        const wasSoftDeleted = result.data?.softDeleted || result.data?.status === 'inactive';
+        const message = result.data?.message || 
+          (wasSoftDeleted 
+            ? `Product "${productToDelete.name}" has been deactivated (has order history).`
+            : `Product "${productToDelete.name}" deleted successfully!`);
+        
         // Create activity log
         if (user?.id) {
           await AdminLogService.createLog({
             userId: user.id,
-            actionType: 'product_delete',
-            actionDescription: `Deleted product: ${productToDelete.name}`,
+            actionType: wasSoftDeleted ? 'product_deactivate' : 'product_delete',
+            actionDescription: wasSoftDeleted 
+              ? `Deactivated product (has orders): ${productToDelete.name}`
+              : `Deleted product: ${productToDelete.name}`,
             targetType: 'product',
             targetId: productToDelete.id,
             metadata: {
               productName: productToDelete.name,
               sku: productToDelete.sku,
               price: productToDelete.price,
+              softDelete: wasSoftDeleted
             },
           });
         }
@@ -458,15 +468,17 @@ const Inventory = forwardRef((props, ref) => {
         await loadProducts();
         
         // Show success notification
-        setSuccessMessage(`Product "${productToDelete.name}" deleted successfully!`);
+        setSuccessMessage(message);
         setShowSuccess(true);
       } else {
         console.error("❌ Failed to delete product:", result.error);
-        alert(`Failed to delete product: ${result.error}`);
+        setErrorMessage(`Failed to delete product: ${result.error}`);
+        setShowError(true);
       }
     } catch (error) {
       console.error("❌ Error deleting product:", error);
-      alert(`Error deleting product: ${error.message}`);
+      setErrorMessage(`Error deleting product: ${error.message}`);
+      setShowError(true);
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
