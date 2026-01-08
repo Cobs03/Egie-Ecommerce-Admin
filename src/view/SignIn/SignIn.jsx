@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { supabase } from "../../lib/supabase";
 
 const SignIn = () => {
@@ -21,6 +22,7 @@ const SignIn = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [logoUrl, setLogoUrl] = useState("https://i.ibb.co/Cpx2BBt5");
   const [backgroundUrl, setBackgroundUrl] = useState("https://i.ibb.co/yF04zrC9/vecteezy-computer-electronic-chip-with-processor-transistors-29336852.jpg");
   const navigate = useNavigate();
@@ -49,6 +51,12 @@ const SignIn = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!turnstileToken) {
+      setError("Please complete the security verification");
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -280,6 +288,17 @@ const SignIn = () => {
                 },
               }}
             />
+
+            {/* Turnstile CAPTCHA */}
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+              <Turnstile
+                siteKey="0x4AAAAAACLTFMvYoxZ2HCN_"
+                onSuccess={(token) => setTurnstileToken(token)}
+                onError={() => setError("Security verification failed. Please refresh the page.")}
+                onExpire={() => setTurnstileToken("")}
+                theme="light"
+              />
+            </Box>
 
             {/* Login Button */}
             <Button
