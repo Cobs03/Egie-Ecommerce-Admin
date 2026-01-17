@@ -258,6 +258,67 @@ export class ProductService {
         .eq('id', id)
         .single()
 
+      // Check if product has order references
+      const { data: orderItems, error: orderCheckError } = await supabase
+        .from('order_items')
+        .select('id')
+        .eq('product_id', id)
+        .limit(1)
+
+      if (orderCheckError) {
+        console.warn('Could not check order references:', orderCheckError)
+      }
+
+      // If product has orders, do a soft delete (set status to inactive)
+      if (orderItems && orderItems.length > 0) {
+        console.log('Product has order history, performing soft delete')
+        
+        const { data, error } = await supabase
+          .from('products')
+          .update({ 
+            status: 'inactive',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+
+        if (error) {
+          if (error.message.includes('row-level security') || error.message.includes('RLS')) {
+            return handleSupabaseError(new Error(
+              'Permission denied: Only admins and managers can delete products. ' +
+              'RLS Error: ' + error.message
+            ))
+          }
+          return handleSupabaseError(error)
+        }
+
+        // Create admin log for soft deletion
+        if (productInfo) {
+          try {
+            await supabase.from('admin_logs').insert({
+              user_id: user.id,
+              action_type: 'product_soft_delete',
+              action_description: `Soft deleted product (has order history): ${productInfo.name}`,
+              metadata: {
+                product_id: id,
+                product_name: productInfo.name,
+                product_sku: productInfo.sku,
+                reason: 'Product has order references'
+              }
+            })
+          } catch (logError) {
+            console.error('Failed to create admin log:', logError)
+          }
+        }
+
+        return handleSupabaseSuccess({
+          ...data[0],
+          softDeleted: true,
+          message: 'Product has been deactivated (has order history). It will no longer appear in the store but order history is preserved.'
+        })
+      }
+
+      // If no orders, perform hard delete
       const { data, error } = await supabase
         .from('products')
         .delete()
@@ -268,6 +329,12 @@ export class ProductService {
           return handleSupabaseError(new Error(
             'Permission denied: Only admins and managers can delete products. ' +
             'RLS Error: ' + error.message
+          ))
+        }
+        // Handle foreign key constraint error
+        if (error.message.includes('foreign key') || error.message.includes('violates')) {
+          return handleSupabaseError(new Error(
+            'Cannot delete product: It is referenced by existing orders. The product will be marked as inactive instead.'
           ))
         }
         return handleSupabaseError(error)

@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Egie Admin</title>
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://mhhnfftaoihhltbknenq.supabase.co https://challenges.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: https: blob:;
+      font-src 'self' data:;
+      connect-src 'self' https://mhhnfftaoihhltbknenq.supabase.co wss://mhhnfftaoihhltbknenq.supabase.co https://challenges.cloudflare.com https://api.groq.com;
+      frame-src https://challenges.cloudflare.com;
+    ">
+    <title>Novatech Admin</title>
     <link href="/src/index.css" rel="stylesheet">
   </head>
   <body>

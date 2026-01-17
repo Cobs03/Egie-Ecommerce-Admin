@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, Typography, Box, Stack, LinearProgress, Chip } from "@mui/material";
+import { Card, CardContent, Typography, Box, Stack, LinearProgress, Chip, Button, IconButton } from "@mui/material";
 import { motion } from "framer-motion";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import DownloadIcon from "@mui/icons-material/Download";
 import DashboardService from "../../../services/DashboardService";
 
 const TopProduct = () => {
@@ -24,6 +25,45 @@ const TopProduct = () => {
 
     fetchTopProducts();
   }, []);
+
+  const handleDownloadAll = async () => {
+    try {
+      // Fetch ALL top products without limit
+      const response = await DashboardService.getTopProducts();
+      if (!response.success || !response.data || response.data.length === 0) {
+        alert('No data available to download');
+        return;
+      }
+
+      // Create CSV content
+      const headers = ['Rank', 'Product Name', 'Total Sold', 'Percentage'];
+      const rows = response.data.map((product, index) => [
+        index + 1,
+        product.product_name || 'N/A',
+        product.totalSold || 0,
+        `${product.percentage || 0}%`
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `top_selling_products_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading data:', error);
+      alert('Failed to download data');
+    }
+  };
 
   if (loading) {
     return (
@@ -93,13 +133,29 @@ const TopProduct = () => {
       >
         <CardContent sx={{ p: 2 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box display="flex" alignItems="center" gap={1} flex={1}>
               <TrendingUpIcon sx={{ color: "#10b981" }} />
               <Typography variant="h6" fontWeight={700}>
                 Top Selling Products
               </Typography>
+              <Chip label="Best Sellers" size="small" sx={{ bgcolor: "#10b981", color: "#fff" }} />
             </Box>
-            <Chip label="Best Sellers" size="small" sx={{ bgcolor: "#10b981", color: "#fff" }} />
+            <IconButton
+              size="small"
+              onClick={handleDownloadAll}
+              sx={{ 
+                bgcolor: "#10b981",
+                color: "#fff",
+                '&:hover': { 
+                  bgcolor: "#059669"
+                },
+                width: 32,
+                height: 32
+              }}
+              title="Download All Top Selling Products"
+            >
+              <DownloadIcon sx={{ fontSize: 18 }} />
+            </IconButton>
           </Box>
 
           <Stack spacing={2.5}>

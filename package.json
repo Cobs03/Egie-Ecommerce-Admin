@@ -1,5 +1,5 @@
 {
-  "name": "egie-ecommerce-admin",
+  "name": "novatech-admin",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@marsidev/react-turnstile": "^1.4.1",
     "@mui/icons-material": "^7.1.0",
     "@mui/lab": "^7.0.1-beta.20",
     "@mui/material": "^7.1.0",
@@ -35,7 +36,7 @@
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.6.0",
-    "recharts": "^2.15.3",
+    "recharts": "^2.15.4",
     "resend": "^6.6.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",

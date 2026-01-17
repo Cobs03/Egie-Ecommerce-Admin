@@ -12,6 +12,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SaveIcon from "@mui/icons-material/Save";
@@ -225,6 +227,40 @@ const ProductCreate = () => {
       }
     }
   };
+
+  // Handle discount input change with validation
+  const handleDiscountChange = (e) => {
+    const value = e.target.value;
+
+    // Allow empty string for clearing
+    if (value === "") {
+      setDiscount(0);
+      return;
+    }
+
+    // Parse the value as a number
+    const numValue = parseFloat(value);
+
+    // Validate: must be a number between 0 and 100
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+      setDiscount(numValue);
+    }
+  };
+
+  // Calculate official price based on initial price and discount
+  const calculateOfficialPrice = (initial, discountPercent) => {
+    if (!initial || isNaN(initial)) return "";
+    const initialNum = Number(initial);
+    const discountNum = Number(discountPercent);
+    const discountAmount = (initialNum * discountNum) / 100;
+    return (initialNum - discountAmount).toFixed(2);
+  };
+
+  // Update official price whenever initial price or discount changes
+  useEffect(() => {
+    const calculatedPrice = calculateOfficialPrice(initialPrice, discount);
+    setOfficialPrice(calculatedPrice);
+  }, [initialPrice, discount]);
 
   // Validate form before viewing product
   const validateForm = () => {
@@ -1297,6 +1333,92 @@ const ProductCreate = () => {
               onAddVariant={handleAddVariant}
               onVariantChange={handleVariantChange}
               onRemoveVariant={handleRemoveVariant}
+            />
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Pricing Section */}
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
+              Pricing
+            </Typography>
+
+            <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
+              <TextField
+                label="Original Price"
+                type="number"
+                value={initialPrice}
+                onChange={(e) => setInitialPrice(e.target.value)}
+                size="small"
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">₱</InputAdornment>
+                  ),
+                  inputProps: {
+                    min: 0,
+                    step: 0.01,
+                  },
+                }}
+                helperText="Enter the original price before discount"
+              />
+
+              <TextField
+                label="Discount"
+                type="number"
+                value={discount}
+                onChange={handleDiscountChange}
+                size="small"
+                fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">%</InputAdornment>
+                  ),
+                  inputProps: {
+                    min: 0,
+                    max: 100,
+                    step: 0.1,
+                  },
+                }}
+                helperText="Enter discount (0-100)"
+                onBlur={(e) => {
+                  // Ensure value is within range on blur
+                  const value = parseFloat(e.target.value);
+                  if (isNaN(value) || value < 0) {
+                    setDiscount(0);
+                  } else if (value > 100) {
+                    setDiscount(100);
+                  }
+                }}
+              />
+            </Box>
+
+            <TextField
+              label="Discounted Price (Official Price)"
+              fullWidth
+              size="small"
+              value={
+                officialPrice
+                  ? `₱${Number(officialPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  : "₱0.00"
+              }
+              disabled
+              InputProps={{
+                readOnly: true,
+              }}
+              helperText={
+                discount > 0
+                  ? `${discount}% discount applied (₱${(
+                      (initialPrice * discount) /
+                      100
+                    ).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })} off)`
+                  : "Enter original price and discount to see the discounted price"
+              }
             />
 
             <Divider sx={{ my: 2 }} />

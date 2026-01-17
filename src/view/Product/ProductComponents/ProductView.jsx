@@ -765,15 +765,38 @@ const ProductView = () => {
           )}
 
           {/* Price Range */}
-          <Typography
-            variant="h4"
-            color="text.primary"
-            fontWeight={700}
-            mb={1}
-          >
-            ₱{priceRange.min.toLocaleString()} - ₱
-            {priceRange.max.toLocaleString()}
-          </Typography>
+          <Box mb={3}>
+            <Typography variant="body2" color="text.secondary" mb={0.5}>
+              {officialPrice && initialPrice && officialPrice !== initialPrice ? "Discounted Price" : "Price"}
+            </Typography>
+            <Typography
+              variant="h4"
+              color="success.main"
+              fontWeight={700}
+            >
+              ₱{priceRange.min.toLocaleString()} - ₱
+              {priceRange.max.toLocaleString()}
+            </Typography>
+            
+            {/* Original Price and Discount Badge */}
+            {officialPrice && initialPrice && initialPrice > officialPrice && (
+              <Box mt={1}>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ textDecoration: "line-through" }}
+                >
+                  Original: ₱{initialPrice.toLocaleString()}
+                </Typography>
+                <Chip
+                  label={`${discount}% OFF`}
+                  color="error"
+                  size="small"
+                  sx={{ mt: 0.5, fontWeight: 600 }}
+                />
+              </Box>
+            )}
+          </Box>
 
           {/* Stock Status */}
           <Typography
