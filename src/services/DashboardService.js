@@ -463,32 +463,24 @@ export class DashboardService {
   // Get most clicked products (based on product views)
   static async getMostClickedProducts(limit = 5) {
     try {
+      // Use database function for better performance and to avoid complex joins
       const { data, error } = await supabase
-        .from('product_views')
-        .select('product_id, products(id, name, images)');
+        .rpc('get_most_clicked_products', { limit_count: limit });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching most clicked products:', error);
+        throw error;
+      }
 
-      // Aggregate clicks by product_id
-      const productMap = {};
-      data.forEach(view => {
-        const productId = view.product_id;
-        if (!productMap[productId]) {
-          productMap[productId] = {
-            product_id: productId,
-            product_name: view.products?.name || 'Unknown Product',
-            product_image: view.products?.images?.[0] || '',
-            totalClicks: 0
-          };
-        }
-        productMap[productId].totalClicks++;
-      });
+      // Transform data to match expected format
+      const transformedData = (data || []).map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_image: item.product_image || '',
+        totalClicks: parseInt(item.view_count)
+      }));
 
-      const mostClicked = Object.values(productMap)
-        .sort((a, b) => b.totalClicks - a.totalClicks)
-        .slice(0, limit);
-
-      return { success: true, data: mostClicked };
+      return { success: true, data: transformedData };
     } catch (error) {
       console.error('Error fetching most clicked products:', error);
       return { success: false, error: error.message, data: [] };
@@ -576,19 +568,19 @@ export class DashboardService {
 
       const stats = {
         total: data.length,
-        completed: 0, // delivered orders
-        ongoing: 0, // processing, shipped, ready_for_pickup
-        new: 0 // pending, confirmed
+        completed: 0, // completed, delivered orders
+        ongoing: 0, // processing, confirmed, shipped
+        new: 0 // pending
       };
 
       data.forEach(order => {
         const status = order.status.toLowerCase();
         
-        if (status === 'delivered') {
+        if (status === 'completed' || status === 'delivered') {
           stats.completed++;
-        } else if (status === 'processing' || status === 'shipped' || status === 'ready_for_pickup') {
+        } else if (status === 'processing' || status === 'confirmed' || status === 'shipped') {
           stats.ongoing++;
-        } else if (status === 'pending' || status === 'confirmed') {
+        } else if (status === 'pending') {
           stats.new++;
         }
       });
@@ -700,6 +692,66 @@ export class DashboardService {
     } catch (error) {
       console.error('Error fetching conversion rate:', error);
       return { success: false, error: error.message, rate: 0, visits: 0, orders: 0 };
+    }
+  }
+
+  // Get orders by status
+  static async getOrdersByStatus(status) {
+    try {
+      let query = supabase
+        .from('orders')
+        .select('id, total, created_at, status, user_id')
+        .order('created_at', { ascending: false });
+
+      // Map status types
+      if (status === 'completed') {
+        query = query.in('status', ['completed', 'delivered']);
+      } else if (status === 'ongoing') {
+        query = query.in('status', ['processing', 'confirmed', 'shipped']);
+      } else if (status === 'new') {
+        query = query.eq('status', 'pending');
+      }
+
+      const { data: orders, error } = await query;
+
+      if (error) throw error;
+
+      // Fetch user profiles separately
+      const userIds = [...new Set((orders || []).map(o => o.user_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, first_name, last_name')
+        .in('id', userIds);
+
+      // Map profiles to orders
+      const profileMap = (profiles || []).reduce((acc, p) => {
+        acc[p.id] = p;
+        return acc;
+      }, {});
+
+      // Format the response
+      const formattedOrders = (orders || []).map(order => {
+        const profile = profileMap[order.user_id];
+        const customerName = profile?.full_name 
+          || (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}`.trim() : null)
+          || 'Guest';
+        
+        return {
+          id: order.id,
+          customer_name: customerName,
+          total_amount: order.total,
+          created_at: order.created_at,
+          status: order.status
+        };
+      });
+
+      return {
+        success: true,
+        data: formattedOrders
+      };
+    } catch (error) {
+      console.error('Error fetching orders by status:', error);
+      return { success: false, error: error.message, data: [] };
     }
   }
 }

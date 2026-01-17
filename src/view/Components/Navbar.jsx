@@ -33,6 +33,7 @@ import {
 } from "react-icons/md";
 import { TbPackage } from "react-icons/tb";
 import { FaUserGroup, FaRegCreditCard, FaFileContract } from "react-icons/fa6";
+import { TbChartBar } from "react-icons/tb";
 import { IoDocumentTextOutline } from "react-icons/io5";
 import { RiDiscountPercentFill } from "react-icons/ri";
 import { VscListFlat } from "react-icons/vsc";
@@ -59,6 +60,7 @@ import Shipview from "../Shipping/Shipping Components/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
 import ContactSubmissions from "../ContactSubmissions/ContactSubmissions";
 import Compliance from "../Compliance/Compliance";
+import SalesAnalytics from "../Reports/SalesAnalytics";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -74,6 +76,7 @@ const NAVIGATION = [
   { segment: "shipping", title: "Shipping", icon: <MdOutlineLocalShipping size={20} /> },
   { segment: "contact", title: "Contact", icon: <HiOutlineMail size={20} /> },
   { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
+  { segment: "reports/sales-analytics", title: "Sales Analytics", icon: <TbChartBar size={20} /> },
   { segment: "compliance", title: "Compliance", icon: <FaFileContract size={20} /> },
   { segment: "discount", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
   { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
@@ -503,6 +506,7 @@ function Navbar() {
             <Route path="/shipping/view/:orderCode" element={<Shipview />} />
             <Route path="/contact" element={<ContactSubmissions />} />
             <Route path="/feedback" element={<Feedback />} />
+            <Route path="/reports/sales-analytics" element={<SalesAnalytics />} />
             <Route path="/discount" element={<Promotions />} />
             <Route path="/compliance" element={<Compliance />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}

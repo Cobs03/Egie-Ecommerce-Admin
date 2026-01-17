@@ -123,10 +123,10 @@ const Inventory = forwardRef((props, ref) => {
             specifications: product.specifications || {},
             compatibility_tags: product.compatibility_tags || [], // Tags for recommendations
             
-            // Metadata fields
-            officialPrice: product.metadata?.officialPrice || product.price,
-            initialPrice: product.metadata?.initialPrice || product.price,
-            discount: product.metadata?.discount || 0
+            // Metadata fields - parse as numbers to ensure toLocaleString works
+            officialPrice: parseFloat(product.metadata?.officialPrice) || parseFloat(product.price),
+            initialPrice: parseFloat(product.metadata?.initialPrice) || parseFloat(product.price),
+            discount: parseFloat(product.metadata?.discount) || 0
           };
         });
         setAllProducts(transformedProducts);
@@ -884,12 +884,28 @@ const Inventory = forwardRef((props, ref) => {
                     <Typography fontWeight={600}>{product.stock || 0}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography>
-                      ₱
-                      {(product.price || 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </Typography>
+                    <Box>
+                      <Typography fontWeight={600}>
+                        ₱
+                        {(parseFloat(product.officialPrice || product.price) || 0).toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </Typography>
+                      {product.initialPrice && parseFloat(product.initialPrice) > parseFloat(product.officialPrice || product.price) && (
+                        <>
+                          <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through', display: 'block' }}>
+                            ₱{(parseFloat(product.initialPrice) || 0).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </Typography>
+                          <Typography variant="caption" color="error.main" fontWeight={600}>
+                            {product.discount}% OFF
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
