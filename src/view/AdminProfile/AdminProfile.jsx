@@ -341,7 +341,14 @@ const AdminProfile = () => {
           <Box position="relative" mr={3}>
             <Avatar
               src={profileData.avatar || undefined}
-              sx={{ width: 80, height: 80 }}
+              sx={{ 
+                width: 80, 
+                height: 80,
+                objectFit: 'cover',
+                '& img': {
+                  objectFit: 'cover'
+                }
+              }}
             >
               {profileData.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
             </Avatar>
