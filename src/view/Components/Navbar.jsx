@@ -61,6 +61,8 @@ import AdminLogs from "../AdminLogs/AdminLogs";
 import ContactSubmissions from "../ContactSubmissions/ContactSubmissions";
 import Compliance from "../Compliance/Compliance";
 import SalesAnalytics from "../Reports/SalesAnalytics";
+import FinancialReports from "../Reports/FinancialReports";
+import CustomerReports from "../Reports/CustomerReports";
 
 // Define drawer widths
 const drawerWidth = 240;
@@ -77,6 +79,8 @@ const NAVIGATION = [
   { segment: "contact", title: "Contact", icon: <HiOutlineMail size={20} /> },
   { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
   { segment: "reports/sales-analytics", title: "Sales Analytics", icon: <TbChartBar size={20} /> },
+  { segment: "reports/financial", title: "Financial Reports", icon: <FaRegCreditCard size={20} /> },
+  { segment: "reports/customers", title: "Customer Reports", icon: <FaUserGroup size={20} /> },
   { segment: "compliance", title: "Compliance", icon: <FaFileContract size={20} /> },
   { segment: "discount", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
   { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
@@ -507,6 +511,8 @@ function Navbar() {
             <Route path="/contact" element={<ContactSubmissions />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/reports/sales-analytics" element={<SalesAnalytics />} />
+            <Route path="/reports/financial" element={<FinancialReports />} />
+            <Route path="/reports/customers" element={<CustomerReports />} />
             <Route path="/discount" element={<Promotions />} />
             <Route path="/compliance" element={<Compliance />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}
