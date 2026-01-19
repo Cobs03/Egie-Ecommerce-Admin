@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ReportsService } from '../../services/ReportsService';
+import PDFReportService from '../../services/PDFReportService';
 import AISalesInsights from './AISalesInsights';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7c7c'];
@@ -103,7 +104,7 @@ const SalesAnalytics = () => {
     }
   };
 
-  const handleDownloadReport = async () => {
+  const handleDownloadReport = async (format = 'csv') => {
     try {
       const params = {
         timeRange,
@@ -111,11 +112,69 @@ const SalesAnalytics = () => {
         endDate: customEndDate
       };
       
-      await ReportsService.downloadSalesReport(params);
+      if (format === 'pdf') {
+        // Generate PDF report
+        const { startDate: start, endDate: end } = getDateRangeForParams();
+        
+        console.log('📄 Generating PDF with data:', {
+          salesOverview,
+          productPerformance: productPerformance?.length,
+          categoryPerformance: categoryPerformance?.length,
+          timeRange,
+          startDate: start,
+          endDate: end
+        });
+        
+        await PDFReportService.generateSalesReport({
+          salesOverview: salesOverview || { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0, topProduct: null },
+          productPerformance: productPerformance || [],
+          categoryPerformance: categoryPerformance || [],
+          timeRange,
+          startDate: start,
+          endDate: end
+        });
+        
+        console.log('✅ PDF generated successfully');
+      } else {
+        // Generate CSV report
+        await ReportsService.downloadSalesReport(params);
+      }
     } catch (error) {
-      console.error('Error downloading report:', error);
-      alert('Failed to download report');
+      console.error('❌ Error downloading report:', error);
+      console.error('Error details:', error.message, error.stack);
+      alert(`Failed to download report: ${error.message || 'Unknown error'}`);
     }
+  };
+
+  const getDateRangeForParams = () => {
+    const today = new Date();
+    let startDate, endDate;
+
+    switch (timeRange) {
+      case 'day':
+        startDate = endDate = today.toISOString().split('T')[0];
+        break;
+      case 'week':
+        startDate = new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
+        endDate = new Date().toISOString().split('T')[0];
+        break;
+      case 'month':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        endDate = new Date().toISOString().split('T')[0];
+        break;
+      case 'year':
+        startDate = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
+        endDate = new Date().toISOString().split('T')[0];
+        break;
+      case 'custom':
+        startDate = customStartDate;
+        endDate = customEndDate;
+        break;
+      default:
+        startDate = endDate = today.toISOString().split('T')[0];
+    }
+
+    return { startDate, endDate };
   };
 
   const getTimeRangeLabel = () => {
@@ -179,14 +238,28 @@ const SalesAnalytics = () => {
             Analyze product performance and make data-driven inventory decisions
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<DownloadIcon />}
-          onClick={handleDownloadReport}
-          sx={{ bgcolor: '#63e01d', '&:hover': { bgcolor: '#56c018' } }}
-        >
-          Download Full Report
-        </Button>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={() => handleDownloadReport('csv')}
+            sx={{ bgcolor: '#63e01d', '&:hover': { bgcolor: '#56c018' } }}
+          >
+            Download CSV
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<AssessmentIcon />}
+            onClick={() => handleDownloadReport('pdf')}
+            sx={{ 
+              borderColor: '#63e01d', 
+              color: '#63e01d',
+              '&:hover': { borderColor: '#56c018', bgcolor: 'rgba(99, 224, 29, 0.04)' }
+            }}
+          >
+            Download PDF
+          </Button>
+        </Box>
       </Box>
 
       {/* Time Range Selector */}
