@@ -10,6 +10,7 @@ const PaymentStatus = () => {
     { name: "Pending", value: 0, color: "#2176ae" },
   ]);
   const [loading, setLoading] = useState(true);
+  const [isCardHovered, setIsCardHovered] = useState(false);
 
   useEffect(() => {
     const fetchPaymentData = async () => {
@@ -63,10 +64,12 @@ const PaymentStatus = () => {
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <Card
+      onMouseEnter={() => setIsCardHovered(true)}
+      onMouseLeave={() => setIsCardHovered(false)}
       sx={{
         background: "#fff",
         borderRadius: 3,
-        boxShadow: 3,
+        boxShadow: isCardHovered ? "0 8px 24px rgba(0,0,0,0.15)" : "0 2px 8px rgba(0,0,0,0.07)",
         padding: 2,
         minWidth: 280,
         minHeight: 220,
@@ -76,6 +79,9 @@ const PaymentStatus = () => {
         position: "relative",
         margin: 1,
         overflow: "hidden",
+        border: isCardHovered ? "1px solid #e0e0e0" : "1px solid transparent",
+        transform: isCardHovered ? "translateY(-4px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <CardContent sx={{ flexGrow: 1, p: 2 }}>

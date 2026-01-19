@@ -3,6 +3,7 @@ import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import Tooltip from "@mui/material/Tooltip";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 const Card = ({
@@ -16,9 +17,12 @@ const Card = ({
   iconBg = "#f3f4f6",
   trendData = [],
   onPeriodChange,
+  onClick,
+  tooltipText,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(period);
+  const [isHovered, setIsHovered] = useState(false);
   const open = Boolean(anchorEl);
 
   const handleClick = (event) => {
@@ -39,12 +43,15 @@ const Card = ({
 
   const options = ["Today", "In the Last Day", "In the Last Week", "In the Last Month"];
 
-  return (
+  const cardContent = (
     <div
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         background: "#fff",
         borderRadius: 16,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+        boxShadow: isHovered ? "0 8px 24px rgba(0,0,0,0.15)" : "0 2px 8px rgba(0,0,0,0.07)",
         padding: 24,
         minWidth: 240,
         minHeight: 140,
@@ -53,6 +60,10 @@ const Card = ({
         justifyContent: "space-between",
         position: "relative",
         margin: 8,
+        cursor: onClick ? "pointer" : "default",
+        transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        border: isHovered ? "1px solid #e0e0e0" : "1px solid transparent",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
@@ -154,6 +165,14 @@ const Card = ({
         <div style={{ color: "#888", fontSize: 14 }}>{selectedPeriod}</div>
       </div>
     </div>
+  );
+
+  return tooltipText ? (
+    <Tooltip title={tooltipText} arrow placement="top">
+      {cardContent}
+    </Tooltip>
+  ) : (
+    cardContent
   );
 };
 

@@ -24,6 +24,9 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import Collapse from "@mui/material/Collapse";
 import { useAuth } from "../../contexts/AuthContext";
 
 import {
@@ -60,31 +63,55 @@ import Shipview from "../Shipping/Shipping Components/Shipview";
 import AdminLogs from "../AdminLogs/AdminLogs";
 import ContactSubmissions from "../ContactSubmissions/ContactSubmissions";
 import Compliance from "../Compliance/Compliance";
-import SalesAnalytics from "../Reports/SalesAnalytics";
-import FinancialReports from "../Reports/FinancialReports";
-import CustomerReports from "../Reports/CustomerReports";
+import SalesAnalytics from "../SalesAnalytics/SalesAnalyticsRefactored";
+import FinancialReports from "../FinancialReports/FinancialReportsRefactored";
+import CustomerReports from "../CustomerReports/CustomerReportsRefactored";
 
 // Define drawer widths
 const drawerWidth = 240;
 const miniDrawerWidth = 65;
 
-// Navigation items
+// Navigation items grouped
 const NAVIGATION = [
+  // Standalone items (no group)
   { segment: "dashboard", title: "Dashboard", icon: <MdOutlineDashboard size={20} /> },
-  { segment: "products", title: "Product", icon: <TbPackage size={20} /> },
-  { segment: "users", title: "Users", icon: <FaUserGroup size={20} /> },
-  { segment: "orders", title: "Orders", icon: <IoDocumentTextOutline size={20} /> },
-  { segment: "payment", title: "Payment", icon: <FaRegCreditCard size={20} /> },
-  { segment: "shipping", title: "Shipping", icon: <MdOutlineLocalShipping size={20} /> },
-  { segment: "contact", title: "Contact", icon: <HiOutlineMail size={20} /> },
-  { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
-  { segment: "reports/sales-analytics", title: "Sales Analytics", icon: <TbChartBar size={20} /> },
-  { segment: "reports/financial", title: "Financial Reports", icon: <FaRegCreditCard size={20} /> },
-  { segment: "reports/customers", title: "Customer Reports", icon: <FaUserGroup size={20} /> },
-  { segment: "compliance", title: "Compliance", icon: <FaFileContract size={20} /> },
-  { segment: "discount", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
-  { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
-  { segment: "website-settings", title: "Website", icon: <MdWebAsset size={20} /> },
+];
+
+const NAVIGATION_GROUPS = [
+  {
+    title: "E-Commerce",
+    items: [
+      { segment: "products", title: "Product", icon: <TbPackage size={20} /> },
+      { segment: "orders", title: "Orders", icon: <IoDocumentTextOutline size={20} /> },
+      { segment: "payment", title: "Payment", icon: <FaRegCreditCard size={20} /> },
+      { segment: "shipping", title: "Shipping", icon: <MdOutlineLocalShipping size={20} /> },
+      { segment: "promotions", title: "Promotions", icon: <RiDiscountPercentFill size={20} /> },
+    ]
+  },
+  {
+    title: "Customer Management",
+    items: [
+      { segment: "users", title: "Users", icon: <FaUserGroup size={20} /> },
+      { segment: "contact", title: "Contact", icon: <HiOutlineMail size={20} /> },
+      { segment: "feedback", title: "Feedback", icon: <MdFeedback size={20} /> },
+    ]
+  },
+  {
+    title: "Reports & Analytics",
+    items: [
+      { segment: "reports/sales-analytics", title: "Sales Analytics", icon: <TbChartBar size={20} /> },
+      { segment: "reports/financial", title: "Financial Reports", icon: <FaRegCreditCard size={20} /> },
+      { segment: "reports/customers", title: "Customer Reports", icon: <FaUserGroup size={20} /> },
+    ]
+  },
+  {
+    title: "System",
+    items: [
+      { segment: "compliance", title: "Compliance", icon: <FaFileContract size={20} /> },
+      { segment: "logs", title: "Logs", icon: <VscListFlat size={20} /> },
+      { segment: "website-settings", title: "Website", icon: <MdWebAsset size={20} /> },
+    ]
+  },
 ];
 
 // Styled components
@@ -142,6 +169,12 @@ function Navbar() {
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState({
+    "E-Commerce": true,
+    "Customer Management": true,
+    "Reports & Analytics": true,
+    "System": true,
+  });
   
   // Add state for profile menu
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
@@ -153,6 +186,13 @@ function Navbar() {
 
   const toggleDrawerCollapse = () => {
     setIsCollapsed(!isCollapsed);
+  };
+  
+  const toggleGroup = (groupTitle) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupTitle]: !prev[groupTitle]
+    }));
   };
   
   // Profile menu handlers
@@ -258,6 +298,7 @@ function Navbar() {
             scrollbarColor: "rgba(255, 255, 255, 0.3) transparent",
           }}
         >
+          {/* Standalone Dashboard item */}
           {NAVIGATION.map((item) => (
             <ListItem key={item.segment} disablePadding>
               <Tooltip title={isCollapsed ? item.title : ""} placement="right">
@@ -276,8 +317,10 @@ function Navbar() {
                         ? "#39FC1D"
                         : "rgba(255, 255, 255, 0.08)",
                     },
-                    borderRadius: "4px",
+                    color: isActive(item.segment) ? "#000" : "rgba(255, 255, 255, 0.7)",
+                    borderRadius: "8px",
                     mx: 1,
+                    transition: "all 0.2s ease",
                   }}
                 >
                   <ListItemIcon
@@ -285,7 +328,7 @@ function Navbar() {
                       minWidth: 0,
                       mr: isCollapsed ? 0 : 2,
                       justifyContent: "center",
-                      color: isActive(item.segment) ? "#000" : "#fff",
+                      color: "inherit",
                     }}
                   >
                     {item.icon}
@@ -294,7 +337,6 @@ function Navbar() {
                     <ListItemText
                       primary={item.title}
                       sx={{
-                        color: isActive(item.segment) ? "#000" : "#fff",
                         "& .MuiListItemText-primary": {
                           fontWeight: isActive(item.segment) ? 600 : 400,
                         },
@@ -304,6 +346,93 @@ function Navbar() {
                 </ListItemButton>
               </Tooltip>
             </ListItem>
+          ))}
+
+          {/* Navigation Groups */}
+          {NAVIGATION_GROUPS.map((group) => (
+            <Box key={group.title}>
+              {!isCollapsed && (
+                <ListItemButton
+                  onClick={() => toggleGroup(group.title)}
+                  sx={{
+                    px: 2,
+                    py: 0.5,
+                    mx: 1,
+                    borderRadius: "4px",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary={group.title}
+                    sx={{
+                      "& .MuiListItemText-primary": {
+                        color: "rgba(255, 255, 255, 0.5)",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      },
+                    }}
+                  />
+                  {expandedGroups[group.title] ? (
+                    <ExpandLessIcon sx={{ color: "rgba(255, 255, 255, 0.5)", fontSize: 18 }} />
+                  ) : (
+                    <ExpandMoreIcon sx={{ color: "rgba(255, 255, 255, 0.5)", fontSize: 18 }} />
+                  )}
+                </ListItemButton>
+              )}
+              <Collapse in={isCollapsed || expandedGroups[group.title]} timeout="auto" unmountOnExit>
+                {group.items.map((item) => (
+                  <ListItem key={item.segment} disablePadding>
+                    <Tooltip title={isCollapsed ? item.title : ""} placement="right">
+                      <ListItemButton
+                        onClick={() => navigate(`/${item.segment}`)}
+                        sx={{
+                          minHeight: 48,
+                          px: isCollapsed ? 2 : 2.5,
+                          my: 0.5,
+                          justifyContent: isCollapsed ? "center" : "flex-start",
+                          backgroundColor: isActive(item.segment)
+                            ? "#39FC1D"
+                            : "transparent",
+                          "&:hover": {
+                            backgroundColor: isActive(item.segment)
+                              ? "#39FC1D"
+                              : "rgba(255, 255, 255, 0.08)",
+                          },
+                          borderRadius: "4px",
+                          mx: 1,
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 0,
+                            mr: isCollapsed ? 0 : 2,
+                            justifyContent: "center",
+                            color: isActive(item.segment) ? "#000" : "#fff",
+                          }}
+                        >
+                          {item.icon}
+                        </ListItemIcon>
+                        {!isCollapsed && (
+                          <ListItemText
+                            primary={item.title}
+                            sx={{
+                              color: isActive(item.segment) ? "#000" : "#fff",
+                              "& .MuiListItemText-primary": {
+                                fontWeight: isActive(item.segment) ? 600 : 400,
+                              },
+                            }}
+                          />
+                        )}
+                      </ListItemButton>
+                    </Tooltip>
+                  </ListItem>
+                ))}
+              </Collapse>
+            </Box>
           ))}
         </List>
 
@@ -514,6 +643,7 @@ function Navbar() {
             <Route path="/reports/financial" element={<FinancialReports />} />
             <Route path="/reports/customers" element={<CustomerReports />} />
             <Route path="/discount" element={<Promotions />} />
+            <Route path="/promotions" element={<Promotions />} />
             <Route path="/compliance" element={<Compliance />} />
             <Route path="/logs" element={<AdminLogs />} /> {/* CHANGED from /adminlogs to /logs */}
             {/* Settings page */}

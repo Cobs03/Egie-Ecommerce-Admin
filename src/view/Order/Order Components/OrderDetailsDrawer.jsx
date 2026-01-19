@@ -151,7 +151,7 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
       const canAccept = permissions.can(PERMISSIONS.ORDER_ACCEPT);
       return (
         <Stack direction="row" spacing={2}>
-          <Tooltip title={!canAccept ? "You don't have permission to confirm orders" : ""}>
+          <Tooltip title={!canAccept ? "You don't have permission to accept new orders" : ""}>
             <span style={{ width: '100%' }}>
               <Button
                 variant="contained"
@@ -164,7 +164,7 @@ const OrderDetailsDrawer = ({ open, onClose, order, onOrderUpdate }) => {
                 onClick={handleConfirmOrder}
                 disabled={isUpdating || !canAccept}
               >
-                Confirm Order
+                Accept Order
               </Button>
             </span>
           </Tooltip>

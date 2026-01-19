@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Snackbar, Alert } from "@mui/material";
+import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
 import { AdminLogService } from "../../services/AdminLogService";
@@ -19,6 +20,7 @@ import { supabase } from "../../lib/supabase";
 
 const Promotions = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [vouchers, setVouchers] = useState([]);
   const [filteredVouchers, setFilteredVouchers] = useState([]);
   const [discounts, setDiscounts] = useState([]);
@@ -34,7 +36,16 @@ const Promotions = () => {
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
   const [isAddMode, setIsAddMode] = useState(false);
-  const [activeTab, setActiveTab] = useState("vouchers");
+  
+  // Initialize activeTab based on navigation state
+  const getInitialTab = () => {
+    const navTab = location.state?.activeTab;
+    if (navTab === "discounts") return "discount"; // Map to internal tab name
+    if (navTab === "vouchers") return "vouchers";
+    return "vouchers"; // Default
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab());
   const [searchQuery, setSearchQuery] = useState("");
 
   // Success notification state

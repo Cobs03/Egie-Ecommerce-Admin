@@ -1,20 +1,31 @@
-import React from "react";
-import { Card, CardContent, Typography, Box } from "@mui/material";
-// You might need to install Material Icons if not already installed
-// npm install @mui/icons-material
-import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined"; // Example icon, you can replace with another if preferred
+import React, { useState } from "react";
+import { Card, CardContent, Typography, Box, Tooltip } from "@mui/material";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 
 const BaseCard2 = ({
   title,
   value,
-  iconComponent: IconComponent, // Renamed prop for clarity
+  iconComponent: IconComponent,
+  onClick,
+  tooltipText,
+  displayValue,
 }) => {
-  return (
+  const [isHovered, setIsHovered] = useState(false);
+  
+  // Format value to show 99+ if exceeds 99
+  const numericValue = parseInt(value);
+  const shouldShowPlus = !isNaN(numericValue) && numericValue > 99;
+  const displayText = displayValue || (shouldShowPlus ? "99+" : value);
+  
+  const cardContent = (
     <Card
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       sx={{
         background: "#fff",
         borderRadius: 3,
-        boxShadow: 3,
+        boxShadow: isHovered ? "0 8px 24px rgba(0,0,0,0.15)" : 3,
         padding: 2,
         minWidth: 240,
         minHeight: 100,
@@ -22,13 +33,15 @@ const BaseCard2 = ({
         flexDirection: "column",
         justifyContent: "space-between",
         position: "relative",
-        margin: 1, // Use margin from the parent grid for spacing
-        overflow: "hidden", // Hide overflow for background icon
+        margin: 1,
+        overflow: "hidden",
+        cursor: onClick ? "pointer" : "default",
+        transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        border: isHovered ? "1px solid #e0e0e0" : "1px solid transparent",
       }}
     >
-      <CardContent sx={{ flexGrow: 1, p: 1 }}>
-        {" "}
-        {/* Use sx for padding */}
+      <CardContent sx={{ flexGrow: 1, p: 1, zIndex: 1 }}>
         <Typography
           variant="body2"
           color="text.secondary"
@@ -37,9 +50,17 @@ const BaseCard2 = ({
         >
           {title}
         </Typography>
-        <Typography variant="h4" fontWeight={700}>
-          {value}
-        </Typography>
+        {shouldShowPlus ? (
+          <Tooltip title={`Actual count: ${value}`} arrow placement="top">
+            <Typography variant="h4" fontWeight={700} sx={{ cursor: "help" }}>
+              {displayText}
+            </Typography>
+          </Tooltip>
+        ) : (
+          <Typography variant="h4" fontWeight={700}>
+            {displayText}
+          </Typography>
+        )}
       </CardContent>
 
       {/* Background Icon */}
@@ -57,6 +78,14 @@ const BaseCard2 = ({
         {IconComponent ? <IconComponent sx={{ fontSize: "inherit" }} /> : null}
       </Box>
     </Card>
+  );
+  
+  return tooltipText ? (
+    <Tooltip title={tooltipText} arrow placement="top">
+      {cardContent}
+    </Tooltip>
+  ) : (
+    cardContent
   );
 };
 

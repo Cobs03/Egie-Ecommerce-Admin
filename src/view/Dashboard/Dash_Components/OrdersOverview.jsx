@@ -1,55 +1,84 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, Typography, Box, Stack, IconButton, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Chip, CircularProgress, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, Typography, Box, Stack, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText, Chip, CircularProgress, Button, Tooltip, ButtonBase } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DownloadIcon from "@mui/icons-material/Download";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import DashboardService from "../../../services/DashboardService";
+import { motion } from "framer-motion";
 
 // Helper component for the stacked progress bar
 const OrderProgressBar = ({ completed, ongoing, total }) => {
   const completedPercentage = (completed / total) * 100;
   const ongoingPercentage = (ongoing / total) * 100;
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        height: 12,
-        borderRadius: 6,
-        bgcolor: "#357100",
-        overflow: "hidden",
-      }}
+    <Tooltip
+      title={`${completed} out of ${total} orders`}
+      arrow
+      placement="top"
     >
       <Box
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         sx={{
-          width: `${completedPercentage}%`,
-          height: "100%",
-          bgcolor: "#63e01d", // Light green for completed
-          float: "left",
+          flex: 1,
+          height: 12,
+          borderRadius: 6,
+          bgcolor: "#357100",
+          overflow: "hidden",
+          transform: isHovered ? "scaleY(1.2)" : "scaleY(1)",
+          transition: "transform 0.2s ease",
+          cursor: "pointer",
         }}
-      />
-      <Box
-        sx={{
-          width: `${ongoingPercentage}%`,
-          height: "100%",
-          bgcolor: "#388e3c", // Darker green for ongoing
-          float: "left",
-        }}
-      />
-    </Box>
+      >
+        <Box
+          sx={{
+            width: `${completedPercentage}%`,
+            height: "100%",
+            bgcolor: "#63e01d",
+            float: "left",
+            transition: "width 0.4s ease",
+          }}
+        />
+        <Box
+          sx={{
+            width: `${ongoingPercentage}%`,
+            height: "100%",
+            bgcolor: "#388e3c",
+            float: "left",
+            transition: "width 0.4s ease",
+          }}
+        />
+      </Box>
+    </Tooltip>
   );
 };
 
 const OrdersOverview = () => {
+  const navigate = useNavigate();
   const [totalOrders, setTotalOrders] = useState(0);
   const [completedOrders, setCompletedOrders] = useState(0);
   const [ongoingOrders, setOngoingOrders] = useState(0);
   const [newOrders, setNewOrders] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hoveredSection, setHoveredSection] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'completed', 'ongoing', 'new'
+  const [modalType, setModalType] = useState('');
   const [modalOrders, setModalOrders] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
+
+  const handleNavigate = (orderType) => {
+    // Map order types to order status filters
+    const statusMap = {
+      'completed': 'completed',
+      'ongoing': 'processing',
+      'new': 'pending'
+    };
+    navigate("/orders", { state: { filterStatus: statusMap[orderType] } });
+  };
 
   const handleOpenModal = async (type) => {
     setModalType(type);
@@ -137,22 +166,30 @@ const OrdersOverview = () => {
   }
 
   return (
-    <Card
-      sx={{
-        background: "#fff",
-        borderRadius: 3,
-        boxShadow: 3,
-        padding: 1,
-        minWidth: 300,
-        minHeight: 150,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        position: "relative",
-        margin: 1,
-        overflow: "hidden",
-      }}
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.2 }}
     >
+      <Card
+        sx={{
+          background: "#fff",
+          borderRadius: 3,
+          boxShadow: 3,
+          padding: 1,
+          minWidth: 300,
+          minHeight: 150,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          position: "relative",
+          margin: 1,
+          overflow: "hidden",
+          transition: "box-shadow 0.3s ease",
+          "&:hover": {
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          },
+        }}
+      >
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
         <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
           Orders Overview
@@ -160,85 +197,166 @@ const OrdersOverview = () => {
 
         <Stack spacing={2}>
           {/* Completed Orders */}
-          <Box display="flex" alignItems="center">
-            <Typography
-              variant="body2"
-              fontWeight={500}
+          <Tooltip title="Click to view completed orders" arrow placement="top">
+            <ButtonBase
+              onClick={() => handleNavigate('completed')}
+              onMouseEnter={() => setHoveredSection("completed")}
+              onMouseLeave={() => setHoveredSection(null)}
               sx={{
-                width: 100,
-                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                p: 1,
+                borderRadius: 1,
+                bgcolor: hoveredSection === "completed" ? "#f5f5f5" : "transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  transform: "scale(1.02)",
+                },
               }}
             >
-              Completed
-            </Typography>
-            <OrderProgressBar
-              completed={completedOrders}
-              ongoing={0}
-              total={totalOrders}
-            />
-            <Typography variant="body2" fontWeight={500} sx={{ ml: 2 }}>
-              {completedOrders}
-            </Typography>
-            {completedOrders > 0 && (
-              <IconButton size="small" onClick={() => handleOpenModal('completed')} sx={{ ml: 0.5 }}>
-                <InfoOutlinedIcon sx={{ fontSize: 18, color: "#63e01d" }} />
-              </IconButton>
-            )}
-          </Box>
+              <Typography
+                variant="body2"
+                fontWeight={500}
+                sx={{
+                  width: 100,
+                  flexShrink: 0,
+                }}
+              >
+                Completed
+              </Typography>
+              <OrderProgressBar
+                completed={completedOrders}
+                ongoing={0}
+                total={totalOrders}
+              />
+              <Tooltip title={`${((completedOrders / totalOrders) * 100).toFixed(1)}% completed`}>
+                <Typography variant="body2" fontWeight={500} sx={{ ml: 2, cursor: "pointer" }}>
+                  {completedOrders}
+                </Typography>
+              </Tooltip>
+              {completedOrders > 0 && (
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal('completed');
+                  }} 
+                  sx={{ ml: 0.5 }}
+                >
+                  <InfoOutlinedIcon sx={{ fontSize: 18, color: "#63e01d" }} />
+                </IconButton>
+              )}
+            </ButtonBase>
+          </Tooltip>
 
           {/* Ongoing Orders */}
-          <Box display="flex" alignItems="center">
-            <Typography
-              variant="body2"
-              fontWeight={500}
+          <Tooltip title="Click to view ongoing orders" arrow placement="top">
+            <ButtonBase
+              onClick={() => handleNavigate('ongoing')}
+              onMouseEnter={() => setHoveredSection("ongoing")}
+              onMouseLeave={() => setHoveredSection(null)}
               sx={{
-                width: 100,
-                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                p: 1,
+                borderRadius: 1,
+                bgcolor: hoveredSection === "ongoing" ? "#f5f5f5" : "transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  transform: "scale(1.02)",
+                },
               }}
             >
-              Ongoing
-            </Typography>
-            <OrderProgressBar
-              completed={ongoingOrders}
-              ongoing={0}
-              total={totalOrders}
-            />
-            <Typography variant="body2" fontWeight={500} sx={{ ml: 2 }}>
-              {ongoingOrders}
-            </Typography>
-            {ongoingOrders > 0 && (
-              <IconButton size="small" onClick={() => handleOpenModal('ongoing')} sx={{ ml: 0.5 }}>
-                <InfoOutlinedIcon sx={{ fontSize: 18, color: "#388e3c" }} />
-              </IconButton>
-            )}
-          </Box>
+              <Typography
+                variant="body2"
+                fontWeight={500}
+                sx={{
+                  width: 100,
+                  flexShrink: 0,
+                }}
+              >
+                Ongoing
+              </Typography>
+              <OrderProgressBar
+                completed={ongoingOrders}
+                ongoing={0}
+                total={totalOrders}
+              />
+              <Tooltip title={`${((ongoingOrders / totalOrders) * 100).toFixed(1)}% ongoing`}>
+                <Typography variant="body2" fontWeight={500} sx={{ ml: 2, cursor: "pointer" }}>
+                  {ongoingOrders}
+                </Typography>
+              </Tooltip>
+              {ongoingOrders > 0 && (
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal('ongoing');
+                  }} 
+                  sx={{ ml: 0.5 }}
+                >
+                  <InfoOutlinedIcon sx={{ fontSize: 18, color: "#388e3c" }} />
+                </IconButton>
+              )}
+            </ButtonBase>
+          </Tooltip>
 
           {/* New Orders */}
-          <Box display="flex" alignItems="center">
-            <Typography
-              variant="body2"
-              fontWeight={500}
+          <Tooltip title="Click to view new orders" arrow placement="top">
+            <ButtonBase
+              onClick={() => handleNavigate('new')}
+              onMouseEnter={() => setHoveredSection("new")}
+              onMouseLeave={() => setHoveredSection(null)}
               sx={{
-                width: 100,
-                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                p: 1,
+                borderRadius: 1,
+                bgcolor: hoveredSection === "new" ? "#f5f5f5" : "transparent",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  transform: "scale(1.02)",
+                },
               }}
             >
-              New
-            </Typography>
-            <OrderProgressBar
-              completed={newOrders}
-              ongoing={0}
-              total={totalOrders}
-            />
-            <Typography variant="body2" fontWeight={500} sx={{ ml: 2 }}>
-              {newOrders}
-            </Typography>
-            {newOrders > 0 && (
-              <IconButton size="small" onClick={() => handleOpenModal('new')} sx={{ ml: 0.5 }}>
-                <InfoOutlinedIcon sx={{ fontSize: 18, color: "#357100" }} />
-              </IconButton>
-            )}
-          </Box>
+              <Typography
+                variant="body2"
+                fontWeight={500}
+                sx={{
+                  width: 100,
+                  flexShrink: 0,
+                }}
+              >
+                New
+              </Typography>
+              <OrderProgressBar
+                completed={newOrders}
+                ongoing={0}
+                total={totalOrders}
+              />
+              <Tooltip title={`${((newOrders / totalOrders) * 100).toFixed(1)}% new`}>
+                <Typography variant="body2" fontWeight={500} sx={{ ml: 2, cursor: "pointer" }}>
+                  {newOrders}
+                </Typography>
+              </Tooltip>
+              {newOrders > 0 && (
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal('new');
+                  }} 
+                  sx={{ ml: 0.5 }}
+                >
+                  <InfoOutlinedIcon sx={{ fontSize: 18, color: "#357100" }} />
+                </IconButton>
+              )}
+            </ButtonBase>
+          </Tooltip>
         </Stack>
       </CardContent>
 
@@ -308,8 +426,40 @@ const OrdersOverview = () => {
             </List>
           )}
         </DialogContent>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2, 
+          bgcolor: '#f5f5f5',
+          borderTop: '1px solid #e0e0e0'
+        }}>
+          <Button
+            variant="contained"
+            startIcon={<OpenInNewIcon />}
+            onClick={() => {
+              handleCloseModal();
+              handleNavigate(modalType);
+            }}
+            sx={{
+              bgcolor: '#63e01d',
+              '&:hover': {
+                bgcolor: '#56c018'
+              },
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            View in Orders
+          </Button>
+          <Button
+            onClick={handleCloseModal}
+            sx={{ textTransform: 'none' }}
+          >
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
     </Card>
+    </motion.div>
   );
 };
 

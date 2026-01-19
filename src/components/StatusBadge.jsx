@@ -10,7 +10,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 const StatusBadge = ({ status }) => {
   const statusConfig = {
     pending: {
-      label: 'Pending',
+      label: 'New',
       color: '#fff',
       bgcolor: '#FFA726',
       icon: <PendingIcon />
@@ -52,13 +52,7 @@ const StatusBadge = ({ status }) => {
       icon: <CancelIcon />
     },
     completed: {
-      label: 'Paid',
-      color: '#fff',
-      bgcolor: '#4CAF50',
-      icon: <TaskAltIcon />
-    },
-    paid: {
-      label: 'Paid',
+      label: 'Completed',
       color: '#fff',
       bgcolor: '#4CAF50',
       icon: <TaskAltIcon />

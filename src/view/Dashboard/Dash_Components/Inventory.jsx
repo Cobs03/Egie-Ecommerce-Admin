@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, Typography, Box, Stack, Dialog, DialogTitle, DialogContent, IconButton, List, ListItem, ListItemText, Chip, CircularProgress, Button, Avatar, ListItemAvatar } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, Typography, Box, Stack, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, List, ListItem, ListItemText, Chip, CircularProgress, Button, Avatar, ListItemAvatar, Tooltip, ButtonBase } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DownloadIcon from "@mui/icons-material/Download";
-// You might need to install Material Icons if not already installed
-// npm install @mui/icons-material
-import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined"; // Inventory icon
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import DashboardService from "../../../services/DashboardService";
 import { ProductService } from "../../../services/ProductService";
 
@@ -18,9 +18,11 @@ const Inventory = () => {
   });
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'lowStock' or 'outOfStock'
+  const [modalType, setModalType] = useState('');
   const [modalProducts, setModalProducts] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
 
   const handleOpenModal = async (type) => {
     setModalType(type);
@@ -119,12 +121,23 @@ const Inventory = () => {
   const hasLowStock = inventoryStats.lowStock > 0;
   const hasOutOfStock = inventoryStats.outOfStock > 0;
 
+  const handleNavigate = (filter) => {
+    navigate("/products", { state: { filterType: filter } });
+  };
+
+  const formatCount = (value) => {
+    const num = parseInt(value);
+    return !isNaN(num) && num > 99 ? "99+" : value.toString();
+  };
+
   return (
     <Card
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       sx={{
         background: "#fff",
         borderRadius: 3,
-        boxShadow: 3,
+        boxShadow: isHovered ? "0 8px 24px rgba(0,0,0,0.15)" : 3,
         padding: 1,
         minWidth: 240,
         height: "100%",
@@ -134,6 +147,8 @@ const Inventory = () => {
         position: "relative",
         overflow: "hidden",
         border: hasOutOfStock ? "2px solid #f44336" : hasLowStock ? "2px solid #ff9800" : "none",
+        transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
@@ -189,89 +204,146 @@ const Inventory = () => {
           </Box>
 
           {/* Low Stocks */}
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{
-              bgcolor: hasLowStock ? "#fff3e0" : "transparent",
-              p: hasLowStock ? 1 : 0,
-              borderRadius: 1,
-            }}
-          >
+          <Tooltip title="Click to view low stock products" arrow placement="top">
+            <ButtonBase
+              onClick={() => handleNavigate('lowStock')}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: "100%",
+                bgcolor: hasLowStock ? "#fff3e0" : "transparent",
+                p: 1,
+                borderRadius: 1,
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  bgcolor: "#ffe0b2",
+                  transform: "scale(1.02)",
+                },
+              }}
+            >
             <Typography variant="body2" fontWeight={500} color="#ff9800">
               ⚠️ Low Stocks
             </Typography>
             <Box display="flex" alignItems="center" gap={0.5}>
-              <Typography variant="body2" fontWeight={700} color="#ff9800">
-                {(inventoryStats.lowStock || 0).toLocaleString()}
-              </Typography>
+              {inventoryStats.lowStock > 99 ? (
+                <Tooltip title={`Actual count: ${inventoryStats.lowStock}`} arrow>
+                  <Typography variant="body2" fontWeight={700} color="#ff9800">
+                    {formatCount(inventoryStats.lowStock)}
+                  </Typography>
+                </Tooltip>
+              ) : (
+                <Typography variant="body2" fontWeight={700} color="#ff9800">
+                  {formatCount(inventoryStats.lowStock)}
+                </Typography>
+              )}
               {hasLowStock && (
                 <IconButton 
                   size="small" 
-                  onClick={() => handleOpenModal('lowStock')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal('lowStock');
+                  }}
                   sx={{ 
                     p: 0.5,
-                    '&:hover': { bgcolor: '#ffe0b2' }
+                    '&:hover': { bgcolor: '#ffb74d' }
                   }}
                 >
                   <InfoOutlinedIcon sx={{ fontSize: 18, color: "#ff9800" }} />
                 </IconButton>
               )}
             </Box>
-          </Box>
+          </ButtonBase>
+          </Tooltip>
 
           {/* Out of Stock */}
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{
-              bgcolor: hasOutOfStock ? "#ffebee" : "transparent",
-              p: hasOutOfStock ? 1 : 0,
-              borderRadius: 1,
-            }}
-          >
+          <Tooltip title="Click to view out of stock products" arrow placement="top">
+            <ButtonBase
+              onClick={() => handleNavigate('outOfStock')}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: "100%",
+                bgcolor: hasOutOfStock ? "#ffebee" : "transparent",
+                p: 1,
+                borderRadius: 1,
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  bgcolor: "#ffcdd2",
+                  transform: "scale(1.02)",
+                },
+              }}
+            >
             <Typography variant="body2" fontWeight={500} color="#f44336">
               🚫 Out of Stock
             </Typography>
             <Box display="flex" alignItems="center" gap={0.5}>
-              <Typography variant="body2" fontWeight={700} color="#f44336">
-                {(inventoryStats.outOfStock || 0).toLocaleString()}
-              </Typography>
+              {inventoryStats.outOfStock > 99 ? (
+                <Tooltip title={`Actual count: ${inventoryStats.outOfStock}`} arrow>
+                  <Typography variant="body2" fontWeight={700} color="#f44336">
+                    {formatCount(inventoryStats.outOfStock)}
+                  </Typography>
+                </Tooltip>
+              ) : (
+                <Typography variant="body2" fontWeight={700} color="#f44336">
+                  {formatCount(inventoryStats.outOfStock)}
+                </Typography>
+              )}
               {hasOutOfStock && (
                 <IconButton 
                   size="small" 
-                  onClick={() => handleOpenModal('outOfStock')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal('outOfStock');
+                  }}
                   sx={{ 
                     p: 0.5,
-                    '&:hover': { bgcolor: '#ffcdd2' }
+                    '&:hover': { bgcolor: '#ef9a9a' }
                   }}
                 >
                   <InfoOutlinedIcon sx={{ fontSize: 18, color: "#f44336" }} />
                 </IconButton>
               )}
             </Box>
-          </Box>
+          </ButtonBase>
+          </Tooltip>
 
           {/* Total Bundles */}
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{
-              bgcolor: inventoryStats.totalBundles > 0 ? "#e3f2fd" : "transparent",
-              p: inventoryStats.totalBundles > 0 ? 1 : 0,
-              borderRadius: 1,
-            }}
-          >
+          <Tooltip title="Click to view product bundles" arrow placement="top">
+            <ButtonBase
+              onClick={() => handleNavigate('bundles')}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: "100%",
+                bgcolor: inventoryStats.totalBundles > 0 ? "#e3f2fd" : "transparent",
+                p: 1,
+                borderRadius: 1,
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  bgcolor: "#bbdefb",
+                  transform: "scale(1.02)",
+                },
+              }}
+            >
             <Typography variant="body2" fontWeight={500} color="#2196f3">
               📦 Total Bundles
             </Typography>
-            <Typography variant="body2" fontWeight={700} color="#2196f3">
-              {(inventoryStats.totalBundles || 0).toLocaleString()}
-            </Typography>
-          </Box>
+            {inventoryStats.totalBundles > 99 ? (
+              <Tooltip title={`Actual count: ${inventoryStats.totalBundles}`} arrow>
+                <Typography variant="body2" fontWeight={700} color="#2196f3">
+                  {formatCount(inventoryStats.totalBundles)}
+                </Typography>
+              </Tooltip>
+            ) : (
+              <Typography variant="body2" fontWeight={700} color="#2196f3">
+                {formatCount(inventoryStats.totalBundles)}
+              </Typography>
+            )}
+          </ButtonBase>
+          </Tooltip>
         </Stack>
       </CardContent>
 
@@ -381,6 +453,37 @@ const Inventory = () => {
             </List>
           )}
         </DialogContent>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2, 
+          bgcolor: '#f5f5f5',
+          borderTop: '1px solid #e0e0e0'
+        }}>
+          <Button
+            variant="contained"
+            startIcon={<OpenInNewIcon />}
+            onClick={() => {
+              handleCloseModal();
+              handleNavigate(modalType);
+            }}
+            sx={{
+              bgcolor: modalType === 'outOfStock' ? '#f44336' : '#ff9800',
+              '&:hover': {
+                bgcolor: modalType === 'outOfStock' ? '#d32f2f' : '#f57c00'
+              },
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            View in Product Management
+          </Button>
+          <Button
+            onClick={handleCloseModal}
+            sx={{ textTransform: 'none' }}
+          >
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
     </Card>
   );

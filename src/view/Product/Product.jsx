@@ -22,20 +22,33 @@ import Bundles from "./ProductComponents/Bundles";
 const Product = () => {
   const location = useLocation();
   const [tab, setTab] = useState(() => {
+    // Check if there's a filterType in location state
+    if (location.state?.filterType) {
+      if (location.state.filterType === 'bundles') return 2;
+      if (location.state.filterType === 'lowStock' || location.state.filterType === 'outOfStock') return 1;
+    }
     const savedTab = localStorage.getItem("productTab");
     return savedTab ? parseInt(savedTab) : 0;
   });
   
   const [error, setError] = useState(null);
+  const [filterType, setFilterType] = useState(location.state?.filterType || null);
   
   // Refs to access child component download functions
   const inventoryRef = useRef();
   const stocksRef = useRef();
   const bundlesRef = useRef();
 
-  // Log location state for debugging
+  // Handle navigation state for filtering
   useEffect(() => {
-    if (location.state) {
+    if (location.state?.filterType) {
+      setFilterType(location.state.filterType);
+      // Switch to appropriate tab
+      if (location.state.filterType === 'bundles') {
+        setTab(2);
+      } else if (location.state.filterType === 'lowStock' || location.state.filterType === 'outOfStock') {
+        setTab(1);
+      }
     }
   }, [location.state]);
 
@@ -197,7 +210,7 @@ const Product = () => {
           transition={{ duration: 0.5 }}
         >
           <ErrorBoundary fallback={<Alert severity="error">Error loading stocks. Please refresh the page.</Alert>}>
-            <Stocks ref={stocksRef} />
+            <Stocks ref={stocksRef} filterType={filterType} />
           </ErrorBoundary>
         </motion.div>
       )}

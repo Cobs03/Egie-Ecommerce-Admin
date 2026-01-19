@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Box, Paper, Typography, Snackbar, Alert } from "@mui/material";
 import { Toaster, toast } from "sonner";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { AdminLogService } from "../../services/AdminLogService";
 import OrderHeader from "./Order Components/OrderHeader";
@@ -17,8 +18,21 @@ const Order = () => {
   // ALL HOOKS MUST BE AT THE TOP - before any conditional returns
   const permissions = usePermissions();
   const { loading: authLoading } = useAuth();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTab, setSelectedTab] = useState(0);
+  
+  // Initialize selectedTab based on navigation state
+  const getInitialTab = () => {
+    const filterStatus = location.state?.filterStatus;
+    if (filterStatus === "active") return 1; // Show pending/confirmed/processing/shipped
+    if (filterStatus === "cancelled") return 4; // Show cancelled orders
+    if (filterStatus === "completed") return 3; // Show completed orders
+    if (filterStatus === "processing") return 2; // Show processing orders (ongoing)
+    if (filterStatus === "pending") return 1; // Show pending orders (new orders in active tab)
+    return 0; // All orders
+  };
+  
+  const [selectedTab, setSelectedTab] = useState(getInitialTab());
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -199,10 +213,13 @@ const Order = () => {
       const matchesStatus = (() => {
         switch (selectedTab) {
           case 0: return true; // All orders
-          case 1: return order.status === "pending" || order.status === "New";
+          case 1: 
+            // Active orders: pending, confirmed, processing, shipped
+            return ["pending", "New", "confirmed", "Confirmed", "processing", "On Going", "shipped", "Shipped"].includes(order.status);
           case 2: return order.status === "processing" || order.status === "On Going";
           case 3: return order.status === "completed" || order.status === "Completed";
-          default: return order.status === "cancelled" || order.status === "Cancelled";
+          case 4: return order.status === "cancelled" || order.status === "Cancelled";
+          default: return true;
         }
       })();
 

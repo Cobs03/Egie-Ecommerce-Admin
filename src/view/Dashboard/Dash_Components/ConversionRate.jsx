@@ -11,6 +11,7 @@ const ConversionRate = () => {
     totalOrders: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [isCardHovered, setIsCardHovered] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -58,15 +59,20 @@ const ConversionRate = () => {
       transition={{ duration: 0.5, delay: 0.3 }}
     >
       <Card
+      onMouseEnter={() => setIsCardHovered(true)}
+      onMouseLeave={() => setIsCardHovered(false)}
       sx={{
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         borderRadius: 3,
-        boxShadow: 3,
+        boxShadow: isCardHovered ? "0 8px 24px rgba(0,0,0,0.15)" : "0 2px 8px rgba(0,0,0,0.07)",
         padding: 2,
         minWidth: 280,
         minHeight: 220,
         margin: 1,
         color: "#fff",
+        border: isCardHovered ? "1px solid #e0e0e0" : "1px solid transparent",
+        transform: isCardHovered ? "translateY(-4px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <CardContent sx={{ p: 2 }}>

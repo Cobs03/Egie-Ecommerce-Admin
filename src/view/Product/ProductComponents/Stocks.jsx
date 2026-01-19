@@ -46,7 +46,7 @@ import AdminLogService from "../../../services/AdminLogService";
 import { supabase } from "../../../lib/supabase";
 import * as XLSX from 'xlsx';
 
-const Stocks = forwardRef((props, ref) => {
+const Stocks = forwardRef(({ filterType }, ref) => {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,12 +62,29 @@ const Stocks = forwardRef((props, ref) => {
   const [nameFilterAnchor, setNameFilterAnchor] = useState(null);
   const [statusFilterAnchor, setStatusFilterAnchor] = useState(null);
   const [nameSort, setNameSort] = useState(null);
-  const [statusFilter, setStatusFilter] = useState([]);
+  
+  // Initialize statusFilter based on filterType prop
+  const getInitialStatusFilter = () => {
+    if (filterType === 'lowStock') return ['Low Stock'];
+    if (filterType === 'outOfStock') return ['Out of Stock'];
+    return [];
+  };
+  
+  const [statusFilter, setStatusFilter] = useState(getInitialStatusFilter());
   const [filteredProducts, setFilteredProducts] = useState([]);
 
   // Success notification state
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Update statusFilter when filterType prop changes
+  useEffect(() => {
+    if (filterType === 'lowStock') {
+      setStatusFilter(['Low Stock']);
+    } else if (filterType === 'outOfStock') {
+      setStatusFilter(['Out of Stock']);
+    }
+  }, [filterType]);
 
   // Load real products from database
   useEffect(() => {

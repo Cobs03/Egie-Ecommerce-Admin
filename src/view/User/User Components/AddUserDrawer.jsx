@@ -16,7 +16,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
-import { PersonAdd, Phone, Email, Lock, CheckCircle } from "@mui/icons-material";
+import { PersonAdd, Phone, Email, Lock, CheckCircle, Visibility, VisibilityOff } from "@mui/icons-material";
 import { supabase } from "../../../lib/supabase";
 
 const AddUserDrawer = ({ open, onClose, onAddUser }) => {
@@ -26,6 +26,7 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -429,7 +430,7 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
           <TextField
             fullWidth
             label="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             variant="outlined"
             size="small"
             value={formData.password}
@@ -440,6 +441,19 @@ const AddUserDrawer = ({ open, onClose, onAddUser }) => {
               startAdornment: (
                 <InputAdornment position="start">
                   <Lock fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    edge="end"
+                    size="small"
+                  >
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
                 </InputAdornment>
               ),
             }}

@@ -18,11 +18,15 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  Checkbox,
+  Chip,
 } from "@mui/material";
 import {
   MoreVert,
   FilterList,
 } from "@mui/icons-material";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import StoreIcon from "@mui/icons-material/Store";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import StatusBadge from "../../../components/StatusBadge";
@@ -33,10 +37,12 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
   const [orderFilterAnchor, setOrderFilterAnchor] = useState(null);
   const [dateFilterAnchor, setDateFilterAnchor] = useState(null);
   const [statusFilterAnchor, setStatusFilterAnchor] = useState(null);
+  const [deliveryFilterAnchor, setDeliveryFilterAnchor] = useState(null);
 
   const [orderSort, setOrderSort] = useState(null);
   const [dateSort, setDateSort] = useState(null);
   const [statusFilter, setStatusFilter] = useState([]);
+  const [deliveryFilter, setDeliveryFilter] = useState([]);
 
   const handleOrderFilterOpen = (event) => {
     setOrderFilterAnchor(event.currentTarget);
@@ -50,10 +56,15 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
     setStatusFilterAnchor(event.currentTarget);
   };
 
+  const handleDeliveryFilterOpen = (event) => {
+    setDeliveryFilterAnchor(event.currentTarget);
+  };
+
   const handleFilterClose = () => {
     setOrderFilterAnchor(null);
     setDateFilterAnchor(null);
     setStatusFilterAnchor(null);
+    setDeliveryFilterAnchor(null);
   };
 
   const handlePageChange = (event, newPage) => {
@@ -75,11 +86,38 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
     });
   };
 
+  const handleDeliveryFilterToggle = (type) => {
+    setDeliveryFilter((prev) => {
+      if (prev.includes(type)) {
+        return prev.filter((t) => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
+
   const filteredAndSortedOrders = orders
     .filter((order) => {
+      // Status filter
       if (statusFilter.length > 0) {
-        return statusFilter.includes(order.status);
+        if (!statusFilter.includes(order.status)) {
+          return false;
+        }
       }
+      
+      // Delivery type filter
+      if (deliveryFilter.length > 0) {
+        const deliveryType = (order.deliveryType || '').toLowerCase();
+        const isPickup = deliveryType === 'pickup' || 
+                       deliveryType === 'store_pickup' || 
+                       deliveryType.includes('pickup');
+        
+        const orderType = isPickup ? 'pickup' : 'delivery';
+        if (!deliveryFilter.includes(orderType)) {
+          return false;
+        }
+      }
+      
       return true;
     })
     .sort((a, b) => {
@@ -180,19 +218,28 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
                 anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
               >
                 <List sx={{ width: 200, pt: 0, pb: 0 }}>
-                  {["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"].map(
-                    (status) => (
-                      <ListItem
-                        key={status}
-                        button
-                        onClick={() => handleStatusFilterToggle(status)}
-                        selected={statusFilter.includes(status)}
-                      >
-                        <ListItemText 
-                          primary={status.charAt(0).toUpperCase() + status.slice(1)} 
-                        />
-                      </ListItem>
-                    )
+                  {["pending", "confirmed", "processing", "shipped", "completed", "cancelled"].map(
+                    (status) => {
+                      const displayLabel = status === 'pending' ? 'New' : status.charAt(0).toUpperCase() + status.slice(1);
+                      return (
+                        <ListItem
+                          key={status}
+                          button
+                          onClick={() => handleStatusFilterToggle(status)}
+                          selected={statusFilter.includes(status)}
+                          sx={{ py: 0.5 }}
+                        >
+                          <Checkbox
+                            checked={statusFilter.includes(status)}
+                            size="small"
+                            sx={{ mr: 1 }}
+                          />
+                          <ListItemText 
+                            primary={displayLabel} 
+                          />
+                        </ListItem>
+                      );
+                    }
                   )}
                   {statusFilter.length > 0 && (
                     <>
@@ -201,6 +248,57 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
                         button
                         onClick={() => {
                           setStatusFilter([]);
+                          handleFilterClose();
+                        }}
+                      >
+                        <ListItemText
+                          primary="Clear Filters"
+                          sx={{ color: "text.secondary" }}
+                        />
+                      </ListItem>
+                    </>
+                  )}
+                </List>
+              </Popover>
+            </TableCell>
+
+            <TableCell sx={{ fontWeight: 700 }}>
+              <Box display="flex" alignItems="center">
+                <Typography fontWeight="bold">Delivery</Typography>
+                <IconButton size="small" onClick={handleDeliveryFilterOpen}>
+                  <FilterList fontSize="small" />
+                </IconButton>
+              </Box>
+              <Popover
+                open={Boolean(deliveryFilterAnchor)}
+                anchorEl={deliveryFilterAnchor}
+                onClose={handleFilterClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              >
+                <List sx={{ width: 200, pt: 0, pb: 0 }}>
+                  <ListItem button>
+                    <Checkbox
+                      checked={deliveryFilter.includes('pickup')}
+                      onChange={() => handleDeliveryFilterToggle('pickup')}
+                      size="small"
+                    />
+                    <ListItemText primary="Store Pickup" />
+                  </ListItem>
+                  <ListItem button>
+                    <Checkbox
+                      checked={deliveryFilter.includes('delivery')}
+                      onChange={() => handleDeliveryFilterToggle('delivery')}
+                      size="small"
+                    />
+                    <ListItemText primary="Delivery" />
+                  </ListItem>
+                  {deliveryFilter.length > 0 && (
+                    <>
+                      <Divider />
+                      <ListItem
+                        button
+                        onClick={() => {
+                          setDeliveryFilter([]);
                           handleFilterClose();
                         }}
                       >
@@ -276,7 +374,7 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={6} sx={{ border: 'none', py: 0 }}>
+              <TableCell colSpan={7} sx={{ border: 'none', py: 0 }}>
                 <Box sx={{ 
                   display: 'flex', 
                   flexDirection: 'column', 
@@ -354,6 +452,31 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
                 </TableCell>
 
                 <TableCell>
+                  {(() => {
+                    const deliveryType = (order.deliveryType || '').toLowerCase();
+                    const isPickup = deliveryType === 'pickup' || 
+                                   deliveryType === 'store_pickup' || 
+                                   deliveryType.includes('pickup');
+                    
+                    return (
+                      <Chip
+                        icon={isPickup ? <StoreIcon /> : <LocalShippingIcon />}
+                        label={isPickup ? 'Store Pickup' : 'Delivery'}
+                        size="small"
+                        sx={{
+                          bgcolor: isPickup ? '#E3F2FD' : '#FFF3E0',
+                          color: isPickup ? '#1976D2' : '#F57C00',
+                          fontWeight: 600,
+                          '& .MuiChip-icon': {
+                            color: isPickup ? '#1976D2' : '#F57C00'
+                          }
+                        }}
+                      />
+                    );
+                  })()}
+                </TableCell>
+
+                <TableCell>
                   <Typography variant="body2" color="text.secondary">
                     {order.date}
                   </Typography>
@@ -368,7 +491,7 @@ const OrderTable = ({ orders, onOrderClick, loading = false }) => {
             )))}
           {!loading && filteredAndSortedOrders.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+              <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                 <Typography variant="body1" color="text.secondary">
                   No orders found
                 </Typography>
